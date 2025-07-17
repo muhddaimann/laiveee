@@ -1,10 +1,22 @@
 LaiveV1/
 ├─ .expo/
 ├─ app/
+│  ├─ (sidebar)/
+│  │  ├─ a/
+│  │  │  ├─ _layout.tsx
+│  │  │  └─ index.tsx
+│  │  ├─ b/
+│  │  │  ├─ _layout.tsx
+│  │  │  └─ index.tsx
+│  │  ├─ c/
+│  │  │  ├─ _layout.tsx
+│  │  │  └─ index.tsx
+│  │  └─ _layout.tsx
 │  ├─ _layout.tsx
 │  └─ index.tsx
 ├─ assets/
 ├─ components/
+│  └─ sidebar.tsx
 ├─ constants/
 │  ├─ color.ts
 │  └─ theme.ts
@@ -14,6 +26,5 @@ LaiveV1/
 ├─ app.json
 ├─ package-lock.json
 ├─ package.json
+├─ readme.md
 └─ tsconfig.json
-
-

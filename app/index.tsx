@@ -1,27 +1,15 @@
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useTheme } from "react-native-paper";
-import ModeToggle from "../components/modeToggle";
+import { useEffect } from 'react';
+import { useRouter } from 'expo-router';
 
-export default function Home() {
-  const theme = useTheme();
+export default function Index() {
+  const router = useRouter();
 
-  return (
-    <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
-      <ModeToggle />
-    </View>
-  );
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      router.replace('/a');
+    }, 0);
+    return () => clearTimeout(timeout);
+  }, []);
+
+  return null;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 32,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-});
