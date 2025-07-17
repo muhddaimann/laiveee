@@ -57,3 +57,13 @@ npm install
 
 # Run the web app
 npx expo start --web
+
+## 🔐 Environment Variables
+
+Create a `.env` file based on `.env.example` and add your OpenAI API key. The Expo prefix `EXPO_PUBLIC_` allows the value to be used in the web bundle.
+
+```bash
+cp .env.example .env
+# edit .env and fill in EXPO_PUBLIC_OPENAI_API_KEY
+```
+
