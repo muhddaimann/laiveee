@@ -1,0 +1,19 @@
+LaiveV1/
+├─ .expo/
+├─ app/
+│  ├─ _layout.tsx
+│  └─ index.tsx
+├─ assets/
+├─ components/
+├─ constants/
+│  ├─ color.ts
+│  └─ theme.ts
+├─ contexts/
+│  └─ themeContext.tsx
+├─ .gitignore
+├─ app.json
+├─ package-lock.json
+├─ package.json
+└─ tsconfig.json
+
+
