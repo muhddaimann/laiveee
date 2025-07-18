@@ -21,7 +21,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native";
-import { OPENAI_API_KEY } from "@env";
+import { QUERY_MESSAGES_URL, GENERAL_BOT_REALTIME_URL } from "../../../constants/env";
 
 
 const LOCAL_RELAY_SERVER_URL: string =
@@ -30,7 +30,7 @@ const LOCAL_RELAY_SERVER_URL: string =
 async function saveChatHistory(msgRole: string, assistantMessage: string) {
   try {
     const response = await fetch(
-      "http://d3-nlb-946b28767842b62b.elb.ap-southeast-1.amazonaws.com:3001/query/messages",
+      QUERY_MESSAGES_URL,
       {
         method: "POST",
         headers: {
@@ -132,33 +132,6 @@ export default function Demo() {
   }>({});
   const [isConnected, setIsConnected] = useState(false);
   const [muted, setMuted] = useState(false);
-
-  const formatTime = useCallback((timestamp: string) => {
-    const startTime = startTimeRef.current;
-    const t0 = new Date(startTime).valueOf();
-    const t1 = new Date(timestamp).valueOf();
-    const delta = t1 - t0;
-    const hs = Math.floor(delta / 10) % 100;
-    const s = Math.floor(delta / 1000) % 60;
-    const m = Math.floor(delta / 60_000) % 60;
-    const pad = (n: number) => {
-      let s = n + "";
-      while (s.length < 2) {
-        s = "0" + s;
-      }
-      return s;
-    };
-    return `${pad(m)}:${pad(s)}.${pad(hs)}`;
-  }, []);
-
-  const resetAPIKey = useCallback(() => {
-    const apiKey = prompt("OpenAI API Key");
-    if (apiKey !== null) {
-      localStorage.clear();
-      localStorage.setItem("tmp::voice_api_key", apiKey);
-      window.location.reload();
-    }
-  }, []);
 
   const connectConversation = useCallback(async () => {
     const client = clientRef.current;
@@ -344,7 +317,7 @@ export default function Demo() {
 
         try {
           const response = await fetch(
-            "https://dgai-kr-bot-biz-api-stg.aws.daythree.ai:3001/query/general_bot_realtime",
+            GENERAL_BOT_REALTIME_URL,
             {
               method: "POST",
               headers: {
