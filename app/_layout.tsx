@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import { PaperProvider } from "react-native-paper";
 import { ThemeProvider, useToggle } from "../contexts/themeContext";
 import { SidebarProvider } from "../contexts/sidebarContext";
+import { DemoProvider } from "../contexts/demoContext";
 
 function InnerLayout() {
   const { theme } = useToggle();
@@ -18,7 +19,9 @@ export default function Layout() {
   return (
     <ThemeProvider>
       <SidebarProvider>
-        <InnerLayout />
+        <DemoProvider>
+          <InnerLayout />
+        </DemoProvider>
       </SidebarProvider>
     </ThemeProvider>
   );

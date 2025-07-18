@@ -28,3 +28,50 @@ LaiveV1/
 ├─ package.json
 ├─ readme.md
 └─ tsconfig.json
+
+
+LaiveV1/
+├─ .expo/
+├─ app/
+│  ├─ (sidebar)/
+│  │  ├─ a/
+│  │  │  ├─ _layout.tsx
+│  │  │  └─ index.tsx
+│  │  ├─ b/
+│  │  │  ├─ _layout.tsx
+│  │  │  └─ index.tsx
+│  │  └─ _layout.tsx
+│  ├─ _layout.tsx
+│  └─ index.tsx
+├─ assets/
+│  ├─ adaptive-icon.png
+│  ├─ favicon.png
+│  ├─ icon.png
+│  └─ splash-icon.png
+├─ components/
+│  ├─ a/
+│  │  └─ header.tsx
+│  ├─ b/
+│  │  ├─ demoModal.tsx
+│  │  └─ header.tsx
+│  └─ sidebar.tsx
+├─ constants/
+│  ├─ color.ts
+│  └─ theme.ts
+├─ contexts/
+│  ├─ demoContext.tsx
+│  ├─ sidebarContext.tsx
+│  └─ themeContext.tsx
+├─ hooks/
+│  └─ useDemo.tsx
+├─ lib/
+├─ utils/
+│  ├─ conversationConfig.ts
+│  └─ wavRenderer.ts
+├─ .gitignore
+├─ app.json
+├─ note
+├─ package-lock.json
+├─ package.json
+├─ readme.md
+└─ tsconfig.json

@@ -1,89 +1,115 @@
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { useTheme, Menu } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Button, useTheme } from "react-native-paper";
+import { useDemoContext } from "../../contexts/demoContext";
+import useDemo from "../../hooks/useDemo";
+import DemoModal from "./demoModal";
 
 export default function Header() {
   const theme = useTheme();
+  const { options } = useDemo();
+  const { selectedProject, setSelectedProject, getProjectLabel } =
+    useDemoContext();
+  const [visible, setVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const openMenu = () => setVisible(true);
+  const closeMenu = () => setVisible(false);
+
+  const handleSelect = (value: string) => {
+    setSelectedProject(value);
+    closeMenu();
+  };
 
   return (
-    <View style={styles.wrapper}>
-      <View style={styles.container}>
-        <View style={styles.left}>
-          <View>
+    <>
+      <View
+        style={[styles.wrapper, { backgroundColor: theme.colors.background }]}
+      >
+        <View style={styles.row}>
+          <View style={styles.texts}>
             <Text style={[styles.title, { color: theme.colors.onBackground }]}>
-              Project Dashboard
+              Laive Assistance{" "}
+              <Text style={{ color: theme.colors.primary }}>[AI]</Text>{" "}
+              <Text style={{ color: theme.colors.secondary }}>[RAG]</Text>{" "}
+              <Text style={{ color: theme.colors.outline }}>[DEMO]</Text>
             </Text>
-            <Text
-              style={[
-                styles.subtitle,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Insights, metrics, and controls
-            </Text>
-          </View>
-        </View>
 
-        <Button
-          mode="contained"
-          onPress={() => {}}
-          contentStyle={styles.backContent}
-          labelStyle={{ color: theme.colors.onPrimary }}
-          buttonColor={theme.colors.primary}
-          icon={({ size }) => (
+            <Menu
+              visible={visible}
+              onDismiss={closeMenu}
+              contentStyle={{
+                backgroundColor: theme.colors.surface,
+                borderRadius: 12,
+              }}
+              anchor={
+                <TouchableOpacity onPress={openMenu}>
+                  <Text
+                    style={[styles.dropdown, { color: theme.colors.onSurface }]}
+                  >
+                    {getProjectLabel(selectedProject)}
+                  </Text>
+                </TouchableOpacity>
+              }
+            >
+              {options.map((opt) => (
+                <Menu.Item
+                  key={opt.value}
+                  onPress={() => handleSelect(opt.value)}
+                  title={opt.label}
+                />
+              ))}
+            </Menu>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.iconBtn, { backgroundColor: theme.colors.surface }]}
+            onPress={() => setModalVisible(true)}
+          >
             <MaterialCommunityIcons
-              name="chevron-left"
-              size={size}
-              color={theme.colors.onPrimary}
+              name="cog-outline"
+              size={30}
+              color={theme.colors.primary}
             />
-          )}
-        >
-          Back
-        </Button>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+
+      <DemoModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+      />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
+    paddingTop: 24,
     paddingHorizontal: 24,
-    paddingVertical: 20,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: "#ccc",
   },
-  container: {
+  row: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
   },
-  iconPill: {
-    borderRadius: 20,
-    width: 32,
-    height: 32,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 8,
-  },
-  backContent: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  left: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+  texts: {
+    flex: 1,
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "700",
+    letterSpacing: 0.3,
   },
-  subtitle: {
-    fontSize: 13,
-    fontWeight: "400",
-    marginTop: 2,
+  dropdown: {
+    fontSize: 15,
+    fontWeight: "500",
+    marginTop: 8,
+    opacity: 0.8,
+  },
+  iconBtn: {
+    padding: 8,
+    borderRadius: 12,
   },
 });

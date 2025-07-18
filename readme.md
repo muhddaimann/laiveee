@@ -1,69 +1,56 @@
-# Laive V1 🧠🎙️
+# 🧠 Laive – Real-time AI Voicebot
 
-**Laive V1** is a web-first AI assistant built with [Expo](https://expo.dev/) + React Native Web, designed to demonstrate how modern AI tools like GPT-4o (Realtime), Whisper, and RAG (Retrieval-Augmented Generation) can enhance everyday tasks through voice and chat.
-
----
-
-## ✨ What is Laive?
-
-Laive is your intelligent, conversational assistant that:
-- Listens to your voice in real time
-- Understands and responds naturally
-- Accesses internal knowledge to answer accurately
-- Helps automate or simplify daily tasks
-
-All from your browser — no installation needed.
+**Laive** is a real-time AI-powered voicebot that combines OpenAI's Realtime API and Retrieval-Augmented Generation (RAG) to deliver intelligent, responsive conversations through natural voice input.
 
 ---
 
-## 🔍 Key Features
+## 🚀 Key Features
 
-- 🎙️ **Real-time Voice Interaction** (via GPT-4o Realtime API)
-- 🗣️ **Speech-to-Text** with Whisper
-- 📚 **RAG-based Answers** using your own data (FAQs, policies, docs)
-- 🔄 **Streaming Audio In & Out**
-- 🧾 **Smart Chat History & Tool Calls**
-- 💡 **Customizable Personas** for role-based simulations
+- 🎤 **Realtime Voice Streaming**  
+  Stream microphone input directly to OpenAI’s GPT-4o for live, low-latency interaction.
 
----
+- 🔁 **OpenAI Realtime API**  
+  Built with a custom implementation of OpenAI’s Realtime Client to handle full duplex audio and response streaming.
 
-## 🧪 Example Use Cases
+- 📚 **RAG (Retrieval-Augmented Generation)**  
+  Dynamically enriches responses with facts from your internal knowledgebase using vector search (Chroma DB).
 
-| Use Case             | Tools Used                    |
-|----------------------|-------------------------------|
-| Internal Helpdesk    | Realtime + RAG                |
-| Voice Note Assistant | Whisper + GPT summarization   |
-| Interview Simulator  | Realtime + Whisper + Persona  |
-| FAQ Chatbot          | Realtime + RAG                |
-| Voice Command Agent  | Whisper + Realtime + Actions  |
+- 💬 **Voice-to-Voice Interaction**  
+  End-to-end voice experience: user speaks, AI thinks, AI replies with voice.
 
----
+- 🧩 **Modular Architecture**  
+  Clean structure with separate hooks and services for voice, chat, tools, and logs.
 
-## 🧰 Tech Stack
-
-- **Frontend**: Expo Web (React Native Web, TypeScript)
-- **AI & Voice**: OpenAI GPT-4o, Whisper API
-- **RAG**: ChromaDB or Supabase for vector search
-- **Audio**: WAV recording, waveform visualizations
-- **State Management**: React Contexts
+- 🌐 **Web-First with Expo + React Native Web**  
+  Designed to run in-browser with responsive design and minimal setup.
 
 ---
 
-## 🚀 Getting Started
+## 🛠️ Tech Stack
 
-```bash
-# Install dependencies
-npm install
+- **Frontend:** React Native Web (Expo)
+- **Voice Streaming:** WavRecorder + WavStreamPlayer
+- **AI:** OpenAI GPT-4o + Whisper
+- **Knowledgebase:** Chroma Vector DB (RAG)
+- **Logging:** PostgreSQL (via RDS)
+- **Waveform UI:** `<canvas>`-based visualizer
+- **Context Management:** React Context API
+- **State:** Custom hooks for audio, assistant, logs, and chat
 
-# Run the web app
-npx expo start --web
+---
 
-## 🔐 Environment Variables
+## 🧪 Voice Interaction Flow
 
-Create a `.env` file based on `.env.example` and add your OpenAI API key. The Expo prefix `EXPO_PUBLIC_` allows the value to be used in the web bundle.
-
-```bash
-cp .env.example .env
-# edit .env and fill in EXPO_PUBLIC_OPENAI_API_KEY
+```text
+🎙️ User speaks
+↓
+🛰️ Audio streamed to GPT-4o
+↓
+🧠 Assistant processes voice and responds
+↓
+📚 (if tool call) RAG queries internal docs
+↓
+🗣️ Assistant replies with voice (TTS)
+↓
+📝 Chat and interaction logs are saved
 ```
-
