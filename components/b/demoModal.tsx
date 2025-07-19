@@ -3,7 +3,6 @@ import {
   Modal,
   View,
   Text,
-  TextInput,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -21,24 +20,6 @@ interface DemoModalProps {
 
 export default function DemoModal({ visible, onClose }: DemoModalProps) {
   const theme = useTheme();
-  const [apiKey, setApiKey] = useState("");
-  const [focusedField, setFocusedField] = useState<"apiKey" | "mode" | null>(
-    null
-  );
-
-  const handleSave = () => {
-    onClose();
-  };
-
-  const getInputStyle = (field: "apiKey" | "mode") =>
-    StyleSheet.flatten([
-      styles.input,
-      {
-        borderColor:
-          focusedField === field ? theme.colors.primary : theme.colors.outline,
-        color: theme.colors.onSurface,
-      },
-    ]);
 
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -62,22 +43,7 @@ export default function DemoModal({ visible, onClose }: DemoModalProps) {
               />
             </View>
 
-            <View style={styles.section}>
-              <Text
-                style={[styles.label, { color: theme.colors.onSurfaceVariant }]}
-              >
-                API Key
-              </Text>
-              <TextInput
-                style={getInputStyle("apiKey")}
-                placeholder="Enter your OpenAI API Key"
-                placeholderTextColor={theme.colors.outline}
-                value={apiKey}
-                onChangeText={setApiKey}
-                onFocus={() => setFocusedField("apiKey")}
-                onBlur={() => setFocusedField(null)}
-              />
-            </View>
+            
 
             <View style={styles.section}>
               <Text
@@ -94,19 +60,11 @@ export default function DemoModal({ visible, onClose }: DemoModalProps) {
 
             <View style={styles.actions}>
               <Button
-                mode="outlined"
+                mode="contained"
                 onPress={onClose}
                 style={styles.button}
-                textColor={theme.colors.onSurface}
               >
-                Cancel
-              </Button>
-              <Button
-                mode="contained"
-                onPress={handleSave}
-                style={styles.button}
-              >
-                Save
+                Close
               </Button>
             </View>
           </View>

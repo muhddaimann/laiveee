@@ -5,21 +5,6 @@ import React, {
   useState,
   RefObject,
 } from "react";
-import { RealtimeClient } from "@openai/realtime-api-beta";
-import { ItemType } from "@openai/realtime-api-beta/dist/lib/client.js";
-import { WavRecorder, WavStreamPlayer } from "../../../lib/wavtools/index.js";
-import { instructions } from "../../../utils/conversationConfig";
-import { WavRenderer } from "../../../utils/wavRenderer";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { v4 as uuidv4 } from "uuid";
-import { useTheme, Button } from "react-native-paper";
-import { useDemoContext } from "../../../contexts/demoContext";
-import {
-  OPENAI_API_KEY,
-  LOCAL_RELAY_SERVER_URL,
-  QUERY_MESSAGES_URL,
-  GENERAL_BOT_REALTIME_URL,
-} from "../../../constants/env";
 import {
   StyleSheet,
   Text,
@@ -27,44 +12,23 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native";
+import { RealtimeClient } from "@openai/realtime-api-beta";
+import { ItemType } from "@openai/realtime-api-beta/dist/lib/client.js";
+import { WavRecorder, WavStreamPlayer } from "../../../lib/wavtools/index.js";
+import { WavRenderer } from "../../../utils/wavRenderer";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useTheme, Button, Card, Title, Paragraph } from "react-native-paper";
+import { OPENAI_API_KEY, LOCAL_RELAY_SERVER_URL } from "../../../constants/env";
+import {
+  InterviewProvider,
+  useInterviewContext,
+} from "../../../contexts/interviewContext";
 
-async function saveChatHistory(msgRole: string, assistantMessage: string) {
-  try {
-    const response = await fetch(QUERY_MESSAGES_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-        body: JSON.stringify({
-          role: msgRole,
-          content: assistantMessage,
-        }),
-      }
-    );
-    const data = await response.json();
-    console.log("Chat history saved:", data);
-  } catch (error) {
-    console.error("Error saving chat history:", error);
-  }
-}
-
-interface RealtimeEvent {
-  time: string;
-  source: "client" | "server";
-  count?: number;
-  event: { [key: string]: any };
-}
-
-interface QueryResults {
-  retrieved_documents: string[];
-  chat_history: { role: string; content: string }[];
-}
-
+// --- Interfaces ---
 interface ChatCardProps {
   items: any[];
   deleteConversationItem: (id: string) => void;
 }
-
 interface ActionCardProps {
   isConnected: boolean;
   connectConversation: () => void;
@@ -72,28 +36,42 @@ interface ActionCardProps {
   toggleMute: () => void;
   muted: boolean;
 }
-
 interface IconCardProps {
   clientCanvasRef: RefObject<HTMLCanvasElement | null>;
   serverCanvasRef: RefObject<HTMLCanvasElement | null>;
 }
-
-interface DocumentCardProps {
-  queryResults: {
-    retrieved_documents?: string[];
-  } | null;
+interface ScoreType {
+  clarity: number;
+  relevance: number;
+  confidence: number;
+  feedback: string;
 }
 
-export default function Demo() {
+// --- Components ---
+function ScoringFeedback() {
+  const { scores } = useInterviewContext();
+  return (
+    <Card style={styles.scoringCard}>
+      <Card.Content>
+        <Title>Scoring & Feedback</Title>
+        {scores ? (
+          <View>
+            <Paragraph>Clarity: {scores.clarity}</Paragraph>
+            <Paragraph>Relevance: {scores.relevance}</Paragraph>
+            <Paragraph>Confidence: {scores.confidence}</Paragraph>
+            <Paragraph>Feedback: {scores.feedback}</Paragraph>
+          </View>
+        ) : (
+          <Paragraph>No feedback yet.</Paragraph>
+        )}
+      </Card.Content>
+    </Card>
+  );
+}
 
+function BasicInterview() {
   const theme = useTheme();
-  const { selectedProject } = useDemoContext();
-  const selectedProjectRef = useRef(selectedProject);
-  useEffect(() => {
-    selectedProjectRef.current = selectedProject;
-  }, [selectedProject]);
-  const [queryResults, setQueryResults] = useState<QueryResults | null>(null);
-
+  const { setScores } = useInterviewContext();
   const wavRecorderRef = useRef<WavRecorder>(
     new WavRecorder({ sampleRate: 24000 })
   );
@@ -110,44 +88,16 @@ export default function Demo() {
           }
     )
   );
-
   const clientCanvasRef = useRef<HTMLCanvasElement>(null);
   const serverCanvasRef = useRef<HTMLCanvasElement>(null);
-  const eventsScrollHeightRef = useRef(0);
-  const eventsScrollRef = useRef<ScrollView>(null);
-  const startTimeRef = useRef<string>(new Date().toISOString());
   const [items, setItems] = useState<ItemType[]>([]);
-  const [realtimeEvents, setRealtimeEvents] = useState<RealtimeEvent[]>([]);
-  const [expandedEvents, setExpandedEvents] = useState<{
-    [key: string]: boolean;
-  }>({});
   const [isConnected, setIsConnected] = useState(false);
   const [muted, setMuted] = useState(false);
-
-  const formatTime = useCallback((timestamp: string) => {
-    const startTime = startTimeRef.current;
-    const t0 = new Date(startTime).valueOf();
-    const t1 = new Date(timestamp).valueOf();
-    const delta = t1 - t0;
-    const hs = Math.floor(delta / 10) % 100;
-    const s = Math.floor(delta / 1000) % 60;
-    const m = Math.floor(delta / 60_000) % 60;
-    const pad = (n: number) => {
-      let s = n + "";
-      while (s.length < 2) {
-        s = "0" + s;
-      }
-      return s;
-    };
-    return `${pad(m)}:${pad(s)}.${pad(hs)}`;
-  }, []);
-
-  
 
   const connectConversation = useCallback(async () => {
     if (!LOCAL_RELAY_SERVER_URL && !OPENAI_API_KEY) {
       const errorMessage =
-        'No API key or relay server URL provided. Please set EXPO_PUBLIC_OPENAI_API_KEY or EXPO_PUBLIC_LOCAL_RELAY_SERVER_URL in your .env file.';
+        "No API key or relay server URL provided. Please set EXPO_PUBLIC_OPENAI_API_KEY or EXPO_PUBLIC_LOCAL_RELAY_SERVER_URL in your .env file.";
       console.error(errorMessage);
       alert(errorMessage);
       return;
@@ -155,26 +105,20 @@ export default function Demo() {
     const client = clientRef.current;
     const wavRecorder = wavRecorderRef.current;
     const wavStreamPlayer = wavStreamPlayerRef.current;
-
-    startTimeRef.current = new Date().toISOString();
     setIsConnected(true);
-    setRealtimeEvents([]);
     setItems(client.conversation.getItems());
-
     await wavRecorder.begin();
     await wavStreamPlayer.connect();
     await client.connect();
     await client.updateSession({
       turn_detection: { type: "server_vad" },
     });
-
     client.sendUserMessageContent([
       {
         type: `input_text`,
-        text: `Hello!`,
+        text: `Hello! I'm ready for my interview.`,
       },
     ]);
-
     await wavRecorder.record((data) => client.appendInputAudio(data.mono));
   }, []);
 
@@ -182,7 +126,6 @@ export default function Demo() {
     const wavRecorder = wavRecorderRef.current;
     const client = clientRef.current;
     if (!wavRecorder) return;
-
     if (muted) {
       await wavRecorder.record((data) => client.appendInputAudio(data.mono));
     } else {
@@ -193,15 +136,11 @@ export default function Demo() {
 
   const disconnectConversation = useCallback(async () => {
     setIsConnected(false);
-    setRealtimeEvents([]);
     setItems([]);
-
     const client = clientRef.current;
     client.disconnect();
-
     const wavRecorder = wavRecorderRef.current;
     await wavRecorder.end();
-
     const wavStreamPlayer = wavStreamPlayerRef.current;
     await wavStreamPlayer.interrupt();
   }, []);
@@ -212,41 +151,13 @@ export default function Demo() {
   }, []);
 
   useEffect(() => {
-    if (eventsScrollRef.current) {
-      const eventsEl = eventsScrollRef.current as unknown as HTMLDivElement;
-      const scrollHeight = eventsEl.scrollHeight;
-      if (scrollHeight !== eventsScrollHeightRef.current) {
-        eventsEl.scrollTop = scrollHeight;
-        eventsScrollHeightRef.current = scrollHeight;
-      }
-    }
-  }, [realtimeEvents]);
-
-  useEffect(() => {
-    const conversationEls = [].slice.call(
-      document.body.querySelectorAll("[data-conversation-content]")
-    );
-    for (const el of conversationEls) {
-      const conversationEl = el as HTMLDivElement;
-      conversationEl.scrollTop = conversationEl.scrollHeight;
-    }
-  }, [items]);
-
-  useEffect(() => {
-    console.log("Query results updated:", queryResults);
-  }, [queryResults]);
-
-  useEffect(() => {
     let isLoaded = true;
-
     const wavRecorder = wavRecorderRef.current;
     const clientCanvas = clientCanvasRef.current;
     let clientCtx: CanvasRenderingContext2D | null = null;
-
     const wavStreamPlayer = wavStreamPlayerRef.current;
     const serverCanvas = serverCanvasRef.current;
     let serverCtx: CanvasRenderingContext2D | null = null;
-
     const render = () => {
       if (isLoaded) {
         if (clientCanvas) {
@@ -297,7 +208,6 @@ export default function Demo() {
       }
     };
     render();
-
     return () => {
       isLoaded = false;
     };
@@ -306,86 +216,44 @@ export default function Demo() {
   useEffect(() => {
     const wavStreamPlayer = wavStreamPlayerRef.current;
     const client = clientRef.current;
-    client.updateSession({ instructions: instructions });
+    client.updateSession({
+      instructions: "You are an interviewer asking behavioral questions.",
+    });
     client.updateSession({ voice: "echo" });
     client.updateSession({ input_audio_transcription: { model: "whisper-1" } });
     client.addTool(
       {
-        name: "query_db",
-        description:
-          "Queries the knowledgebase stored in the vector DB to retrieve relevant and specific context.",
+        name: "submit_scores",
+        description: "Submits the interview scores and feedback.",
         parameters: {
           type: "object",
           properties: {
-            query: {
-              type: "string",
-              description: "The query string to search the knowledgebase",
+            clarity: {
+              type: "number",
+              description: "Clarity of the candidate's responses.",
             },
-            project: {
+            relevance: {
+              type: "number",
+              description: "Relevance of the responses to the questions.",
+            },
+            confidence: {
+              type: "number",
+              description: "Confidence level of the candidate.",
+            },
+            feedback: {
               type: "string",
-              description: 'The project name (e.g., "BYD")',
+              description: "Overall feedback for the candidate.",
             },
           },
-          required: ["query", "project"],
+          required: ["clarity", "relevance", "confidence", "feedback"],
         },
       },
-      async ({ query }: { query: string; project: string }) => {
-        const project = selectedProjectRef.current;
-
-        try {
-          const response = await fetch(GENERAL_BOT_REALTIME_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-              body: JSON.stringify({ query, project }),
-            }
-          );
-
-          if (!response.ok) {
-            const text = await response.text();
-            throw new Error(`HTTP ${response.status}: ${text}`);
-          }
-
-          const data = await response.json();
-
-          let retrievedDocs: string[] = [];
-          if (data.results?.retrieved_context) {
-            retrievedDocs = [data.results.retrieved_context];
-          } else if (data.payload?.assistantResponse) {
-            retrievedDocs = [data.payload.assistantResponse];
-          } else {
-            retrievedDocs = ["No assistant response"];
-          }
-
-          const results: QueryResults = {
-            retrieved_documents: retrievedDocs,
-            chat_history: [],
-          };
-
-          setQueryResults(results);
-          return results;
-        } catch (error) {
-          setQueryResults({
-            retrieved_documents: ["Failed to query database."],
-            chat_history: [],
-          });
-          return { error: "Failed to query database." };
-        }
+      async (scores: ScoreType) => {
+        setScores(scores);
+        return { success: true };
       }
     );
 
-    client.on("realtime.event", (realtimeEvent: RealtimeEvent) => {
-      setRealtimeEvents((realtimeEvents) => {
-        const lastEvent = realtimeEvents[realtimeEvents.length - 1];
-        if (lastEvent?.event.type === realtimeEvent.event.type) {
-          lastEvent.count = (lastEvent.count || 0) + 1;
-          return realtimeEvents.slice(0, -1).concat(lastEvent);
-        } else {
-          return realtimeEvents.concat(realtimeEvent);
-        }
-      });
-    });
     client.on("error", (event: any) => console.error(event));
     client.on("conversation.interrupted", async () => {
       const trackSampleOffset = await wavStreamPlayer.interrupt();
@@ -394,98 +262,47 @@ export default function Demo() {
         await client.cancelResponse(trackId, offset);
       }
     });
-
     client.on("conversation.updated", async ({ item, delta }: any) => {
       const updatedItems = client.conversation.getItems();
-
       if (delta?.audio) {
         wavStreamPlayer.add16BitPCM(delta.audio, item.id);
       }
-
-      if (item.status === "completed" && item.formatted.audio?.length) {
-        try {
-          const wavFile = await WavRecorder.decode(
-            item.formatted.audio,
-            24000,
-            24000
-          );
-          item.formatted.file = wavFile;
-          console.log("Decoded WAV file:", wavFile);
-        } catch (err) {
-          console.error("Error decoding audio:", err);
-        }
-      }
-
-      if (item.status === "completed" && item.role === "assistant") {
-        const assistantMessage =
-          item.formatted?.transcript ||
-          item.formatted?.text ||
-          "No assistant text";
-
-        setTimeout(() => {
-          const latestItems = client.conversation.getItems();
-          const userItems = latestItems.filter((i: any) => i.role === "user");
-          const userItem = userItems[userItems.length - 1];
-          const userMessage =
-            userItem?.formatted?.transcript ||
-            userItem?.formatted?.text ||
-            "No user message";
-          const chatId = item.chat_id || uuidv4();
-
-          console.log("Saving chat history:", {
-            chatId,
-            userMessage,
-            assistantMessage,
-          });
-          saveChatHistory("assistant", assistantMessage);
-        }, 500);
-      }
-
       setItems(updatedItems);
     });
-
     setItems(client.conversation.getItems());
-
     return () => {
       client.reset();
     };
   }, []);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.leftColumn}>
-        <View style={styles.topFlex8}>
-          <ChatCard
-            items={items}
-            deleteConversationItem={deleteConversationItem}
-          />
-        </View>
-        <View style={styles.bottomFlex2}>
-          <ActionCard
-            isConnected={isConnected}
-            connectConversation={connectConversation}
-            disconnectConversation={disconnectConversation}
-            toggleMute={toggleMute}
-            muted={muted}
-          />
-        </View>
+    <View style={styles.interviewContainer}>
+      <View style={styles.chatContainer}>
+        <ChatCard
+          items={items}
+          deleteConversationItem={deleteConversationItem}
+        />
       </View>
-      <View style={styles.rightColumn}>
-        <View style={styles.topFlex3}>
-          <IconCard
-            clientCanvasRef={clientCanvasRef}
-            serverCanvasRef={serverCanvasRef}
-          />
-        </View>
-        <View style={styles.bottomFlex7}>
-          <DocumentCard queryResults={queryResults} />
-        </View>
+      <View style={styles.controlsContainer}>
+        <ActionCard
+          isConnected={isConnected}
+          connectConversation={connectConversation}
+          disconnectConversation={disconnectConversation}
+          toggleMute={toggleMute}
+          muted={muted}
+        />
+      </View>
+      <View style={styles.vizContainer}>
+        <IconCard
+          clientCanvasRef={clientCanvasRef}
+          serverCanvasRef={serverCanvasRef}
+        />
       </View>
     </View>
   );
 }
 
-export function ActionCard({
+function ActionCard({
   isConnected,
   connectConversation,
   disconnectConversation,
@@ -493,30 +310,17 @@ export function ActionCard({
   muted,
 }: ActionCardProps) {
   const theme = useTheme();
-
   const micBgColor = muted
     ? theme.colors.primaryContainer
     : theme.colors.errorContainer;
-
   const micTextColor = muted
     ? theme.colors.onPrimaryContainer
     : theme.colors.onErrorContainer;
-
   return (
-    <View style={styles.card}>
+    <View style={styles.actionCard}>
       <View style={styles.row}>
         {!isConnected ? (
           <>
-            <Button
-              mode="outlined"
-              icon="account-voice"
-              textColor={theme.colors.onBackground}
-              style={styles.paperButton}
-              contentStyle={styles.buttonContent}
-              disabled
-            >
-              Interactive
-            </Button>
             <Button
               mode="contained"
               icon="link-variant-plus"
@@ -526,7 +330,7 @@ export function ActionCard({
               style={styles.paperButton}
               contentStyle={styles.buttonContent}
             >
-              Connect
+              Start Interview
             </Button>
           </>
         ) : (
@@ -551,7 +355,7 @@ export function ActionCard({
               style={styles.paperButton}
               contentStyle={styles.buttonContent}
             >
-              Disconnect
+              End Interview
             </Button>
           </>
         )}
@@ -563,17 +367,15 @@ export function ActionCard({
 function ChatCard({ items, deleteConversationItem }: ChatCardProps) {
   const theme = useTheme();
   const scrollViewRef = useRef<ScrollView>(null);
-
   useEffect(() => {
     if (scrollViewRef.current) {
       scrollViewRef.current.scrollToEnd({ animated: true });
     }
   }, [items]);
-
   return (
     <View
       style={[
-        styles.card,
+        styles.chatCard,
         { backgroundColor: theme.colors.surface, padding: 10 },
       ]}
     >
@@ -597,7 +399,7 @@ function ChatCard({ items, deleteConversationItem }: ChatCardProps) {
                 { color: theme.colors.onSurfaceVariant },
               ]}
             >
-              Tap Connect to start conversation
+              Tap Start Interview to begin
             </Text>
           </View>
         ) : (
@@ -632,7 +434,7 @@ function ChatCard({ items, deleteConversationItem }: ChatCardProps) {
                           : theme.colors.onSecondaryContainer,
                     }}
                   >
-                    {item.role === "user" ? "You" : "Assistant"}
+                    {item.role === "user" ? "You" : "Interviewer"}
                   </Text>
                   <TouchableOpacity
                     onPress={() => deleteConversationItem(item.id)}
@@ -672,9 +474,9 @@ function ChatCard({ items, deleteConversationItem }: ChatCardProps) {
   );
 }
 
-export function IconCard({ clientCanvasRef, serverCanvasRef }: IconCardProps) {
+function IconCard({ clientCanvasRef, serverCanvasRef }: IconCardProps) {
   return (
-    <View style={styles.card}>
+    <View style={styles.iconCard}>
       <View style={{ flex: 1, flexDirection: "row" }}>
         <View style={{ flex: 1 }}>
           <canvas
@@ -693,90 +495,67 @@ export function IconCard({ clientCanvasRef, serverCanvasRef }: IconCardProps) {
   );
 }
 
-export function DocumentCard({ queryResults }: DocumentCardProps) {
-  const theme = useTheme();
-  const documents = queryResults?.retrieved_documents ?? [];
-  const hasDocuments = documents.length > 0;
-  const noDocsUsed =
-    hasDocuments &&
-    (documents[0] === "No assistant response" ||
-      documents[0] === "Failed to query database.");
-
+// --- Main Component ---
+export default function InterviewPage() {
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: theme.colors.surface, padding: 10 },
-      ]}
-    >
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={
-          !hasDocuments || noDocsUsed
-            ? { flex: 1, justifyContent: "center" }
-            : undefined
-        }
-      >
-        {hasDocuments && !noDocsUsed ? (
-          documents.map((doc, idx) => (
-            <Text
-              key={idx}
-              style={{ marginBottom: 6, color: theme.colors.onSurface }}
-            >
-              {doc}
-            </Text>
-          ))
-        ) : (
-          <View style={styles.emptyChatContainer}>
-            <MaterialCommunityIcons
-              name={
-                noDocsUsed ? "file-remove-outline" : "file-document-outline"
-              }
-              size={48}
-              color={theme.colors.primary}
-            />
-            <Text
-              style={[styles.emptyChatText, { color: theme.colors.onSurface }]}
-            >
-              {noDocsUsed
-                ? "No documents were used for this response."
-                : "Retrieved documents will appear here."}
-            </Text>
-          </View>
-        )}
-      </ScrollView>
-    </View>
+    <InterviewProvider>
+      <View style={styles.pageContainer}>
+        <View style={styles.leftColumn}>
+          <BasicInterview />
+        </View>
+        <View style={styles.rightColumn}>
+          <ScoringFeedback />
+        </View>
+      </View>
+    </InterviewProvider>
   );
 }
 
+// --- Styles ---
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
+  // Page styles
+  pageContainer: {
     flex: 1,
-    padding: 24,
+    flexDirection: "row",
+    padding: 16,
     gap: 16,
   },
   leftColumn: {
     flex: 1,
-    gap: 16,
   },
   rightColumn: {
     flex: 1,
-    gap: 16,
   },
-  topFlex8: {
-    flex: 11,
-  },
-  bottomFlex2: {
+  // ScoringFeedback styles
+  scoringCard: {
     flex: 1,
   },
-  topFlex3: {
-    flex: 2,
+  // BasicInterview styles
+  interviewContainer: {
+    flex: 1,
+    flexDirection: "column",
+    gap: 16,
   },
-  bottomFlex7: {
+  chatContainer: {
     flex: 8,
   },
-  card: {
+  controlsContainer: {
+    flex: 1,
+  },
+  vizContainer: {
+    flex: 2,
+  },
+  actionCard: {
+    flex: 1,
+    borderRadius: 16,
+    justifyContent: "center",
+  },
+  chatCard: {
+    flex: 1,
+    borderRadius: 16,
+    justifyContent: "center",
+  },
+  iconCard: {
     flex: 1,
     borderRadius: 16,
     justifyContent: "center",

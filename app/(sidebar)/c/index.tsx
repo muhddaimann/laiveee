@@ -8,18 +8,9 @@ import React, {
 import { RealtimeClient } from "@openai/realtime-api-beta";
 import { ItemType } from "@openai/realtime-api-beta/dist/lib/client.js";
 import { WavRecorder, WavStreamPlayer } from "../../../lib/wavtools/index.js";
-import { instructions } from "../../../utils/conversationConfig";
 import { WavRenderer } from "../../../utils/wavRenderer";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { v4 as uuidv4 } from "uuid";
 import { useTheme, Button } from "react-native-paper";
-import { useDemoContext } from "../../../contexts/demoContext";
-import {
-  OPENAI_API_KEY,
-  LOCAL_RELAY_SERVER_URL,
-  QUERY_MESSAGES_URL,
-  GENERAL_BOT_REALTIME_URL,
-} from "../../../constants/env";
 import {
   StyleSheet,
   Text,
@@ -27,37 +18,16 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native";
-
-async function saveChatHistory(msgRole: string, assistantMessage: string) {
-  try {
-    const response = await fetch(QUERY_MESSAGES_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-        body: JSON.stringify({
-          role: msgRole,
-          content: assistantMessage,
-        }),
-      }
-    );
-    const data = await response.json();
-    console.log("Chat history saved:", data);
-  } catch (error) {
-    console.error("Error saving chat history:", error);
-  }
-}
+import {
+  OPENAI_API_KEY,
+  LOCAL_RELAY_SERVER_URL,
+} from "../../../constants/env";
 
 interface RealtimeEvent {
   time: string;
   source: "client" | "server";
   count?: number;
   event: { [key: string]: any };
-}
-
-interface QueryResults {
-  retrieved_documents: string[];
-  chat_history: { role: string; content: string }[];
 }
 
 interface ChatCardProps {
@@ -78,21 +48,8 @@ interface IconCardProps {
   serverCanvasRef: RefObject<HTMLCanvasElement | null>;
 }
 
-interface DocumentCardProps {
-  queryResults: {
-    retrieved_documents?: string[];
-  } | null;
-}
-
-export default function Demo() {
-
+export default function JokeGenerator() {
   const theme = useTheme();
-  const { selectedProject } = useDemoContext();
-  const selectedProjectRef = useRef(selectedProject);
-  useEffect(() => {
-    selectedProjectRef.current = selectedProject;
-  }, [selectedProject]);
-  const [queryResults, setQueryResults] = useState<QueryResults | null>(null);
 
   const wavRecorderRef = useRef<WavRecorder>(
     new WavRecorder({ sampleRate: 24000 })
@@ -118,31 +75,8 @@ export default function Demo() {
   const startTimeRef = useRef<string>(new Date().toISOString());
   const [items, setItems] = useState<ItemType[]>([]);
   const [realtimeEvents, setRealtimeEvents] = useState<RealtimeEvent[]>([]);
-  const [expandedEvents, setExpandedEvents] = useState<{
-    [key: string]: boolean;
-  }>({});
   const [isConnected, setIsConnected] = useState(false);
   const [muted, setMuted] = useState(false);
-
-  const formatTime = useCallback((timestamp: string) => {
-    const startTime = startTimeRef.current;
-    const t0 = new Date(startTime).valueOf();
-    const t1 = new Date(timestamp).valueOf();
-    const delta = t1 - t0;
-    const hs = Math.floor(delta / 10) % 100;
-    const s = Math.floor(delta / 1000) % 60;
-    const m = Math.floor(delta / 60_000) % 60;
-    const pad = (n: number) => {
-      let s = n + "";
-      while (s.length < 2) {
-        s = "0" + s;
-      }
-      return s;
-    };
-    return `${pad(m)}:${pad(s)}.${pad(hs)}`;
-  }, []);
-
-  
 
   const connectConversation = useCallback(async () => {
     if (!LOCAL_RELAY_SERVER_URL && !OPENAI_API_KEY) {
@@ -164,6 +98,7 @@ export default function Demo() {
     await wavRecorder.begin();
     await wavStreamPlayer.connect();
     await client.connect();
+
     await client.updateSession({
       turn_detection: { type: "server_vad" },
     });
@@ -171,7 +106,7 @@ export default function Demo() {
     client.sendUserMessageContent([
       {
         type: `input_text`,
-        text: `Hello!`,
+        text: `Tell me a joke!`,
       },
     ]);
 
@@ -231,10 +166,6 @@ export default function Demo() {
       conversationEl.scrollTop = conversationEl.scrollHeight;
     }
   }, [items]);
-
-  useEffect(() => {
-    console.log("Query results updated:", queryResults);
-  }, [queryResults]);
 
   useEffect(() => {
     let isLoaded = true;
@@ -306,74 +237,9 @@ export default function Demo() {
   useEffect(() => {
     const wavStreamPlayer = wavStreamPlayerRef.current;
     const client = clientRef.current;
-    client.updateSession({ instructions: instructions });
+    client.updateSession({ instructions: "You are a funny assistant that tells jokes." });
     client.updateSession({ voice: "echo" });
     client.updateSession({ input_audio_transcription: { model: "whisper-1" } });
-    client.addTool(
-      {
-        name: "query_db",
-        description:
-          "Queries the knowledgebase stored in the vector DB to retrieve relevant and specific context.",
-        parameters: {
-          type: "object",
-          properties: {
-            query: {
-              type: "string",
-              description: "The query string to search the knowledgebase",
-            },
-            project: {
-              type: "string",
-              description: 'The project name (e.g., "BYD")',
-            },
-          },
-          required: ["query", "project"],
-        },
-      },
-      async ({ query }: { query: string; project: string }) => {
-        const project = selectedProjectRef.current;
-
-        try {
-          const response = await fetch(GENERAL_BOT_REALTIME_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-              body: JSON.stringify({ query, project }),
-            }
-          );
-
-          if (!response.ok) {
-            const text = await response.text();
-            throw new Error(`HTTP ${response.status}: ${text}`);
-          }
-
-          const data = await response.json();
-
-          let retrievedDocs: string[] = [];
-          if (data.results?.retrieved_context) {
-            retrievedDocs = [data.results.retrieved_context];
-          } else if (data.payload?.assistantResponse) {
-            retrievedDocs = [data.payload.assistantResponse];
-          } else {
-            retrievedDocs = ["No assistant response"];
-          }
-
-          const results: QueryResults = {
-            retrieved_documents: retrievedDocs,
-            chat_history: [],
-          };
-
-          setQueryResults(results);
-          return results;
-        } catch (error) {
-          setQueryResults({
-            retrieved_documents: ["Failed to query database."],
-            chat_history: [],
-          });
-          return { error: "Failed to query database." };
-        }
-      }
-    );
 
     client.on("realtime.event", (realtimeEvent: RealtimeEvent) => {
       setRealtimeEvents((realtimeEvents) => {
@@ -416,31 +282,6 @@ export default function Demo() {
         }
       }
 
-      if (item.status === "completed" && item.role === "assistant") {
-        const assistantMessage =
-          item.formatted?.transcript ||
-          item.formatted?.text ||
-          "No assistant text";
-
-        setTimeout(() => {
-          const latestItems = client.conversation.getItems();
-          const userItems = latestItems.filter((i: any) => i.role === "user");
-          const userItem = userItems[userItems.length - 1];
-          const userMessage =
-            userItem?.formatted?.transcript ||
-            userItem?.formatted?.text ||
-            "No user message";
-          const chatId = item.chat_id || uuidv4();
-
-          console.log("Saving chat history:", {
-            chatId,
-            userMessage,
-            assistantMessage,
-          });
-          saveChatHistory("assistant", assistantMessage);
-        }, 500);
-      }
-
       setItems(updatedItems);
     });
 
@@ -476,9 +317,6 @@ export default function Demo() {
             clientCanvasRef={clientCanvasRef}
             serverCanvasRef={serverCanvasRef}
           />
-        </View>
-        <View style={styles.bottomFlex7}>
-          <DocumentCard queryResults={queryResults} />
         </View>
       </View>
     </View>
@@ -689,62 +527,6 @@ export function IconCard({ clientCanvasRef, serverCanvasRef }: IconCardProps) {
           />
         </View>
       </View>
-    </View>
-  );
-}
-
-export function DocumentCard({ queryResults }: DocumentCardProps) {
-  const theme = useTheme();
-  const documents = queryResults?.retrieved_documents ?? [];
-  const hasDocuments = documents.length > 0;
-  const noDocsUsed =
-    hasDocuments &&
-    (documents[0] === "No assistant response" ||
-      documents[0] === "Failed to query database.");
-
-  return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: theme.colors.surface, padding: 10 },
-      ]}
-    >
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={
-          !hasDocuments || noDocsUsed
-            ? { flex: 1, justifyContent: "center" }
-            : undefined
-        }
-      >
-        {hasDocuments && !noDocsUsed ? (
-          documents.map((doc, idx) => (
-            <Text
-              key={idx}
-              style={{ marginBottom: 6, color: theme.colors.onSurface }}
-            >
-              {doc}
-            </Text>
-          ))
-        ) : (
-          <View style={styles.emptyChatContainer}>
-            <MaterialCommunityIcons
-              name={
-                noDocsUsed ? "file-remove-outline" : "file-document-outline"
-              }
-              size={48}
-              color={theme.colors.primary}
-            />
-            <Text
-              style={[styles.emptyChatText, { color: theme.colors.onSurface }]}
-            >
-              {noDocsUsed
-                ? "No documents were used for this response."
-                : "Retrieved documents will appear here."}
-            </Text>
-          </View>
-        )}
-      </ScrollView>
     </View>
   );
 }

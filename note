@@ -12,10 +12,6 @@ LaiveV1/
 │  ├─ _layout.tsx
 │  └─ index.tsx
 ├─ assets/
-│  ├─ adaptive-icon.png
-│  ├─ favicon.png
-│  ├─ icon.png
-│  └─ splash-icon.png
 ├─ components/
 │  ├─ a/
 │  │  └─ header.tsx
@@ -42,3 +38,56 @@ LaiveV1/
 ├─ package.json
 ├─ readme.md
 └─ tsconfig.json
+
+
+LaiveV1/
+├─ Demo/
+├─ JokeGenerator/
+├─ InterviewBot/
+│  ├─ Phase1_BasicInterview/
+│  │  ├─ UI screen to show chat bubbles & mic controls
+│  │  ├─ Starts conversation with “Hi, thanks for joining…”
+│  │  ├─ Sends 3 preset questions one by one using GPT
+│  │  ├─ Displays assistant voice + waveform + user answers
+│  │  ├─ Uses:
+│  │  │   ├─ WavRecorder
+│  │  │   ├─ WavStreamPlayer
+│  │  │   ├─ RealtimeClient
+│  │  │   ├─ OPENAI_API_KEY
+│  │
+│  ├─ Phase2_ScoringFeedback/
+│  │  ├─ Adds scoring logic in `conversation.updated` handler
+│  │  ├─ Parses assistantinternal evaluation from GPT (score + feedback)
+│  │  ├─ Renders score beside each user answer
+│  │  ├─ UI shows: “Score: 4/5 – Good communication”
+│  │
+│  ├─ Phase3_ConfigurableRoles/
+│  │  ├─ Adds config screen or modal (e.g., dropdowns or fields):
+│  │  │   ├─ Role (e.g., Customer Support, Sales)
+│  │  │   ├─ Level (e.g., Junior, Senior)
+│  │  │   ├─ Language (e.g., English, Manglish)
+│  │  ├─ Injects these into GPT instructions/persona
+│  │  ├─ Adjusts questions & scoring based on config
+│  │
+│  ├─ Phase4_ResultSummary/
+│  │  ├─ After final question, generate:
+│  │  │   ├─ Total score
+│  │  │   ├─ Key highlights (strengths, weaknesses)
+│  │  │   ├─ Final verdict (e.g., "Recommended for next round")
+│  │  ├─ Renders summary view at the end of chat
+│  │  ├─ Optionally adds “Save” or “Download” button
+│  │
+│  ├─ BonusFeatures/
+│     ├─ Chat history saving to your backend
+│     ├─ Export final summary to PDF/email
+│     ├─ Enable language switching (i18n)
+
+
+develop sidebar/d, interview page which consists of BasicInterview and ScoringFeedback. use the same tech as before as best as you can
+
+develop sidebar/d, interview page which consists of BasicInterview and ScoringFeedback. use the same tech as before as best as you can
+flesh out the new components with more functionality. BasicInterview, ScoringFeedback with tech of │  │  │   ├─ WavRecorder
+│  │  │   ├─ WavStreamPlayer
+│  │  │   ├─ RealtimeClient
+│  │  │   ├─ OPENAI_API_KEY
+

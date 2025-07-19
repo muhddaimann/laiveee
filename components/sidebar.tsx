@@ -15,6 +15,8 @@ import { useToggle } from "../contexts/themeContext";
 const navItems = [
   { icon: "home-outline", label: "Home", route: "/a" },
   { icon: "robot-happy", label: "Dashboard", route: "/b" },
+  { icon: "emoticon-happy-outline", label: "Joke Generator", route: "/c" },
+  { icon: "account-question-outline", label: "Interview", route: "/d" },
 ];
 
 export default function Sidebar() {
