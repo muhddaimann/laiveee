@@ -91,3 +91,27 @@ flesh out the new components with more functionality. BasicInterview, ScoringFee
 │  │  │   ├─ RealtimeClient
 │  │  │   ├─ OPENAI_API_KEY
 
+instead of clarity, relevance, confidence, interviewer should base on empathy, innovate, passion, trust and insight. open ended question, easy and for customer service position. each ScoreType need to have their own number and reasoning and lastly summary and average percentage for the session, you may need to utils/interviewConfig this time 
+
+since its too much rows, keep const styles = StyleSheet.create({ as compact formatting
+
+InterviewPage have a good functional, but now lets focus on UI/UX. InterviewPage should popup a modal ask for text input name that will be inject in         text: `Hello! My name is ${name}, and I am ready for my customer service interview.`, a progress bar to indicates how much response you recieved before move to next properties, a loading state of finishing invterview/ generating result also a better modal view of result includes the early text input name and back button to defaulted interviewPage. you may total redesign. 
+
+ScoringFeedback moda/'s progress bar didnt work as intended and the result should be displayed on another modal, not answered by the interviewer. the result modal come with button back to default. you might need give them function of NameModal and ResultModal
+
+Binding element 'visible' implicitly has an 'any' type.ts(7031)
+
+Binding element 'onSubmit' implicitly has an 'any' type.ts(7031)
+
+
+'scores' is declared but its value is never read.ts(6133)
+
+
+Binding element 'onBack' implicitly has an 'any' type.ts(7031)
+
+
+
+Interviewer should not be the one who inform about the result. just display on the result modal with text. Interviewer should not entertain any voice after end the interview and loading state need to be obvious in generating result
+
+no need for Property 'removeAllListeners' does not exist on type 'RealtimeClient'.ts(2339) removeAllListeners. just not end the session and lets the modal to show the result instead of interviewer speech about the result
+
