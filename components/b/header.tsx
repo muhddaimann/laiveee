@@ -13,7 +13,6 @@ export default function Header() {
     useDemoContext();
   const [visible, setVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-
   const openMenu = () => setVisible(true);
   const closeMenu = () => setVisible(false);
 

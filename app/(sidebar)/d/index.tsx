@@ -3,23 +3,31 @@ import React, {
   useRef,
   useCallback,
   useState,
-  RefObject,
 } from "react";
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
-  TouchableOpacity,
-  Modal,
   ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { RealtimeClient } from "@openai/realtime-api-beta";
 import { ItemType } from "@openai/realtime-api-beta/dist/lib/client.js";
 import { WavRecorder, WavStreamPlayer } from "../../../lib/wavtools/index.js";
 import { WavRenderer } from "../../../utils/wavRenderer";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useTheme, Button, ProgressBar, TextInput } from "react-native-paper";
+import {
+  useTheme,
+  Button,
+  TextInput,
+  Avatar,
+  Card,
+  Title,
+  Paragraph,
+  List,
+} from "react-native-paper";
 import { OPENAI_API_KEY, LOCAL_RELAY_SERVER_URL } from "../../../constants/env";
 import {
   InterviewProvider,
@@ -27,21 +35,6 @@ import {
 } from "../../../contexts/interviewContext";
 import { interviewConfig } from "../../../utils/interviewConfig";
 
-interface ChatCardProps {
-  items: any[];
-  deleteConversationItem: (id: string) => void;
-}
-interface ActionCardProps {
-  isConnected: boolean;
-  connectConversation: () => void;
-  disconnectConversation: () => void;
-  toggleMute: () => void;
-  muted: boolean;
-}
-interface IconCardProps {
-  clientCanvasRef: RefObject<HTMLCanvasElement | null>;
-  serverCanvasRef: RefObject<HTMLCanvasElement | null>;
-}
 interface ScoreType {
   empathy: { score: number; reasoning: string };
   innovation: { score: number; reasoning: string };
@@ -51,249 +44,113 @@ interface ScoreType {
   summary: string;
   average: number;
 }
-
-function NameModal({
-  visible,
-  onSubmit,
-}: {
-  visible: boolean;
-  onSubmit: (name: string) => void;
-}) {
-  const [name, setName] = useState("");
-  const theme = useTheme();
-
-  return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.backdrop}>
-        <View
-          style={[styles.card, { backgroundColor: theme.colors.background }]}
-        >
-          <Text style={[styles.title, { color: theme.colors.primary }]}>
-            Welcome to the Interview!
-          </Text>
-
-          <TextInput
-            mode="outlined"
-            label="Your Name"
-            value={name}
-            onChangeText={setName}
-            style={{ marginTop: 8 }}
-          />
-
-          <View style={styles.actions}>
-            <Button mode="contained" onPress={() => onSubmit(name)}>
-              Start Interview
-            </Button>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
-function ResultsModal({
-  visible,
-  name,
-  onBack,
-}: {
-  visible: boolean;
-  name: string;
-  onBack: () => void;
-}) {
-  const theme = useTheme();
-
-  return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.backdrop}>
-        <View
-          style={[styles.card, { backgroundColor: theme.colors.background }]}
-        >
-          <Text style={[styles.title, { color: theme.colors.primary }]}>
-            Interview Results for {name}
-          </Text>
-          <ScrollView style={{ maxHeight: 300, marginTop: 12 }}>
-            <ScoringFeedback />
-          </ScrollView>
-          <View style={styles.actions}>
-            <Button mode="contained" onPress={onBack}>
-              Back to Interview
-            </Button>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-}
+type PagePhase = "welcome" | "interview" | "analyzing" | "report";
 
 export default function InterviewPage() {
-  const theme = useTheme();
-  const [name, setName] = useState("");
-  const [nameModalVisible, setNameModalVisible] = useState(true);
-
-  const handleNameSubmit = (submittedName: string) => {
-    if (submittedName.trim()) {
-      setName(submittedName);
-      setNameModalVisible(false);
-    }
-  };
-
   return (
     <InterviewProvider>
-      <NameModal visible={nameModalVisible} onSubmit={handleNameSubmit} />
-      {!nameModalVisible && (
-        <View
-          style={[
-            styles.pageContainer,
-            { backgroundColor: theme.colors.background },
-          ]}
-        >
-          <View style={styles.leftColumn}>
-            <BasicInterview name={name} />
-          </View>
-          <View style={styles.rightColumn}>
-            <ScoringFeedback />
-          </View>
-        </View>
-      )}
+      <InterviewFlow />
     </InterviewProvider>
   );
 }
 
-function ScoringFeedback() {
+function InterviewFlow() {
+  const [phase, setPhase] = useState<PagePhase>("welcome");
+  const [name, setName] = useState("");
+  const { scores, setScores } = useInterviewContext();
+
+  const handleStartInterview = (submittedName: string) => {
+    if (submittedName.trim()) {
+      setName(submittedName);
+      setPhase("interview");
+    }
+  };
+
+  const handleEndInterview = useCallback(() => {
+    setPhase("analyzing");
+    setTimeout(() => {
+      setPhase("report");
+    }, 4000);
+  }, []);
+
+  const handleRestart = () => {
+    setName("");
+    setScores(null);
+    setPhase("welcome");
+  };
+
+  switch (phase) {
+    case "welcome":
+      return <WelcomeScreen onStart={handleStartInterview} />;
+    case "interview":
+      return <InterviewScreen onEndRequest={handleEndInterview} name={name} />;
+    case "analyzing":
+      return <AnalyzingScreen />;
+    case "report":
+      return <ReportScreen name={name} onRestart={handleRestart} />;
+    default:
+      return <WelcomeScreen onStart={handleStartInterview} />;
+  }
+}
+
+function WelcomeScreen({ onStart }: { onStart: (name: string) => void }) {
+  const [name, setName] = useState("");
   const theme = useTheme();
-  const { scores } = useInterviewContext();
-  const progress = scores
-    ? Object.values(scores).filter(
-        (s) => s && typeof s === "object" && s.hasOwnProperty("score")
-      ).length / 5
-    : 0;
 
   return (
-    <View
-      style={[
-        styles.scoringContainer,
-        { backgroundColor: theme.colors.surface },
-      ]}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.fullPage}
     >
-      <Text
+      <View
         style={[
-          styles.scoringTitle,
-          { color: theme.colors.onSurface, marginBottom: 12 },
+          styles.welcomeContainer,
+          { backgroundColor: theme.colors.background },
         ]}
       >
-        Scoring & Feedback
-      </Text>
-      <ProgressBar progress={progress} color={theme.colors.primary} />
-      {scores ? (
-        <ScrollView>
-          <View style={styles.scoringContent}>
-            <Text
-              style={[styles.scoringItem, { color: theme.colors.onSurface }]}
-            >
-              Empathy: {scores.empathy.score}/10
-            </Text>
-            <Text
-              style={[
-                styles.reasoningText,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              {scores.empathy.reasoning}
-            </Text>
-            <Text
-              style={[styles.scoringItem, { color: theme.colors.onSurface }]}
-            >
-              Innovation: {scores.innovation.score}/10
-            </Text>
-            <Text
-              style={[
-                styles.reasoningText,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              {scores.innovation.reasoning}
-            </Text>
-            <Text
-              style={[styles.scoringItem, { color: theme.colors.onSurface }]}
-            >
-              Passion: {scores.passion.score}/10
-            </Text>
-            <Text
-              style={[
-                styles.reasoningText,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              {scores.passion.reasoning}
-            </Text>
-            <Text
-              style={[styles.scoringItem, { color: theme.colors.onSurface }]}
-            >
-              Trust: {scores.trust.score}/10
-            </Text>
-            <Text
-              style={[
-                styles.reasoningText,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              {scores.trust.reasoning}
-            </Text>
-            <Text
-              style={[styles.scoringItem, { color: theme.colors.onSurface }]}
-            >
-              Insight: {scores.insight.score}/10
-            </Text>
-            <Text
-              style={[
-                styles.reasoningText,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              {scores.insight.reasoning}
-            </Text>
-            <Text
-              style={[
-                styles.summaryTitle,
-                { color: theme.colors.onSurface, marginTop: 12 },
-              ]}
-            >
-              Summary
-            </Text>
-            <Text
-              style={[
-                styles.summaryText,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              {scores.summary}
-            </Text>
-            <Text
-              style={[
-                styles.averageScore,
-                { color: theme.colors.primary, marginTop: 12 },
-              ]}
-            >
-              Average Score: {scores.average}%
-            </Text>
-          </View>
-        </ScrollView>
-      ) : (
-        <Text
-          style={[styles.noFeedback, { color: theme.colors.onSurfaceVariant }]}
+        <Avatar.Icon
+          icon="account-supervisor-circle"
+          size={80}
+          style={{ backgroundColor: theme.colors.primary, marginBottom: 24 }}
+          color="#fff"
+        />
+        <Title style={styles.welcomeTitle}>AI-Powered Interview</Title>
+        <Paragraph style={styles.welcomeSubtitle}>
+          Welcome to your automated customer service interview. Please enter
+          your name below to begin.
+        </Paragraph>
+        <TextInput
+          mode="outlined"
+          label="Your Name"
+          value={name}
+          onChangeText={setName}
+          style={styles.nameInput}
+          autoFocus
+        />
+        <Button
+          mode="contained"
+          icon="arrow-right"
+          onPress={() => onStart(name)}
+          disabled={!name.trim()}
+          style={styles.startButton}
+          contentStyle={styles.startButtonContent}
         >
-          No feedback yet.
-        </Text>
-      )}
-    </View>
+          Start Interview
+        </Button>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
-function BasicInterview({ name }: { name: string }) {
+function InterviewScreen({
+  onEndRequest,
+  name,
+}: {
+  onEndRequest: () => void;
+  name: string;
+}) {
   const theme = useTheme();
   const { scores, setScores } = useInterviewContext();
-  const [isLoading, setIsLoading] = useState(false);
-  const [resultsModalVisible, setResultsModalVisible] = useState(false);
 
   const wavRecorderRef = useRef<WavRecorder>(
     new WavRecorder({ sampleRate: 24000 })
@@ -305,37 +162,33 @@ function BasicInterview({ name }: { name: string }) {
     new RealtimeClient(
       LOCAL_RELAY_SERVER_URL
         ? { url: LOCAL_RELAY_SERVER_URL }
-        : {
-            apiKey: OPENAI_API_KEY,
-            dangerouslyAllowAPIKeyInBrowser: true,
-          }
+        : { apiKey: OPENAI_API_KEY, dangerouslyAllowAPIKeyInBrowser: true }
     )
   );
   const clientCanvasRef = useRef<HTMLCanvasElement>(null);
-  const serverCanvasRef = useRef<HTMLCanvasElement>(null);
   const [items, setItems] = useState<ItemType[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [muted, setMuted] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const connectConversation = useCallback(async () => {
     if (!LOCAL_RELAY_SERVER_URL && !OPENAI_API_KEY) {
-      const errorMessage =
-        "No API key or relay server URL provided. Please set EXPO_PUBLIC_OPENAI_API_KEY or EXPO_PUBLIC_LOCAL_RELAY_SERVER_URL in your .env file.";
-      console.error(errorMessage);
-      alert(errorMessage);
+      Alert.alert(
+        "Configuration Error",
+        "No API key or relay server URL provided."
+      );
       return;
     }
     const client = clientRef.current;
     const wavRecorder = wavRecorderRef.current;
     const wavStreamPlayer = wavStreamPlayerRef.current;
+
     setIsConnected(true);
     setItems(client.conversation.getItems());
     await wavRecorder.begin();
     await wavStreamPlayer.connect();
     await client.connect();
-    await client.updateSession({
-      turn_detection: { type: "server_vad" },
-    });
+    await client.updateSession({ turn_detection: { type: "server_vad" } });
     client.sendUserMessageContent([
       {
         type: `input_text`,
@@ -357,46 +210,49 @@ function BasicInterview({ name }: { name: string }) {
     setMuted(!muted);
   }, [muted]);
 
-  const disconnectConversation = useCallback(async () => {
-    const client = clientRef.current;
-    client.sendUserMessageContent([
-      {
-        type: "input_text",
-        text: "The interview is over. Please provide the scores.",
-      },
-    ]);
-  }, []);
-
-  const deleteConversationItem = useCallback(async (id: string) => {
-    const client = clientRef.current;
-    client.deleteItem(id);
-  }, []);
+  const requestDisconnect = () => {
+    Alert.alert(
+      "End Interview",
+      "Are you sure you want to end the session? This will proceed to the results.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "End Interview",
+          style: "destructive",
+          onPress: () => {
+            clientRef.current.sendUserMessageContent([
+              {
+                type: "input_text",
+                text: "The interview is over. Please provide the scores.",
+              },
+            ]);
+          },
+        },
+      ]
+    );
+  };
 
   useEffect(() => {
     if (scores) {
-      setIsLoading(true);
       const client = clientRef.current;
       client.disconnect();
       const wavRecorder = wavRecorderRef.current;
       wavRecorder.end();
       const wavStreamPlayer = wavStreamPlayerRef.current;
       wavStreamPlayer.interrupt();
-      setTimeout(() => {
-        setIsConnected(false);
-        setIsLoading(false);
-        setResultsModalVisible(true);
-      }, 3000);
+      onEndRequest();
     }
-  }, [scores]);
+  }, [scores, onEndRequest]);
+
+  useEffect(() => {
+    connectConversation();
+  }, [connectConversation]);
 
   useEffect(() => {
     let isLoaded = true;
     const wavRecorder = wavRecorderRef.current;
     const clientCanvas = clientCanvasRef.current;
     let clientCtx: CanvasRenderingContext2D | null = null;
-    const wavStreamPlayer = wavStreamPlayerRef.current;
-    const serverCanvas = serverCanvasRef.current;
-    let serverCtx: CanvasRenderingContext2D | null = null;
     const render = () => {
       if (isLoaded) {
         if (clientCanvas) {
@@ -421,28 +277,6 @@ function BasicInterview({ name }: { name: string }) {
             );
           }
         }
-        if (serverCanvas) {
-          if (!serverCanvas.width || !serverCanvas.height) {
-            serverCanvas.width = serverCanvas.offsetWidth;
-            serverCanvas.height = serverCanvas.offsetHeight;
-          }
-          serverCtx = serverCtx || serverCanvas.getContext("2d");
-          if (serverCtx) {
-            serverCtx.clearRect(0, 0, serverCanvas.width, serverCanvas.height);
-            const result = wavStreamPlayer.analyser
-              ? wavStreamPlayer.getFrequencies("voice")
-              : { values: new Float32Array([0]) };
-            WavRenderer.drawBars(
-              serverCanvas,
-              serverCtx,
-              result.values,
-              theme.colors.secondary,
-              10,
-              0,
-              8
-            );
-          }
-        }
         window.requestAnimationFrame(render);
       }
     };
@@ -450,16 +284,16 @@ function BasicInterview({ name }: { name: string }) {
     return () => {
       isLoaded = false;
     };
-  }, []);
+  }, [theme.colors.primary]);
 
   useEffect(() => {
     const wavStreamPlayer = wavStreamPlayerRef.current;
     const client = clientRef.current;
     client.updateSession({
       instructions: interviewConfig.instructions,
+      voice: "echo",
+      input_audio_transcription: { model: "whisper-1" },
     });
-    client.updateSession({ voice: "echo" });
-    client.updateSession({ input_audio_transcription: { model: "whisper-1" } });
     client.addTool(interviewConfig.tool, async (scores: ScoreType) => {
       setScores(scores);
       return { success: true };
@@ -469,359 +303,352 @@ function BasicInterview({ name }: { name: string }) {
     client.on("conversation.interrupted", async () => {
       const trackSampleOffset = await wavStreamPlayer.interrupt();
       if (trackSampleOffset?.trackId) {
-        const { trackId, offset } = trackSampleOffset;
-        await client.cancelResponse(trackId, offset);
+        await client.cancelResponse(
+          trackSampleOffset.trackId,
+          trackSampleOffset.offset
+        );
       }
     });
     client.on("conversation.updated", async ({ item, delta }: any) => {
-      const updatedItems = client.conversation.getItems();
       if (delta?.audio) {
         wavStreamPlayer.add16BitPCM(delta.audio, item.id);
       }
-      setItems(updatedItems);
+      setItems(client.conversation.getItems());
     });
     setItems(client.conversation.getItems());
     return () => {
       client.reset();
     };
-  }, []);
+  }, [setScores]);
 
-  return (
-    <View style={styles.interviewContainer}>
-      <Modal visible={isLoading} transparent>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#fff" />
-          <Text
-            style={[styles.loadingText, { color: theme.colors.onBackground }]}
-          >
-            Generating Results...
-          </Text>
-        </View>
-      </Modal>
-      <ResultsModal
-        visible={resultsModalVisible}
-        name={name}
-        onBack={() => {
-          setResultsModalVisible(false);
-          setItems([]);
-          setScores(null);
-        }}
-      />
-      <View style={styles.chatContainer}>
-        <ChatCard
-          items={items}
-          deleteConversationItem={deleteConversationItem}
-        />
-      </View>
-      <View style={styles.controlsContainer}>
-        <ActionCard
-          isConnected={isConnected}
-          connectConversation={connectConversation}
-          disconnectConversation={disconnectConversation}
-          toggleMute={toggleMute}
-          muted={muted}
-        />
-      </View>
-      <View style={styles.vizContainer}>
-        <IconCard
-          clientCanvasRef={clientCanvasRef}
-          serverCanvasRef={serverCanvasRef}
-        />
-      </View>
-    </View>
-  );
-}
-
-function ActionCard({
-  isConnected,
-  connectConversation,
-  disconnectConversation,
-  toggleMute,
-  muted,
-}: ActionCardProps) {
-  const theme = useTheme();
-  const micBgColor = muted
-    ? theme.colors.primaryContainer
-    : theme.colors.errorContainer;
-  const micTextColor = muted
-    ? theme.colors.onPrimaryContainer
-    : theme.colors.onErrorContainer;
-  return (
-    <View style={styles.actionCard}>
-      <View style={styles.row}>
-        {!isConnected ? (
-          <>
-            <Button
-              mode="contained"
-              icon="link-variant-plus"
-              textColor={theme.colors.onPrimary}
-              buttonColor={theme.colors.primary}
-              onPress={connectConversation}
-              style={styles.paperButton}
-              contentStyle={styles.buttonContent}
-            >
-              Start Interview
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button
-              mode="contained"
-              icon={muted ? "microphone-off" : "microphone"}
-              textColor={micTextColor}
-              buttonColor={micBgColor}
-              onPress={toggleMute}
-              style={styles.paperButton}
-              contentStyle={styles.buttonContent}
-            >
-              {muted ? "Unmute" : "Mute"}
-            </Button>
-            <Button
-              mode="contained"
-              icon="link-variant-remove"
-              textColor={theme.colors.onError}
-              buttonColor={theme.colors.error}
-              onPress={disconnectConversation}
-              style={styles.paperButton}
-              contentStyle={styles.buttonContent}
-            >
-              End Interview
-            </Button>
-          </>
-        )}
-      </View>
-    </View>
-  );
-}
-
-function ChatCard({ items, deleteConversationItem }: ChatCardProps) {
-  const theme = useTheme();
-  const scrollViewRef = useRef<ScrollView>(null);
   useEffect(() => {
     if (scrollViewRef.current) {
       scrollViewRef.current.scrollToEnd({ animated: true });
     }
   }, [items]);
+
   return (
     <View
-      style={[
-        styles.chatCard,
-        { backgroundColor: theme.colors.surface, padding: 10 },
-      ]}
+      style={[styles.fullPage, { backgroundColor: theme.colors.background }]}
     >
-      <ScrollView
-        ref={scrollViewRef}
-        style={{ flex: 1 }}
-        contentContainerStyle={
-          !items.length ? { flex: 1, justifyContent: "center" } : undefined
-        }
+      <View style={styles.chatArea}>
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {items.map((item) => (
+            <MessageBubble key={item.id} item={item} />
+          ))}
+        </ScrollView>
+      </View>
+      <View
+        style={[styles.controlBar, { backgroundColor: theme.colors.surface }]}
       >
-        {!items.length ? (
-          <View style={styles.emptyChatContainer}>
-            <MaterialCommunityIcons
-              name="pulse"
-              size={48}
-              color={theme.colors.primary}
-            />
-            <Text
-              style={[
-                styles.emptyChatText,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Tap Start Interview to begin
-            </Text>
-          </View>
-        ) : (
-          items.map((item) => (
-            <View
-              key={item.id}
-              style={[
-                styles.messageBubbleContainer,
-                item.role === "user"
-                  ? styles.userMessageContainer
-                  : styles.assistantMessageContainer,
-              ]}
-            >
-              <View
-                style={[
-                  styles.messageBubble,
-                  {
-                    backgroundColor:
-                      item.role === "user"
-                        ? theme.colors.primaryContainer
-                        : theme.colors.secondaryContainer,
-                  },
-                ]}
-              >
-                <View style={styles.messageHeader}>
-                  <Text
-                    style={{
-                      fontWeight: "600",
-                      color:
-                        item.role === "user"
-                          ? theme.colors.onPrimaryContainer
-                          : theme.colors.onSecondaryContainer,
-                    }}
-                  >
-                    {item.role === "user" ? "You" : "Interviewer"}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => deleteConversationItem(item.id)}
-                  >
-                    <MaterialCommunityIcons
-                      name="close"
-                      size={18}
-                      color={
-                        item.role === "user"
-                          ? theme.colors.onPrimaryContainer
-                          : theme.colors.onSecondaryContainer
-                      }
-                    />
-                  </TouchableOpacity>
-                </View>
-                <Text
-                  style={{
-                    color:
-                      item.role === "user"
-                        ? theme.colors.onPrimaryContainer
-                        : theme.colors.onSecondaryContainer,
-                  }}
-                >
-                  {item.formatted?.transcript ||
-                    item.formatted?.text ||
-                    "Thinking..."}
-                </Text>
-                {item.formatted?.file && (
-                  <audio src={item.formatted.file.url} controls />
-                )}
-              </View>
-            </View>
-          ))
-        )}
-      </ScrollView>
-    </View>
-  );
-}
-
-function IconCard({ clientCanvasRef, serverCanvasRef }: IconCardProps) {
-  return (
-    <View style={styles.iconCard}>
-      <View style={{ flex: 1, flexDirection: "row" }}>
-        <View style={{ flex: 1 }}>
+        <Button
+          mode="contained"
+          onPress={toggleMute}
+          style={styles.muteButton}
+          buttonColor={
+            muted ? theme.colors.errorContainer : theme.colors.primaryContainer
+          }
+          textColor={
+            muted
+              ? theme.colors.onErrorContainer
+              : theme.colors.onPrimaryContainer
+          }
+          icon={muted ? "microphone-off" : "microphone"}
+        >
+          {muted ? "Unmute" : "Mute"}
+        </Button>
+        <View style={styles.vizContainer}>
           <canvas
             ref={clientCanvasRef}
             style={{ width: "100%", height: "100%" }}
           />
         </View>
-        <View style={{ flex: 1 }}>
-          <canvas
-            ref={serverCanvasRef}
-            style={{ width: "100%", height: "100%" }}
-          />
-        </View>
+        <Button
+          mode="contained"
+          onPress={requestDisconnect}
+          style={styles.endButton}
+          buttonColor={theme.colors.error}
+          textColor={theme.colors.onError}
+          icon="stop-circle-outline"
+        >
+          End
+        </Button>
       </View>
     </View>
   );
 }
 
+function MessageBubble({ item }: { item: ItemType }) {
+  const theme = useTheme();
+  const isUser = item.role === "user";
+  return (
+    <View
+      style={[
+        styles.messageContainer,
+        isUser ? styles.userMessage : styles.aiMessage,
+      ]}
+    >
+      {!isUser && (
+        <Avatar.Icon
+          icon="robot-happy"
+          size={40}
+          style={{
+            marginRight: 8,
+            backgroundColor: theme.colors.secondaryContainer,
+          }}
+          color={theme.colors.onSecondaryContainer}
+        />
+      )}
+      <Card
+        style={[
+          styles.messageCard,
+          {
+            backgroundColor: isUser
+              ? theme.colors.primaryContainer
+              : theme.colors.secondaryContainer,
+          },
+        ]}
+      >
+        <Card.Content>
+          <Paragraph
+            style={{
+              color: isUser
+                ? theme.colors.onPrimaryContainer
+                : theme.colors.onSecondaryContainer,
+            }}
+          >
+            {item.formatted?.transcript || item.formatted?.text || "..."}
+          </Paragraph>
+        </Card.Content>
+      </Card>
+    </View>
+  );
+}
+
+function AnalyzingScreen() {
+  const theme = useTheme();
+  return (
+    <View
+      style={[
+        styles.fullPage,
+        styles.centered,
+        { backgroundColor: theme.colors.background },
+      ]}
+    >
+      <ActivityIndicator size="large" color={theme.colors.primary} />
+      <Title style={{ color: theme.colors.onBackground, marginTop: 20 }}>
+        Analyzing your results...
+      </Title>
+      <Paragraph style={{ color: theme.colors.onSurfaceVariant }}>
+        Please wait a moment.
+      </Paragraph>
+    </View>
+  );
+}
+
+function ReportScreen({
+  name,
+  onRestart,
+}: {
+  name: string;
+  onRestart: () => void;
+}) {
+  const theme = useTheme();
+  const { scores } = useInterviewContext();
+
+  if (!scores) {
+    return (
+      <View
+        style={[
+          styles.fullPage,
+          styles.centered,
+          { backgroundColor: theme.colors.background },
+        ]}
+      >
+        <Avatar.Icon
+          icon="alert-circle-outline"
+          size={60}
+          color={theme.colors.error}
+          style={{ backgroundColor: "transparent" }}
+        />
+        <Title style={{ color: theme.colors.onBackground }}>
+          No Results Found
+        </Title>
+        <Paragraph
+          style={{
+            color: theme.colors.onSurfaceVariant,
+            textAlign: "center",
+            marginHorizontal: 20,
+          }}
+        >
+          There was an issue generating your report.
+        </Paragraph>
+        <Button mode="contained" onPress={onRestart} style={{ marginTop: 20 }}>
+          Try Again
+        </Button>
+      </View>
+    );
+  }
+
+  const scoreItems = [
+    { name: "Empathy", data: scores.empathy },
+    { name: "Innovation", data: scores.innovation },
+    { name: "Passion", data: scores.passion },
+    { name: "Trust", data: scores.trust },
+    { name: "Insight", data: scores.insight },
+  ];
+
+  return (
+    <View
+      style={[styles.fullPage, { backgroundColor: theme.colors.background }]}
+    >
+      <ScrollView contentContainerStyle={styles.reportContainer}>
+        <Title style={styles.reportTitle}>Interview Report for {name}</Title>
+        <Card
+          style={[styles.reportCard, { backgroundColor: theme.colors.surface }]}
+        >
+          <Card.Content>
+            <Title>Overall Summary</Title>
+            <Paragraph style={{ color: theme.colors.onSurfaceVariant }}>
+              {scores.summary}
+            </Paragraph>
+            <View style={styles.averageScoreContainer}>
+              <Text
+                style={[
+                  styles.averageScoreText,
+                  { color: theme.colors.primary },
+                ]}
+              >
+                Average Score: {scores.average}%
+              </Text>
+            </View>
+          </Card.Content>
+        </Card>
+
+        <Title style={styles.reportSubtitle}>Detailed Breakdown</Title>
+
+        <List.Section
+          style={[
+            styles.reportCard,
+            { backgroundColor: theme.colors.surface, paddingHorizontal: 0 },
+          ]}
+        >
+          {scoreItems.map((item, index) => (
+            <List.Accordion
+              key={index}
+              title={`${item.name}: ${item.data.score}/10`}
+              left={(props) => <List.Icon {...props} icon="star-circle" />}
+              style={{
+                backgroundColor: theme.colors.surface,
+                borderBottomWidth: 1,
+                borderBottomColor: theme.colors.outlineVariant,
+              }}
+            >
+              <List.Item
+                title="Reasoning"
+                description={item.data.reasoning}
+                descriptionNumberOfLines={10}
+                style={{ paddingHorizontal: 24, paddingVertical: 8 }}
+              />
+            </List.Accordion>
+          ))}
+        </List.Section>
+
+        <Button
+          mode="contained"
+          onPress={onRestart}
+          style={styles.restartButton}
+          icon="reload"
+        >
+          Take Interview Again
+        </Button>
+      </ScrollView>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  pageContainer: { flex: 1, flexDirection: "row", padding: 16, gap: 16 },
-  backdrop: {
+  fullPage: { flex: 1, width: "100%" },
+  centered: { justifyContent: "center", alignItems: "center" },
+  welcomeContainer: {
     flex: 1,
-    backgroundColor: "#00000080",
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
   },
-  card: {
-    width: "100%",
-    maxWidth: 440,
-    borderRadius: 20,
-    padding: 20,
-    elevation: 6,
+  welcomeTitle: { fontSize: 28, fontWeight: "bold", textAlign: "center" },
+  welcomeSubtitle: {
+    fontSize: 16,
+    textAlign: "center",
+    marginVertical: 16,
+    maxWidth: 400,
+    color: "#6c757d",
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
+  nameInput: { width: "100%", maxWidth: 320, marginTop: 8 },
+  startButton: { marginTop: 24, width: "100%", maxWidth: 320 },
+  startButtonContent: { paddingVertical: 8, flexDirection: "row-reverse" },
+  chatArea: { flex: 1 },
+  scrollContent: { padding: 16, paddingBottom: 100 },
+  messageContainer: {
+    flexDirection: "row",
+    marginVertical: 8,
+    maxWidth: "85%",
+    alignItems: "flex-end",
+  },
+  userMessage: { alignSelf: "flex-end", flexDirection: "row-reverse" },
+  aiMessage: { alignSelf: "flex-start" },
+  messageCard: { borderRadius: 18 },
+  controlBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 90,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  muteButton: { width: 130 },
+  endButton: { width: 130 },
+  vizContainer: { flex: 1, height: 50, marginHorizontal: 16 },
+  reportContainer: { padding: 24, alignItems: "center" },
+  reportTitle: {
+    fontSize: 26,
+    fontWeight: "bold",
     marginBottom: 16,
     textAlign: "center",
   },
-  actions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
+  reportSubtitle: {
+    fontSize: 22,
+    fontWeight: "600",
     marginTop: 24,
+    marginBottom: 8,
+    alignSelf: "flex-start",
   },
-
-  leftColumn: { flex: 1 },
-  rightColumn: { flex: 1 },
-  scoringCard: { flex: 1 },
-  interviewContainer: { flex: 1, flexDirection: "column", gap: 16 },
-  chatContainer: { flex: 8 },
-  controlsContainer: { flex: 1 },
-  vizContainer: { flex: 2 },
-  actionCard: { flex: 1, borderRadius: 16, justifyContent: "center" },
-  chatCard: { flex: 1, borderRadius: 16, justifyContent: "center" },
-  iconCard: { flex: 1, borderRadius: 16, justifyContent: "center" },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-    paddingHorizontal: 100,
+  reportCard: {
+    width: "100%",
+    maxWidth: 700,
+    marginBottom: 16,
+    borderRadius: 12,
   },
-  paperButton: { flex: 1, borderRadius: 12 },
-  buttonContent: { flexDirection: "row-reverse", gap: 8 },
-  messageBubbleContainer: {
-    gap: 8,
-    minWidth: "50%",
-    marginBottom: 12,
-    maxWidth: "80%",
+  averageScoreContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderColor: "#e0e0e0",
   },
-  userMessageContainer: { alignSelf: "flex-end" },
-  assistantMessageContainer: { alignSelf: "flex-start" },
-  messageBubble: { padding: 10, gap: 8, borderRadius: 12 },
-  messageHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 4,
+  averageScoreText: { fontSize: 20, fontWeight: "bold", textAlign: "center" },
+  restartButton: {
+    marginTop: 24,
+    width: "100%",
+    maxWidth: 700,
+    paddingVertical: 8,
   },
-  emptyChatContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-    gap: 10,
-  },
-  emptyChatText: { textAlign: "center", fontSize: 16, lineHeight: 24 },
-  scoringContainer: { flex: 1, padding: 16, borderRadius: 16 },
-  scoringTitle: { fontSize: 20, fontWeight: "700" },
-  scoringContent: { gap: 8 },
-  scoringItem: { fontSize: 16, lineHeight: 24, fontWeight: "600" },
-  reasoningText: { fontSize: 14, lineHeight: 20, marginBottom: 8 },
-  summaryTitle: { fontSize: 18, fontWeight: "700" },
-  summaryText: { fontSize: 14, lineHeight: 20 },
-  averageScore: { fontSize: 16, fontWeight: "700" },
-  noFeedback: { fontSize: 16 },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  modalTitle: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
-  input: {
-    width: "80%",
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    marginBottom: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
-  },
-  loadingText: { fontSize: 18, marginTop: 10 },
 });
