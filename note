@@ -120,3 +120,9 @@ proceed with this plan as long as user enter name - user start session - AI star
 we should not uses Title and Paragraph from paper since it looks deprecated, use text from react-native instead. give it names to MessageBubble (Laive Interviewer) and {name} for the candidate. also report page phase need to be form like design instead of current lame looks, no need to tak a full width each phase. Basically your task here is to revise UI UX of the InterviewPage but keep the functionality.
 
 shouldnt it be 3/10 instead of 3%? revise properly how Overall Summary display result
+
+InterviewPage, InterviewContext, interviewConfig need to revise with new flow in order to asses customer service candidates better. InterviewPage still AI interviewer for customer service position but add more checking (specialize language)(English Malay) (English Mandarin) (English Korean) (English Japanese) but i dont think full immersion approach (malay/mandarin/korea/japan) is a good approach, interview will still need to start and end with english with consist of test of their specialize language (for example need to handle customer in that language etc). plan how do you gonna revise this
+
+proceed with implementing these changes as long as name and what candidate specialized language stated within text: `Hello! My name is ${name} and I am ready for my customer service interview specialized in ${language}`, natural conversation  and smooth closing from Laive Interviewer before analying and report phase page
+
+however createInterviewConfig not properly aligned with InterviewPage. Laive Interviewer should make candidate comfortable, asking how are you etc first before jumping into the interview. also theres more aspects to be evaluate empathy, innovation, passion, trust, insight etc. plan your way to revise UI UX and functionality of current InterviewPage and createInterviewConfig

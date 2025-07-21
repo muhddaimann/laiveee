@@ -13,6 +13,7 @@ import { RealtimeClient } from "@openai/realtime-api-beta";
 import { ItemType } from "@openai/realtime-api-beta/dist/lib/client.js";
 import { WavRecorder, WavStreamPlayer } from "../../../lib/wavtools/index.js";
 import { WavRenderer } from "../../../utils/wavRenderer";
+
 import {
   useTheme,
   Button,
@@ -20,13 +21,15 @@ import {
   Avatar,
   Card,
   List,
+  RadioButton,
+  ProgressBar,
 } from "react-native-paper";
 import { OPENAI_API_KEY, LOCAL_RELAY_SERVER_URL } from "../../../constants/env";
 import {
   InterviewProvider,
   useInterviewContext,
 } from "../../../contexts/interviewContext";
-import { interviewConfig } from "../../../utils/interviewConfig";
+import { createInterviewConfig } from "../../../utils/interviewConfig";
 
 interface ScoreType {
   empathy: { score: number; reasoning: string };
@@ -34,10 +37,18 @@ interface ScoreType {
   passion: { score: number; reasoning: string };
   trust: { score: number; reasoning: string };
   insight: { score: number; reasoning: string };
+  languageProficiency: { score: number; reasoning: string };
   summary: string;
   average: number;
 }
-type PagePhase = "welcome" | "interview" | "analyzing" | "report";
+
+type PagePhase =
+  | "welcome"
+  | "preparation"
+  | "interview"
+  | "analyzing"
+  | "report";
+type Language = "Malay" | "Mandarin" | "Korean" | "Japanese";
 
 export default function InterviewPage() {
   return (
@@ -50,13 +61,22 @@ export default function InterviewPage() {
 function InterviewFlow() {
   const [phase, setPhase] = useState<PagePhase>("welcome");
   const [name, setName] = useState("");
-  const { setScores } = useInterviewContext();
+  const { setScores, language, setLanguage } = useInterviewContext();
 
-  const handleStartInterview = (submittedName: string) => {
+  const handleStartInterview = (submittedName: string, lang: Language) => {
     if (submittedName.trim()) {
       setName(submittedName);
-      setPhase("interview");
+      setLanguage(lang);
+      setPhase("preparation");
     }
+  };
+
+  const handleProceedToInterview = () => {
+    setPhase("interview");
+  };
+
+  const handleGoBack = () => {
+    setPhase("welcome");
   };
 
   const handleEndInterview = useCallback(() => {
@@ -69,14 +89,28 @@ function InterviewFlow() {
   const handleRestart = () => {
     setName("");
     setScores(null);
+    setLanguage(null);
     setPhase("welcome");
   };
 
   switch (phase) {
     case "welcome":
       return <WelcomeScreen onStart={handleStartInterview} />;
+    case "preparation":
+      return (
+        <PreparationScreen
+          onProceed={handleProceedToInterview}
+          onBack={handleGoBack}
+        />
+      );
     case "interview":
-      return <InterviewScreen onEndRequest={handleEndInterview} name={name} />;
+      return (
+        <InterviewScreen
+          onEndRequest={handleEndInterview}
+          name={name}
+          language={language!}
+        />
+      );
     case "analyzing":
       return <AnalyzingScreen />;
     case "report":
@@ -86,8 +120,13 @@ function InterviewFlow() {
   }
 }
 
-function WelcomeScreen({ onStart }: { onStart: (name: string) => void }) {
+function WelcomeScreen({
+  onStart,
+}: {
+  onStart: (name: string, language: Language) => void;
+}) {
   const [name, setName] = useState("");
+  const [language, setLanguage] = useState<Language>("Malay");
   const theme = useTheme();
 
   return (
@@ -119,7 +158,7 @@ function WelcomeScreen({ onStart }: { onStart: (name: string) => void }) {
           ]}
         >
           Welcome to your automated customer service interview. Please enter
-          your name below to begin.
+          your name and select your specialized language to begin.
         </Text>
         <TextInput
           mode="outlined"
@@ -129,10 +168,30 @@ function WelcomeScreen({ onStart }: { onStart: (name: string) => void }) {
           style={styles.nameInput}
           autoFocus
         />
+        <View style={styles.languageSelector}>
+          <Text
+            style={[styles.languageLabel, { color: theme.colors.onSurface }]}
+          >
+            Select Language:
+          </Text>
+          <RadioButton.Group
+            onValueChange={(newValue) => setLanguage(newValue as Language)}
+            value={language}
+          >
+            <View style={styles.radioRow}>
+              <RadioButton.Item label="Malay" value="Malay" />
+              <RadioButton.Item label="Mandarin" value="Mandarin" />
+            </View>
+            <View style={styles.radioRow}>
+              <RadioButton.Item label="Korean" value="Korean" />
+              <RadioButton.Item label="Japanese" value="Japanese" />
+            </View>
+          </RadioButton.Group>
+        </View>
         <Button
           mode="contained"
           icon="arrow-right"
-          onPress={() => onStart(name)}
+          onPress={() => onStart(name, language)}
           disabled={!name.trim()}
           style={styles.startButton}
           contentStyle={styles.startButtonContent}
@@ -144,12 +203,127 @@ function WelcomeScreen({ onStart }: { onStart: (name: string) => void }) {
   );
 }
 
+function PreparationScreen({
+  onProceed,
+  onBack,
+}: {
+  onProceed: () => void;
+  onBack: () => void;
+}) {
+  const theme = useTheme();
+  const tips = [
+    {
+      icon: "map-marker-radius",
+      text: "Find a quiet and comfortable space where you won't be disturbed.",
+    },
+    {
+      icon: "microphone-outline",
+      text: "Ensure your microphone is working clearly. Speak at a natural pace.",
+    },
+    {
+      icon: "lightbulb-on-outline",
+      text: "Think about your past experiences and be ready to share specific examples.",
+    },
+    {
+      icon: "account-heart-outline",
+      text: "Be yourself and let your personality shine through. Good luck!",
+    },
+  ];
+
+  return (
+    <View
+      style={[
+        styles.fullPage,
+        styles.centered,
+        { backgroundColor: theme.colors.background },
+      ]}
+    >
+      <View style={styles.preparationContainer}>
+        <Avatar.Icon
+          icon="shield-check-outline"
+          size={80}
+          style={{
+            backgroundColor: theme.colors.secondaryContainer,
+            marginBottom: 24,
+          }}
+          color={theme.colors.onSecondaryContainer}
+        />
+        <Text
+          style={[
+            styles.preparationTitle,
+            { color: theme.colors.onBackground },
+          ]}
+        >
+          Get Ready for Your Interview
+        </Text>
+        <Text
+          style={[
+            styles.preparationSubtitle,
+            { color: theme.colors.onSurfaceVariant },
+          ]}
+        >
+          Here are a few tips to help you succeed:
+        </Text>
+        <Card
+          style={[
+            styles.tipsCard,
+            { backgroundColor: theme.colors.surfaceVariant },
+          ]}
+        >
+          <Card.Content>
+            {tips.map((tip, index) => (
+              <View key={index} style={styles.tipItem}>
+                <Avatar.Icon
+                  icon={tip.icon}
+                  size={32}
+                  style={{
+                    backgroundColor: "transparent",
+                    marginRight: 16,
+                  }}
+                  color={theme.colors.onSurfaceVariant}
+                />
+                <Text
+                  style={[
+                    styles.tipText,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  {tip.text}
+                </Text>
+              </View>
+            ))}
+          </Card.Content>
+        </Card>
+        <Button
+          mode="contained"
+          icon="arrow-right"
+          onPress={onProceed}
+          style={styles.proceedButton}
+          contentStyle={styles.proceedButtonContent}
+        >
+          I'm Ready
+        </Button>
+        <Button
+          mode="text"
+          onPress={onBack}
+          style={styles.backButton}
+          icon="arrow-left"
+        >
+          Go Back
+        </Button>
+      </View>
+    </View>
+  );
+}
+
 function InterviewScreen({
   onEndRequest,
   name,
+  language,
 }: {
   onEndRequest: () => void;
   name: string;
+  language: Language;
 }) {
   const theme = useTheme();
   const { scores, setScores } = useInterviewContext();
@@ -192,11 +366,11 @@ function InterviewScreen({
     client.sendUserMessageContent([
       {
         type: `input_text`,
-        text: `Hello! My name is ${name}, and I am ready for my customer service interview.`,
+        text: `Hello! My name is ${name}, and I am ready for my customer service interview specialized in ${language}.`,
       },
     ]);
     await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-  }, [name]);
+  }, [name, language]);
 
   const toggleMute = useCallback(async () => {
     const wavRecorder = wavRecorderRef.current;
@@ -223,7 +397,7 @@ function InterviewScreen({
             clientRef.current.sendUserMessageContent([
               {
                 type: "input_text",
-                text: "The interview is over. Please provide the scores.",
+                text: "That is all for today, thank you for your time. Please provide the scores now.",
               },
             ]);
           },
@@ -289,12 +463,13 @@ function InterviewScreen({
   useEffect(() => {
     const wavStreamPlayer = wavStreamPlayerRef.current;
     const client = clientRef.current;
+    const config = createInterviewConfig(language);
     client.updateSession({
-      instructions: interviewConfig.instructions,
+      instructions: config.instructions,
       voice: "echo",
       input_audio_transcription: { model: "whisper-1" },
     });
-    client.addTool(interviewConfig.tool, async (scores: ScoreType) => {
+    client.addTool(config.tool, async (scores: ScoreType) => {
       setScores(scores);
       return { success: true };
     });
@@ -319,7 +494,7 @@ function InterviewScreen({
     return () => {
       client.reset();
     };
-  }, [setScores]);
+  }, [setScores, language]);
 
   useEffect(() => {
     if (scrollViewRef.current) {
@@ -478,7 +653,7 @@ function ReportScreen({
   onRestart: () => void;
 }) {
   const theme = useTheme();
-  const { scores } = useInterviewContext();
+  const { scores, language } = useInterviewContext();
 
   if (!scores) {
     return (
@@ -526,7 +701,20 @@ function ReportScreen({
     { name: "Passion", data: scores.passion },
     { name: "Trust", data: scores.trust },
     { name: "Insight", data: scores.insight },
+    {
+      name: `${language} Proficiency`,
+      data: scores.languageProficiency,
+    },
   ];
+
+  const chartData = {
+    labels: scoreItems.map((item) => item.name.split(" ")[0]),
+    datasets: [
+      {
+        data: scoreItems.map((item) => item.data.score / 10),
+      },
+    ],
+  };
 
   return (
     <View
@@ -559,7 +747,7 @@ function ReportScreen({
                     { color: theme.colors.onSurface },
                   ]}
                 >
-                  Overall Summary
+                  Overall Performance
                 </Text>
                 <Text
                   style={[
@@ -570,6 +758,7 @@ function ReportScreen({
                   {scores.average.toFixed(1)}/10
                 </Text>
               </View>
+
               <Text
                 style={[
                   styles.summaryParagraph,
@@ -600,8 +789,11 @@ function ReportScreen({
               {scoreItems.map((item, index) => (
                 <List.Accordion
                   key={index}
-                  title={`${item.name}: ${item.data.score}/10`}
-                  titleStyle={{ color: theme.colors.onSurface }}
+                  title={`${item.name}`}
+                  titleStyle={{
+                    color: theme.colors.onSurface,
+                    fontWeight: "bold",
+                  }}
                   left={(props) => (
                     <List.Icon
                       {...props}
@@ -609,23 +801,37 @@ function ReportScreen({
                       color={theme.colors.primary}
                     />
                   )}
+                  right={(props) => (
+                    <Text
+                      style={{
+                        color: theme.colors.primary,
+                        alignSelf: "center",
+                      }}
+                    >
+                      {item.data.score}/10
+                    </Text>
+                  )}
                   style={{
                     backgroundColor: theme.colors.surface,
                     borderBottomWidth: index === scoreItems.length - 1 ? 0 : 1,
                     borderBottomColor: theme.colors.outlineVariant,
                   }}
                 >
-                  <List.Item
-                    title="Reasoning"
-                    titleStyle={{
-                      fontWeight: "bold",
-                      color: theme.colors.onSurface,
-                    }}
-                    description={item.data.reasoning}
-                    descriptionNumberOfLines={10}
-                    descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
-                    style={{ paddingHorizontal: 24, paddingVertical: 8 }}
-                  />
+                  <View style={{ padding: 16 }}>
+                    <ProgressBar
+                      progress={item.data.score / 10}
+                      color={theme.colors.primary}
+                      style={{ marginBottom: 12, height: 8, borderRadius: 4 }}
+                    />
+                    <Text
+                      style={{
+                        color: theme.colors.onSurfaceVariant,
+                        lineHeight: 20,
+                      }}
+                    >
+                      {item.data.reasoning}
+                    </Text>
+                  </View>
                 </List.Accordion>
               ))}
             </List.Section>
@@ -662,8 +868,51 @@ const styles = StyleSheet.create({
     maxWidth: 400,
   },
   nameInput: { width: "100%", maxWidth: 320, marginTop: 8 },
+  languageSelector: {
+    marginTop: 20,
+    width: "100%",
+    maxWidth: 320,
+  },
+  languageLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  radioRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+  },
   startButton: { marginTop: 24, width: "100%", maxWidth: 320 },
   startButtonContent: { paddingVertical: 8, flexDirection: "row-reverse" },
+  preparationContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+    width: "100%",
+    maxWidth: 500,
+  },
+  preparationTitle: {
+    fontSize: 26,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  preparationSubtitle: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 24,
+  },
+  tipsCard: { width: "100%", borderRadius: 12, marginBottom: 24 },
+  tipItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 12,
+  },
+  tipText: { flex: 1, fontSize: 14, lineHeight: 20 },
+  proceedButton: { width: "100%", marginTop: 8 },
+  proceedButtonContent: { paddingVertical: 8, flexDirection: "row-reverse" },
+  backButton: { marginTop: 12 },
   chatArea: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 100 },
   messageContainer: {
@@ -756,6 +1005,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+
   averageScoreText: {
     fontSize: 22,
     fontWeight: "bold",
