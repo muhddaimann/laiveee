@@ -116,3 +116,7 @@ Interviewer should not be the one who inform about the result. just display on t
 no need for Property 'removeAllListeners' does not exist on type 'RealtimeClient'.ts(2339) removeAllListeners. just not end the session and lets the modal to show the result instead of interviewer speech about the result
 
 proceed with this plan as long as user enter name - user start session - AI start test the candidate in the same time keep the value - alert user if try to disconnect then back to default - proper interview ending before processing result phase - displaying the result as well as entered name with a back to default. you may total redesign as you planned
+
+we should not uses Title and Paragraph from paper since it looks deprecated, use text from react-native instead. give it names to MessageBubble (Laive Interviewer) and {name} for the candidate. also report page phase need to be form like design instead of current lame looks, no need to tak a full width each phase. Basically your task here is to revise UI UX of the InterviewPage but keep the functionality.
+
+shouldnt it be 3/10 instead of 3%? revise properly how Overall Summary display result

@@ -1,9 +1,4 @@
-import React, {
-  useEffect,
-  useRef,
-  useCallback,
-  useState,
-} from "react";
+import React, { useEffect, useRef, useCallback, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -24,8 +19,6 @@ import {
   TextInput,
   Avatar,
   Card,
-  Title,
-  Paragraph,
   List,
 } from "react-native-paper";
 import { OPENAI_API_KEY, LOCAL_RELAY_SERVER_URL } from "../../../constants/env";
@@ -57,7 +50,7 @@ export default function InterviewPage() {
 function InterviewFlow() {
   const [phase, setPhase] = useState<PagePhase>("welcome");
   const [name, setName] = useState("");
-  const { scores, setScores } = useInterviewContext();
+  const { setScores } = useInterviewContext();
 
   const handleStartInterview = (submittedName: string) => {
     if (submittedName.trim()) {
@@ -112,13 +105,22 @@ function WelcomeScreen({ onStart }: { onStart: (name: string) => void }) {
           icon="account-supervisor-circle"
           size={80}
           style={{ backgroundColor: theme.colors.primary, marginBottom: 24 }}
-          color="#fff"
+          color={theme.colors.onPrimary}
         />
-        <Title style={styles.welcomeTitle}>AI-Powered Interview</Title>
-        <Paragraph style={styles.welcomeSubtitle}>
+        <Text
+          style={[styles.welcomeTitle, { color: theme.colors.onBackground }]}
+        >
+          AI-Powered Interview
+        </Text>
+        <Text
+          style={[
+            styles.welcomeSubtitle,
+            { color: theme.colors.onSurfaceVariant },
+          ]}
+        >
           Welcome to your automated customer service interview. Please enter
           your name below to begin.
-        </Paragraph>
+        </Text>
         <TextInput
           mode="outlined"
           label="Your Name"
@@ -167,7 +169,6 @@ function InterviewScreen({
   );
   const clientCanvasRef = useRef<HTMLCanvasElement>(null);
   const [items, setItems] = useState<ItemType[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
   const [muted, setMuted] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -183,7 +184,6 @@ function InterviewScreen({
     const wavRecorder = wavRecorderRef.current;
     const wavStreamPlayer = wavStreamPlayerRef.current;
 
-    setIsConnected(true);
     setItems(client.conversation.getItems());
     await wavRecorder.begin();
     await wavStreamPlayer.connect();
@@ -337,7 +337,7 @@ function InterviewScreen({
           contentContainerStyle={styles.scrollContent}
         >
           {items.map((item) => (
-            <MessageBubble key={item.id} item={item} />
+            <MessageBubble key={item.id} item={item} userName={name} />
           ))}
         </ScrollView>
       </View>
@@ -381,9 +381,17 @@ function InterviewScreen({
   );
 }
 
-function MessageBubble({ item }: { item: ItemType }) {
+function MessageBubble({
+  item,
+  userName,
+}: {
+  item: ItemType;
+  userName: string;
+}) {
   const theme = useTheme();
   const isUser = item.role === "user";
+  const senderName = isUser ? userName : "Laive Interviewer";
+
   return (
     <View
       style={[
@@ -402,28 +410,39 @@ function MessageBubble({ item }: { item: ItemType }) {
           color={theme.colors.onSecondaryContainer}
         />
       )}
-      <Card
-        style={[
-          styles.messageCard,
-          {
-            backgroundColor: isUser
-              ? theme.colors.primaryContainer
-              : theme.colors.secondaryContainer,
-          },
-        ]}
-      >
-        <Card.Content>
-          <Paragraph
-            style={{
-              color: isUser
-                ? theme.colors.onPrimaryContainer
-                : theme.colors.onSecondaryContainer,
-            }}
-          >
-            {item.formatted?.transcript || item.formatted?.text || "..."}
-          </Paragraph>
-        </Card.Content>
-      </Card>
+      <View style={{ flex: 1 }}>
+        <Text
+          style={[
+            styles.senderName,
+            isUser ? styles.userSender : styles.aiSender,
+            { color: theme.colors.onSurfaceVariant },
+          ]}
+        >
+          {senderName}
+        </Text>
+        <Card
+          style={[
+            styles.messageCard,
+            {
+              backgroundColor: isUser
+                ? theme.colors.primaryContainer
+                : theme.colors.secondaryContainer,
+            },
+          ]}
+        >
+          <Card.Content>
+            <Text
+              style={{
+                color: isUser
+                  ? theme.colors.onPrimaryContainer
+                  : theme.colors.onSecondaryContainer,
+              }}
+            >
+              {item.formatted?.transcript || item.formatted?.text || "..."}
+            </Text>
+          </Card.Content>
+        </Card>
+      </View>
     </View>
   );
 }
@@ -439,12 +458,14 @@ function AnalyzingScreen() {
       ]}
     >
       <ActivityIndicator size="large" color={theme.colors.primary} />
-      <Title style={{ color: theme.colors.onBackground, marginTop: 20 }}>
+      <Text
+        style={[styles.analyzingTitle, { color: theme.colors.onBackground }]}
+      >
         Analyzing your results...
-      </Title>
-      <Paragraph style={{ color: theme.colors.onSurfaceVariant }}>
+      </Text>
+      <Text style={{ color: theme.colors.onSurfaceVariant }}>
         Please wait a moment.
-      </Paragraph>
+      </Text>
     </View>
   );
 }
@@ -474,18 +495,24 @@ function ReportScreen({
           color={theme.colors.error}
           style={{ backgroundColor: "transparent" }}
         />
-        <Title style={{ color: theme.colors.onBackground }}>
+        <Text
+          style={[
+            styles.reportTitle,
+            { color: theme.colors.onBackground, fontSize: 22, marginTop: 16 },
+          ]}
+        >
           No Results Found
-        </Title>
-        <Paragraph
+        </Text>
+        <Text
           style={{
             color: theme.colors.onSurfaceVariant,
             textAlign: "center",
             marginHorizontal: 20,
+            marginTop: 8,
           }}
         >
           There was an issue generating your report.
-        </Paragraph>
+        </Text>
         <Button mode="contained" onPress={onRestart} style={{ marginTop: 20 }}>
           Try Again
         </Button>
@@ -505,66 +532,114 @@ function ReportScreen({
     <View
       style={[styles.fullPage, { backgroundColor: theme.colors.background }]}
     >
-      <ScrollView contentContainerStyle={styles.reportContainer}>
-        <Title style={styles.reportTitle}>Interview Report for {name}</Title>
-        <Card
-          style={[styles.reportCard, { backgroundColor: theme.colors.surface }]}
-        >
-          <Card.Content>
-            <Title>Overall Summary</Title>
-            <Paragraph style={{ color: theme.colors.onSurfaceVariant }}>
-              {scores.summary}
-            </Paragraph>
-            <View style={styles.averageScoreContainer}>
+      <ScrollView contentContainerStyle={styles.reportScrollContainer}>
+        <View style={styles.reportContent}>
+          <Text
+            style={[styles.reportTitle, { color: theme.colors.onBackground }]}
+          >
+            Interview Report
+          </Text>
+          <Text
+            style={[styles.reportFor, { color: theme.colors.onSurfaceVariant }]}
+          >
+            For {name}
+          </Text>
+
+          <Card
+            style={[
+              styles.reportCard,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <View style={styles.summaryHeader}>
+                <Text
+                  style={[
+                    styles.summaryTitle,
+                    { color: theme.colors.onSurface },
+                  ]}
+                >
+                  Overall Summary
+                </Text>
+                <Text
+                  style={[
+                    styles.averageScoreText,
+                    { color: theme.colors.primary },
+                  ]}
+                >
+                  {scores.average.toFixed(1)}/10
+                </Text>
+              </View>
               <Text
                 style={[
-                  styles.averageScoreText,
-                  { color: theme.colors.primary },
+                  styles.summaryParagraph,
+                  { color: theme.colors.onSurfaceVariant },
                 ]}
               >
-                Average Score: {scores.average}%
+                {scores.summary}
               </Text>
-            </View>
-          </Card.Content>
-        </Card>
+            </Card.Content>
+          </Card>
 
-        <Title style={styles.reportSubtitle}>Detailed Breakdown</Title>
+          <Text
+            style={[
+              styles.reportSubtitle,
+              { color: theme.colors.onBackground },
+            ]}
+          >
+            Detailed Breakdown
+          </Text>
 
-        <List.Section
-          style={[
-            styles.reportCard,
-            { backgroundColor: theme.colors.surface, paddingHorizontal: 0 },
-          ]}
-        >
-          {scoreItems.map((item, index) => (
-            <List.Accordion
-              key={index}
-              title={`${item.name}: ${item.data.score}/10`}
-              left={(props) => <List.Icon {...props} icon="star-circle" />}
-              style={{
-                backgroundColor: theme.colors.surface,
-                borderBottomWidth: 1,
-                borderBottomColor: theme.colors.outlineVariant,
-              }}
-            >
-              <List.Item
-                title="Reasoning"
-                description={item.data.reasoning}
-                descriptionNumberOfLines={10}
-                style={{ paddingHorizontal: 24, paddingVertical: 8 }}
-              />
-            </List.Accordion>
-          ))}
-        </List.Section>
+          <Card
+            style={[
+              styles.reportCard,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <List.Section style={{ paddingHorizontal: 0, marginVertical: 0 }}>
+              {scoreItems.map((item, index) => (
+                <List.Accordion
+                  key={index}
+                  title={`${item.name}: ${item.data.score}/10`}
+                  titleStyle={{ color: theme.colors.onSurface }}
+                  left={(props) => (
+                    <List.Icon
+                      {...props}
+                      icon="star-circle"
+                      color={theme.colors.primary}
+                    />
+                  )}
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    borderBottomWidth: index === scoreItems.length - 1 ? 0 : 1,
+                    borderBottomColor: theme.colors.outlineVariant,
+                  }}
+                >
+                  <List.Item
+                    title="Reasoning"
+                    titleStyle={{
+                      fontWeight: "bold",
+                      color: theme.colors.onSurface,
+                    }}
+                    description={item.data.reasoning}
+                    descriptionNumberOfLines={10}
+                    descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
+                    style={{ paddingHorizontal: 24, paddingVertical: 8 }}
+                  />
+                </List.Accordion>
+              ))}
+            </List.Section>
+          </Card>
 
-        <Button
-          mode="contained"
-          onPress={onRestart}
-          style={styles.restartButton}
-          icon="reload"
-        >
-          Take Interview Again
-        </Button>
+          <Button
+            mode="contained"
+            onPress={onRestart}
+            style={styles.restartButton}
+            icon="reload"
+          >
+            Take Interview Again
+          </Button>
+        </View>
       </ScrollView>
     </View>
   );
@@ -585,7 +660,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginVertical: 16,
     maxWidth: 400,
-    color: "#6c757d",
   },
   nameInput: { width: "100%", maxWidth: 320, marginTop: 8 },
   startButton: { marginTop: 24, width: "100%", maxWidth: 320 },
@@ -596,11 +670,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginVertical: 8,
     maxWidth: "85%",
-    alignItems: "flex-end",
+    alignItems: "flex-start",
   },
   userMessage: { alignSelf: "flex-end", flexDirection: "row-reverse" },
   aiMessage: { alignSelf: "flex-start" },
-  messageCard: { borderRadius: 18 },
+  messageCard: { borderRadius: 18, flexShrink: 1 },
+  senderName: {
+    fontSize: 12,
+    marginBottom: 4,
+    fontWeight: "bold",
+  },
+  userSender: {
+    textAlign: "right",
+    marginRight: 12,
+  },
+  aiSender: {
+    marginLeft: 12,
+  },
   controlBar: {
     position: "absolute",
     bottom: 0,
@@ -618,37 +704,66 @@ const styles = StyleSheet.create({
   muteButton: { width: 130 },
   endButton: { width: 130 },
   vizContainer: { flex: 1, height: 50, marginHorizontal: 16 },
-  reportContainer: { padding: 24, alignItems: "center" },
+  analyzingTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    marginTop: 20,
+  },
+  reportScrollContainer: {
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    alignItems: "center",
+  },
+  reportContent: {
+    width: "100%",
+    maxWidth: 700,
+    alignItems: "center",
+  },
   reportTitle: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "bold",
-    marginBottom: 16,
     textAlign: "center",
+  },
+  reportFor: {
+    fontSize: 18,
+    textAlign: "center",
+    marginBottom: 24,
   },
   reportSubtitle: {
     fontSize: 22,
     fontWeight: "600",
     marginTop: 24,
-    marginBottom: 8,
+    marginBottom: 12,
     alignSelf: "flex-start",
+    width: "100%",
   },
   reportCard: {
     width: "100%",
-    maxWidth: 700,
     marginBottom: 16,
     borderRadius: 12,
   },
-  averageScoreContainer: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderColor: "#e0e0e0",
+  summaryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
   },
-  averageScoreText: { fontSize: 20, fontWeight: "bold", textAlign: "center" },
+  summaryTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  summaryParagraph: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  averageScoreText: {
+    fontSize: 22,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
   restartButton: {
-    marginTop: 24,
+    marginTop: 16,
     width: "100%",
-    maxWidth: 700,
     paddingVertical: 8,
   },
 });
