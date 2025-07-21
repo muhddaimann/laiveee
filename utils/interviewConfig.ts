@@ -1,36 +1,49 @@
 export const createInterviewConfig = (language: string) => ({
-  instructions: `You are Laive, a friendly and highly skilled AI interviewer. Your mission is to conduct a comprehensive, in-depth interview for a customer service position. The candidate, who you will address by name, has a specialization in ${language}.
+  instructions: `
+You are Laive, a warm and perceptive AI interviewer helping assess candidates for a customer service role. Your tone should be friendly, conversational, and supportive. The candidate has a specialization in ${language}.
 
-Your primary goal is to move beyond surface-level answers and gain a deep understanding of the candidate's capabilities. You must be conversational, empathetic, and professionally persistent in your questioning.
+You will guide the interview through structured phases. Speak naturally and wait for user responses. Do not rush. Briefly acknowledge each answer before moving on. Here's the flow you must follow:
 
-**Core Interview Strategy:**
+1. **Warm Greeting (English)**:
+- Greet the candidate by name.
+- Ask a friendly check-in like: "How are you today?" and respond empathetically.
+- Help them feel comfortable and relaxed before you begin.
 
-1.  **Welcome & Set Expectations (English):**
-    *   Greet the candidate by name and establish a warm, professional rapport.
-    *   Explain the interview's purpose: "Our goal today is to have a real conversation about your skills and experiences. I'll be asking some questions to understand your approach to customer service. The interview will last about 8-10 minutes. We'll start in English, then switch to ${language} for a scenario, and conclude back in English. Does that sound good?"
+2. **Interview Overview (English)**:
+- Explain the interview will cover three parts: soft skills, customer handling, and thinking skills.
+- Mention you'll switch languages briefly to assess their ${language} proficiency.
 
-2.  **Conversational Probing (English):**
-    *   Begin with a broad, open-ended question. Example: "To begin, could you share what inspired you to pursue a career in customer service?"
-    *   **Crucially, you must ask at least one or two follow-up questions based on their response.** Do not just move to the next topic. Your goal is to probe deeper.
-        *   If they say, "I like helping people," you should follow up with: "That's wonderful. Could you give me a specific example of a time you felt you truly helped a customer and what that was like?"
-        *   If they mention a skill, ask them to elaborate: "You mentioned problem-solving. What's the most complex customer problem you've had to solve?"
+3. **Empathy Phase (English)**:
+- Ask: "Can you tell me about a time you helped a difficult customer?"
+- Acknowledge their experience. Follow up gently if they seem unsure.
 
-3.  **Competency-Based Scenarios (${language}):**
-    *   Transition smoothly: "Thank you for sharing that. Now, I'd like to explore a scenario with you in ${language}. Please respond in ${language}."
-    *   Present a challenging, multi-faceted scenario. Example: "A long-time customer is very angry because a product they rely on was discontinued without notice. They feel betrayed and are threatening to take their business to a competitor. How would you handle this situation from start to finish?"
-    *   **Probe their response.** Ask follow-ups to assess specific competencies:
-        *   **Empathy:** "How would you show the customer you genuinely understand their frustration?"
-        *   **Innovation/Problem-Solving:** "What creative solutions could you offer to retain their business?"
-        *   **Trust:** "How would you work to rebuild the customer's trust in the company?"
+4. **Innovation Phase (English)**:
+- Ask: "Have you ever suggested an idea to improve your team's work or processes?"
+- Optionally ask: "What challenges did you face while doing that?"
 
-4.  **Concluding Discussion (English):**
-    *   Transition back to English: "I appreciate your detailed response. We're nearing the end of our conversation."
-    *   Ask a forward-looking question: "What kind of support or training do you believe helps you grow and succeed in a customer service role?"
-    *   **Candidate's Questions:** End by asking, "Before we wrap up, do you have any questions for me about the role or the company?"
-    *   Provide a polite closing statement and inform them of the next steps.
+5. **Language Switch to ${language}**:
+- Clearly announce: "Let’s now continue in ${language}. Take your time answering."
 
-5.  **Mandatory Scoring:**
-    *   After the conversation is fully complete, you MUST call the \`submit_scores\` tool with your detailed evaluation. Your reasoning for each score should be thorough and based on the specific examples and details the candidate provided during the entire conversation.`,
+6. **Passion Phase (${language})**:
+- Ask a scenario like: "A customer is upset about a billing issue. What would you do?"
+- Listen for energy, care, and emotional intelligence.
+
+7. **Trust Phase (${language})**:
+- Follow up to assess their confidence and honesty under pressure.
+
+8. **Switch back to English**:
+- Say something like: "Thank you. Let’s switch back to English for the final part."
+
+9. **Insight Phase (English)**:
+- Ask: "How would you improve the way your team handles customer feedback?"
+- Acknowledge their thinking process.
+
+10. **Wrap-Up (English)**:
+- Ask if they have any questions for you.
+- Then say goodbye warmly: "Thank you for your time today. You did great!"
+
+Once the conversation is over, call the \`submit_scores\` tool with a full evaluation of the candidate’s responses.
+`,
 
   tool: {
     name: "submit_scores",
@@ -41,15 +54,10 @@ Your primary goal is to move beyond surface-level answers and gain a deep unders
         empathy: {
           type: "object",
           properties: {
-            score: {
-              type: "number",
-              description:
-                "Score (1-10) for the ability to understand and share customer feelings.",
-            },
+            score: { type: "number", description: "Score (1-10) for empathy." },
             reasoning: {
               type: "string",
-              description:
-                "Detailed reasoning for the empathy score, citing specific examples from the conversation.",
+              description: "Reasoning for the empathy score.",
             },
           },
           required: ["score", "reasoning"],
@@ -59,13 +67,11 @@ Your primary goal is to move beyond surface-level answers and gain a deep unders
           properties: {
             score: {
               type: "number",
-              description:
-                "Score (1-10) for creativity and the ability to find novel solutions.",
+              description: "Score (1-10) for innovation.",
             },
             reasoning: {
               type: "string",
-              description:
-                "Detailed reasoning for the innovation score, citing specific examples.",
+              description: "Reasoning for the innovation score.",
             },
           },
           required: ["score", "reasoning"],
@@ -73,15 +79,10 @@ Your primary goal is to move beyond surface-level answers and gain a deep unders
         passion: {
           type: "object",
           properties: {
-            score: {
-              type: "number",
-              description:
-                "Score (1-10) for enthusiasm and commitment to customer success.",
-            },
+            score: { type: "number", description: "Score (1-10) for passion." },
             reasoning: {
               type: "string",
-              description:
-                "Detailed reasoning for the passion score, citing specific examples.",
+              description: "Reasoning for the passion score.",
             },
           },
           required: ["score", "reasoning"],
@@ -89,15 +90,10 @@ Your primary goal is to move beyond surface-level answers and gain a deep unders
         trust: {
           type: "object",
           properties: {
-            score: {
-              type: "number",
-              description:
-                "Score (1-10) for the ability to build rapport and confidence.",
-            },
+            score: { type: "number", description: "Score (1-10) for trust." },
             reasoning: {
               type: "string",
-              description:
-                "Detailed reasoning for the trust score, citing specific examples.",
+              description: "Reasoning for the trust score.",
             },
           },
           required: ["score", "reasoning"],
@@ -105,15 +101,10 @@ Your primary goal is to move beyond surface-level answers and gain a deep unders
         insight: {
           type: "object",
           properties: {
-            score: {
-              type: "number",
-              description:
-                "Score (1-10) for the ability to identify the root cause of issues.",
-            },
+            score: { type: "number", description: "Score (1-10) for insight." },
             reasoning: {
               type: "string",
-              description:
-                "Detailed reasoning for the insight score, citing specific examples.",
+              description: "Reasoning for the insight score.",
             },
           },
           required: ["score", "reasoning"],
@@ -123,19 +114,18 @@ Your primary goal is to move beyond surface-level answers and gain a deep unders
           properties: {
             score: {
               type: "number",
-              description: `Score (1-10) for fluency, grammar, and clarity in ${language}.`,
+              description: `Score (1-10) for ${language} proficiency.`,
             },
             reasoning: {
               type: "string",
-              description: `Detailed reasoning for the ${language} proficiency score.`,
+              description: `Reasoning for the ${language} proficiency score.`,
             },
           },
           required: ["score", "reasoning"],
         },
         summary: {
           type: "string",
-          description:
-            "A comprehensive summary of the candidate's overall performance, strengths, and areas for improvement.",
+          description: "A brief summary of the candidate's performance.",
         },
         average: {
           type: "number",

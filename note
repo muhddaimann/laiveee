@@ -126,3 +126,7 @@ InterviewPage, InterviewContext, interviewConfig need to revise with new flow in
 proceed with implementing these changes as long as name and what candidate specialized language stated within text: `Hello! My name is ${name} and I am ready for my customer service interview specialized in ${language}`, natural conversation  and smooth closing from Laive Interviewer before analying and report phase page
 
 however createInterviewConfig not properly aligned with InterviewPage. Laive Interviewer should make candidate comfortable, asking how are you etc first before jumping into the interview. also theres more aspects to be evaluate empathy, innovation, passion, trust, insight etc. plan your way to revise UI UX and functionality of current InterviewPage and createInterviewConfig
+
+createInterviewConfig no need to use ${language} to evaluate all Empathy, Innovation. enough just passion and trust and then back english to evaluate insight then Concluding. english (Conversational Probing, empathy, innovation), ${language} (passion, trust), english (insight and concluding). proceed as long as not too short and not too long interview but holistic
+
+you need to keep the client.sendUserMessageContent so that the interview can properly start. InterviewPage message bubble keep talking for too long and displaying unnecessary text from createInterviewConfig. Keep it short natural and fast pacing while not displaying too much text for candidate. proceed as long as client.sendUserMessageContent and shorten the Laive speech and what it display message bubble 
