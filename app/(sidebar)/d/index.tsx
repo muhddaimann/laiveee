@@ -61,6 +61,7 @@ export default function InterviewPage() {
 function InterviewFlow() {
   const [phase, setPhase] = useState<PagePhase>("welcome");
   const [name, setName] = useState("");
+  const [conversation, setConversation] = useState<ItemType[]>([]);
   const { setScores, language, setLanguage } = useInterviewContext();
 
   const handleStartInterview = (submittedName: string, lang: Language) => {
@@ -90,6 +91,7 @@ function InterviewFlow() {
     setName("");
     setScores(null);
     setLanguage(null);
+    setConversation([]);
     setPhase("welcome");
   };
 
@@ -109,12 +111,19 @@ function InterviewFlow() {
           onEndRequest={handleEndInterview}
           name={name}
           language={language!}
+          setConversation={setConversation}
         />
       );
     case "analyzing":
       return <AnalyzingScreen />;
     case "report":
-      return <ReportScreen name={name} onRestart={handleRestart} />;
+      return (
+        <ReportScreen
+          name={name}
+          onRestart={handleRestart}
+          conversation={conversation}
+        />
+      );
     default:
       return <WelcomeScreen onStart={handleStartInterview} />;
   }
@@ -320,10 +329,12 @@ function InterviewScreen({
   onEndRequest,
   name,
   language,
+  setConversation,
 }: {
   onEndRequest: () => void;
   name: string;
   language: Language;
+  setConversation: React.Dispatch<React.SetStateAction<ItemType[]>>;
 }) {
   const theme = useTheme();
   const { scores, setScores } = useInterviewContext();
@@ -345,6 +356,10 @@ function InterviewScreen({
   const [items, setItems] = useState<ItemType[]>([]);
   const [muted, setMuted] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    setConversation(items);
+  }, [items, setConversation]);
 
   const connectConversation = useCallback(async () => {
     if (!LOCAL_RELAY_SERVER_URL && !OPENAI_API_KEY) {
@@ -613,7 +628,7 @@ function MessageBubble({
                   : theme.colors.onSecondaryContainer,
               }}
             >
-              {item.formatted?.transcript || item.formatted?.text || "..."}
+              {item.formatted?.text || item.formatted?.transcript || "..."}
             </Text>
           </Card.Content>
         </Card>
@@ -648,9 +663,11 @@ function AnalyzingScreen() {
 function ReportScreen({
   name,
   onRestart,
+  conversation,
 }: {
   name: string;
   onRestart: () => void;
+  conversation: ItemType[];
 }) {
   const theme = useTheme();
   const { scores, language } = useInterviewContext();
@@ -835,6 +852,55 @@ function ReportScreen({
                 </List.Accordion>
               ))}
             </List.Section>
+          </Card>
+
+          <Text
+            style={[
+              styles.reportSubtitle,
+              { color: theme.colors.onBackground },
+            ]}
+          >
+            Full Transcript
+          </Text>
+
+          <Card
+            style={[
+              styles.reportCard,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <ScrollView style={{ maxHeight: 300 }}>
+                {conversation.map((item, index) => {
+                  const speaker = item.role === "user" ? name : "Laive Interviewer";
+                  const rawTranscript = item.formatted?.transcript;
+                  const finalText = item.formatted?.text;
+
+                  return (
+                    <View key={index} style={{ marginVertical: 8 }}>
+                      <Text style={{ fontWeight: "bold" }}>{speaker}:</Text>
+                      {rawTranscript && (
+                        <Text selectable style={{ color: theme.colors.onSurfaceVariant }}>
+                          <Text style={{ fontWeight: "bold" }}>[RAW]: </Text>
+                          {rawTranscript}
+                        </Text>
+                      )}
+                      {finalText && (
+                        <Text selectable style={{ color: theme.colors.onSurface }}>
+                          <Text style={{ fontWeight: "bold" }}>[FINAL]: </Text>
+                          {finalText}
+                        </Text>
+                      )}
+                      {!rawTranscript && !finalText && (
+                        <Text selectable style={{ fontStyle: "italic" }}>
+                          ... (no text content)
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            </Card.Content>
           </Card>
 
           <Button
