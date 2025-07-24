@@ -30,6 +30,10 @@ import {
   useInterviewContext,
 } from "../../../contexts/interviewContext";
 import { createInterviewConfig } from "../../../utils/interviewConfig";
+import {
+  calculateInterviewCost,
+  UsageData,
+} from "../../../utils/costEstimator";
 
 interface ScoreType {
   empathy: { score: number; reasoning: string };
@@ -672,6 +676,16 @@ function ReportScreen({
   const theme = useTheme();
   const { scores, language } = useInterviewContext();
 
+  // --- Mock Usage Data ---
+  // In a real app, you would derive this from the conversation data.
+  const usageData: UsageData = {
+    inputTokens: 3500,
+    outputTokens: 2800,
+    audioInputDuration: 300, // 5 minutes
+  };
+
+  const costResult = calculateInterviewCost(usageData);
+
   if (!scores) {
     return (
       <View
@@ -724,21 +738,12 @@ function ReportScreen({
     },
   ];
 
-  const chartData = {
-    labels: scoreItems.map((item) => item.name.split(" ")[0]),
-    datasets: [
-      {
-        data: scoreItems.map((item) => item.data.score / 10),
-      },
-    ],
-  };
-
   return (
     <View
       style={[styles.fullPage, { backgroundColor: theme.colors.background }]}
     >
       <ScrollView contentContainerStyle={styles.reportScrollContainer}>
-        <View style={styles.reportContent}>
+        <View style={styles.reportHeader}>
           <Text
             style={[styles.reportTitle, { color: theme.colors.onBackground }]}
           >
@@ -749,169 +754,230 @@ function ReportScreen({
           >
             For {name}
           </Text>
-
-          <Card
-            style={[
-              styles.reportCard,
-              { backgroundColor: theme.colors.surface },
-            ]}
-          >
-            <Card.Content>
-              <View style={styles.summaryHeader}>
-                <Text
-                  style={[
-                    styles.summaryTitle,
-                    { color: theme.colors.onSurface },
-                  ]}
-                >
-                  Overall Performance
-                </Text>
-                <Text
-                  style={[
-                    styles.averageScoreText,
-                    { color: theme.colors.primary },
-                  ]}
-                >
-                  {scores.average.toFixed(1)}/10
-                </Text>
-              </View>
-
-              <Text
-                style={[
-                  styles.summaryParagraph,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                {scores.summary}
-              </Text>
-            </Card.Content>
-          </Card>
-
-          <Text
-            style={[
-              styles.reportSubtitle,
-              { color: theme.colors.onBackground },
-            ]}
-          >
-            Detailed Breakdown
-          </Text>
-
-          <Card
-            style={[
-              styles.reportCard,
-              { backgroundColor: theme.colors.surface },
-            ]}
-          >
-            <List.Section style={{ paddingHorizontal: 0, marginVertical: 0 }}>
-              {scoreItems.map((item, index) => (
-                <List.Accordion
-                  key={index}
-                  title={`${item.name}`}
-                  titleStyle={{
-                    color: theme.colors.onSurface,
-                    fontWeight: "bold",
-                  }}
-                  left={(props) => (
-                    <List.Icon
-                      {...props}
-                      icon="star-circle"
-                      color={theme.colors.primary}
-                    />
-                  )}
-                  right={(props) => (
-                    <Text
-                      style={{
-                        color: theme.colors.primary,
-                        alignSelf: "center",
-                      }}
-                    >
-                      {item.data.score}/10
-                    </Text>
-                  )}
-                  style={{
-                    backgroundColor: theme.colors.surface,
-                    borderBottomWidth: index === scoreItems.length - 1 ? 0 : 1,
-                    borderBottomColor: theme.colors.outlineVariant,
-                  }}
-                >
-                  <View style={{ padding: 16 }}>
-                    <ProgressBar
-                      progress={item.data.score / 10}
-                      color={theme.colors.primary}
-                      style={{ marginBottom: 12, height: 8, borderRadius: 4 }}
-                    />
-                    <Text
-                      style={{
-                        color: theme.colors.onSurfaceVariant,
-                        lineHeight: 20,
-                      }}
-                    >
-                      {item.data.reasoning}
-                    </Text>
-                  </View>
-                </List.Accordion>
-              ))}
-            </List.Section>
-          </Card>
-
-          <Text
-            style={[
-              styles.reportSubtitle,
-              { color: theme.colors.onBackground },
-            ]}
-          >
-            Full Transcript
-          </Text>
-
-          <Card
-            style={[
-              styles.reportCard,
-              { backgroundColor: theme.colors.surface },
-            ]}
-          >
-            <Card.Content>
-              <ScrollView style={{ maxHeight: 300 }}>
-                {conversation.map((item, index) => {
-                  const speaker = item.role === "user" ? name : "Laive Interviewer";
-                  const rawTranscript = item.formatted?.transcript;
-                  const finalText = item.formatted?.text;
-
-                  return (
-                    <View key={index} style={{ marginVertical: 8 }}>
-                      <Text style={{ fontWeight: "bold" }}>{speaker}:</Text>
-                      {rawTranscript && (
-                        <Text selectable style={{ color: theme.colors.onSurfaceVariant }}>
-                          <Text style={{ fontWeight: "bold" }}>[RAW]: </Text>
-                          {rawTranscript}
-                        </Text>
-                      )}
-                      {finalText && (
-                        <Text selectable style={{ color: theme.colors.onSurface }}>
-                          <Text style={{ fontWeight: "bold" }}>[FINAL]: </Text>
-                          {finalText}
-                        </Text>
-                      )}
-                      {!rawTranscript && !finalText && (
-                        <Text selectable style={{ fontStyle: "italic" }}>
-                          ... (no text content)
-                        </Text>
-                      )}
-                    </View>
-                  );
-                })}
-              </ScrollView>
-            </Card.Content>
-          </Card>
-
-          <Button
-            mode="contained"
-            onPress={onRestart}
-            style={styles.restartButton}
-            icon="reload"
-          >
-            Take Interview Again
-          </Button>
         </View>
+
+        <View style={styles.reportBody}>
+          {/* --- Left Column --- */}
+          <View style={styles.reportColumn}>
+            <Card
+              style={[
+                styles.reportCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
+              <Card.Content>
+                <View style={styles.summaryHeader}>
+                  <Text
+                    style={[
+                      styles.summaryTitle,
+                      { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    Overall Performance
+                  </Text>
+                  <Text
+                    style={[
+                      styles.averageScoreText,
+                      { color: theme.colors.primary },
+                    ]}
+                  >
+                    {scores.average.toFixed(1)}/10
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.summaryParagraph,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  {scores.summary}
+                </Text>
+              </Card.Content>
+            </Card>
+
+            <Text
+              style={[
+                styles.reportSubtitle,
+                { color: theme.colors.onBackground },
+              ]}
+            >
+              Detailed Breakdown
+            </Text>
+            <Card
+              style={[
+                styles.reportCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
+              <List.Section
+                style={{ paddingHorizontal: 0, marginVertical: 0 }}
+              >
+                {scoreItems.map((item, index) => (
+                  <List.Accordion
+                    key={index}
+                    title={`${item.name}`}
+                    titleStyle={{
+                      color: theme.colors.onSurface,
+                      fontWeight: "bold",
+                    }}
+                    left={(props) => (
+                      <List.Icon
+                        {...props}
+                        icon="star-circle"
+                        color={theme.colors.primary}
+                      />
+                    )}
+                    right={(props) => (
+                      <Text
+                        style={{
+                          color: theme.colors.primary,
+                          alignSelf: "center",
+                        }}
+                      >
+                        {item.data.score}/10
+                      </Text>
+                    )}
+                    style={{
+                      backgroundColor: theme.colors.surface,
+                      borderBottomWidth:
+                        index === scoreItems.length - 1 ? 0 : 1,
+                      borderBottomColor: theme.colors.outlineVariant,
+                    }}
+                  >
+                    <View style={{ padding: 16 }}>
+                      <ProgressBar
+                        progress={item.data.score / 10}
+                        color={theme.colors.primary}
+                        style={{
+                          marginBottom: 12,
+                          height: 8,
+                          borderRadius: 4,
+                        }}
+                      />
+                      <Text
+                        style={{
+                          color: theme.colors.onSurfaceVariant,
+                          lineHeight: 20,
+                        }}
+                      >
+                        {item.data.reasoning}
+                      </Text>
+                    </View>
+                  </List.Accordion>
+                ))}
+              </List.Section>
+            </Card>
+          </View>
+
+          {/* --- Right Column --- */}
+          <View style={styles.reportColumn}>
+            <Text
+              style={[
+                styles.reportSubtitle,
+                { color: theme.colors.onBackground },
+              ]}
+            >
+              Cost Estimation
+            </Text>
+            <Card
+              style={[
+                styles.reportCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
+              <Card.Content>
+                <View style={styles.costRow}>
+                  <Text>GPT Input (USD)</Text>
+                  <Text>{costResult.gptInputCostUSD.toFixed(4)}</Text>
+                </View>
+                <View style={styles.costRow}>
+                  <Text>GPT Output (USD)</Text>
+                  <Text>{costResult.gptOutputCostUSD.toFixed(4)}</Text>
+                </View>
+                <View style={styles.costRow}>
+                  <Text>Whisper (USD)</Text>
+                  <Text>{costResult.whisperCostUSD.toFixed(4)}</Text>
+                </View>
+                <View style={styles.totalCostRow}>
+                  <Text style={{ fontWeight: "bold" }}>Total (USD)</Text>
+                  <Text style={{ fontWeight: "bold" }}>
+                    ${costResult.totalCostUSD}
+                  </Text>
+                </View>
+                <View style={styles.totalCostRow}>
+                  <Text style={{ fontWeight: "bold" }}>Total (MYR)</Text>
+                  <Text style={{ fontWeight: "bold" }}>
+                    RM{costResult.totalCostMYR.toFixed(2)}
+                  </Text>
+                </View>
+              </Card.Content>
+            </Card>
+
+            <Text
+              style={[
+                styles.reportSubtitle,
+                { color: theme.colors.onBackground },
+              ]}
+            >
+              Full Transcript
+            </Text>
+            <Card
+              style={[
+                styles.reportCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
+              <Card.Content>
+                <ScrollView style={{ maxHeight: 400 }}>
+                  {conversation.map((item, index) => {
+                    const speaker =
+                      item.role === "user" ? name : "Laive Interviewer";
+                    const rawTranscript = item.formatted?.transcript;
+                    const finalText = item.formatted?.text;
+
+                    return (
+                      <View key={index} style={{ marginVertical: 8 }}>
+                        <Text style={{ fontWeight: "bold" }}>{speaker}:</Text>
+                        {rawTranscript && (
+                          <Text
+                            selectable
+                            style={{ color: theme.colors.onSurfaceVariant }}
+                          >
+                            <Text style={{ fontWeight: "bold" }}>[RAW]: </Text>
+                            {rawTranscript}
+                          </Text>
+                        )}
+                        {finalText && (
+                          <Text
+                            selectable
+                            style={{ color: theme.colors.onSurface }}
+                          >
+                            <Text style={{ fontWeight: "bold" }}>[FINAL]: </Text>
+                            {finalText}
+                          </Text>
+                        )}
+                        {!rawTranscript && !finalText && (
+                          <Text selectable style={{ fontStyle: "italic" }}>
+                            ... (no text content)
+                          </Text>
+                        )}
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+              </Card.Content>
+            </Card>
+          </View>
+        </View>
+
+        <Button
+          mode="contained"
+          onPress={onRestart}
+          style={styles.restartButton}
+          icon="reload"
+        >
+          Take Interview Again
+        </Button>
       </ScrollView>
     </View>
   );
@@ -1071,7 +1137,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-
+  costRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginVertical: 4,
+  },
+  totalCostRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginVertical: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderColor: "#e0e0e0",
+  },
   averageScoreText: {
     fontSize: 22,
     fontWeight: "bold",
@@ -1080,6 +1158,23 @@ const styles = StyleSheet.create({
   restartButton: {
     marginTop: 16,
     width: "100%",
+    maxWidth: 500,
+    alignSelf: "center",
     paddingVertical: 8,
+  },
+  reportHeader: {
+    width: "100%",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  reportBody: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    maxWidth: 1200, // Adjust max-width as needed
+  },
+  reportColumn: {
+    flex: 1,
+    paddingHorizontal: 12,
   },
 });

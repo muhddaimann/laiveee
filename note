@@ -130,3 +130,5 @@ however createInterviewConfig not properly aligned with InterviewPage. Laive Int
 createInterviewConfig no need to use ${language} to evaluate all Empathy, Innovation. enough just passion and trust and then back english to evaluate insight then Concluding. english (Conversational Probing, empathy, innovation), ${language} (passion, trust), english (insight and concluding). proceed as long as not too short and not too long interview but holistic
 
 you need to keep the client.sendUserMessageContent so that the interview can properly start. InterviewPage message bubble keep talking for too long and displaying unnecessary text from createInterviewConfig. Keep it short natural and fast pacing while not displaying too much text for candidate. proceed as long as client.sendUserMessageContent and shorten the Laive speech and what it display message bubble 
+
+next task 
