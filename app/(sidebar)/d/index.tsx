@@ -66,7 +66,7 @@ function InterviewFlow() {
   const [phase, setPhase] = useState<PagePhase>("welcome");
   const [name, setName] = useState("");
   const [conversation, setConversation] = useState<ItemType[]>([]);
-  const { setScores, language, setLanguage } = useInterviewContext();
+  const { setScores, language, setLanguage, setUsage } = useInterviewContext();
 
   const handleStartInterview = (submittedName: string, lang: Language) => {
     if (submittedName.trim()) {
@@ -96,6 +96,7 @@ function InterviewFlow() {
     setScores(null);
     setLanguage(null);
     setConversation([]);
+    setUsage(null);
     setPhase("welcome");
   };
 
@@ -341,7 +342,8 @@ function InterviewScreen({
   setConversation: React.Dispatch<React.SetStateAction<ItemType[]>>;
 }) {
   const theme = useTheme();
-  const { scores, setScores } = useInterviewContext();
+  const { scores, setScores, setUsage } = useInterviewContext();
+  const startTimeRef = useRef<number | null>(null);
 
   const wavRecorderRef = useRef<WavRecorder>(
     new WavRecorder({ sampleRate: 24000 })
@@ -373,6 +375,7 @@ function InterviewScreen({
       );
       return;
     }
+    startTimeRef.current = Date.now();
     const client = clientRef.current;
     const wavRecorder = wavRecorderRef.current;
     const wavStreamPlayer = wavStreamPlayerRef.current;
@@ -427,6 +430,21 @@ function InterviewScreen({
 
   useEffect(() => {
     if (scores) {
+      const endTime = Date.now();
+      const durationInSeconds = startTimeRef.current
+        ? (endTime - startTimeRef.current) / 1000
+        : 0;
+
+      const usage: UsageData = {
+        inputTokens: items.reduce((acc, item) => {
+          const text = item.formatted?.text || item.formatted?.transcript || "";
+          return acc + Math.round(text.length / 4);
+        }, 0),
+        outputTokens: scores.summary.length / 4,
+        audioInputDuration: durationInSeconds,
+      };
+      setUsage(usage);
+
       const client = clientRef.current;
       client.disconnect();
       const wavRecorder = wavRecorderRef.current;
@@ -435,7 +453,7 @@ function InterviewScreen({
       wavStreamPlayer.interrupt();
       onEndRequest();
     }
-  }, [scores, onEndRequest]);
+  }, [scores, onEndRequest, items, setUsage]);
 
   useEffect(() => {
     connectConversation();
@@ -674,19 +692,11 @@ function ReportScreen({
   conversation: ItemType[];
 }) {
   const theme = useTheme();
-  const { scores, language } = useInterviewContext();
+  const { scores, language, usage } = useInterviewContext();
 
-  // --- Mock Usage Data ---
-  // In a real app, you would derive this from the conversation data.
-  const usageData: UsageData = {
-    inputTokens: 3500,
-    outputTokens: 2800,
-    audioInputDuration: 300, // 5 minutes
-  };
+  const costResult = usage ? calculateInterviewCost(usage) : null;
 
-  const costResult = calculateInterviewCost(usageData);
-
-  if (!scores) {
+  if (!scores || !usage || !costResult) {
     return (
       <View
         style={[
@@ -757,7 +767,6 @@ function ReportScreen({
         </View>
 
         <View style={styles.reportBody}>
-          {/* --- Left Column --- */}
           <View style={styles.reportColumn}>
             <Card
               style={[
@@ -809,9 +818,7 @@ function ReportScreen({
                 { backgroundColor: theme.colors.surface },
               ]}
             >
-              <List.Section
-                style={{ paddingHorizontal: 0, marginVertical: 0 }}
-              >
+              <List.Section style={{ paddingHorizontal: 0, marginVertical: 0 }}>
                 {scoreItems.map((item, index) => (
                   <List.Accordion
                     key={index}
@@ -869,7 +876,6 @@ function ReportScreen({
             </Card>
           </View>
 
-          {/* --- Right Column --- */}
           <View style={styles.reportColumn}>
             <Text
               style={[
@@ -886,6 +892,20 @@ function ReportScreen({
               ]}
             >
               <Card.Content>
+                <View style={styles.costRow}>
+                  <Text>Input Tokens</Text>
+                  <Text>{usage.inputTokens}</Text>
+                </View>
+                <View style={styles.costRow}>
+                  <Text>Output Tokens</Text>
+                  <Text>{usage.outputTokens}</Text>
+                </View>
+                <View style={styles.costRow}>
+                  <Text>Duration (minutes)</Text>
+                  <Text>
+                    {((usage.audioInputDuration ?? 0) / 60).toFixed(2)}
+                  </Text>
+                </View>
                 <View style={styles.costRow}>
                   <Text>GPT Input (USD)</Text>
                   <Text>{costResult.gptInputCostUSD.toFixed(4)}</Text>
@@ -952,7 +972,9 @@ function ReportScreen({
                             selectable
                             style={{ color: theme.colors.onSurface }}
                           >
-                            <Text style={{ fontWeight: "bold" }}>[FINAL]: </Text>
+                            <Text style={{ fontWeight: "bold" }}>
+                              [FINAL]:{" "}
+                            </Text>
                             {finalText}
                           </Text>
                         )}
@@ -1171,7 +1193,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     width: "100%",
-    maxWidth: 1200, // Adjust max-width as needed
+    maxWidth: 1200,
   },
   reportColumn: {
     flex: 1,
