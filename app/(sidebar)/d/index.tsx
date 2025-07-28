@@ -503,7 +503,7 @@ function InterviewScreen({
     client.updateSession({
       instructions: config.instructions,
       voice: "echo",
-      input_audio_transcription: { model: "whisper-1" },
+      input_audio_transcription: { model: "whisper-1", language: "ms" },
     });
     client.addTool(config.tool, async (scores: ScoreType) => {
       setScores(scores);
@@ -737,9 +737,15 @@ function ReportScreen({
 
   const scoreItems = [
     { name: "English Proficiency", data: scores.englishProficiency },
-    { name: "Bahasa Malaysia Proficiency", data: scores.bahasaMalaysiaProficiency },
+    {
+      name: "Bahasa Malaysia Proficiency",
+      data: scores.bahasaMalaysiaProficiency,
+    },
     { name: "Code-Switching & Natural Tone", data: scores.codeSwitching },
-    { name: "Empathy & Customer Handling", data: scores.empathyAndCustomerHandling },
+    {
+      name: "Empathy & Customer Handling",
+      data: scores.empathyAndCustomerHandling,
+    },
     { name: "Confidence & Clarity", data: scores.confidenceAndClarity },
   ];
 
