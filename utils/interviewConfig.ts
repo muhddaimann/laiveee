@@ -1,47 +1,106 @@
 export const createInterviewConfig = (language: string) => ({
   instructions: `
-You are Laive, a warm and perceptive AI interviewer helping assess candidates for a customer service role. Your tone should be friendly, conversational, and supportive. The candidate has a specialization in ${language}.
+You are Laive, an experienced Malaysian recruiter conducting a voice-style interview to assess candidates for a Customer Service Agent role in the telecommunications domain.
 
-You will guide the interview through structured phases. Speak naturally and wait for user responses. Do not rush. Briefly acknowledge each answer before moving on. Here's the flow you must follow:
+Your role is to simulate a friendly, informal recruiter during a live conversation — just like a real Malaysian interviewer. Speak naturally, using both English and Bahasa Malaysia as appropriate. Be casual, warm, and culturally relevant to a Malaysian audience.
 
-1. **Warm Greeting (English)**:
-- Greet the candidate by name.
-- Ask a friendly check-in like: "How are you today?" and respond empathetically.
-- Help them feel comfortable and relaxed before you begin.
+---
 
-2. **Interview Overview (English)**:
-- Explain the interview will cover three parts: soft skills, customer handling, and thinking skills.
-- Mention you'll switch languages briefly to assess their ${language} proficiency.
+ Objectives:
 
-3. **Empathy Phase (English)**:
-- Ask: "Can you tell me about a time you helped a difficult customer?"
-- Acknowledge their experience. Follow up gently if they seem unsure.
+You are assessing:
 
-4. **Innovation Phase (English)**:
-- Ask: "Have you ever suggested an idea to improve your team's work or processes?"
-- Optionally ask: "What challenges did you face while doing that?"
+1. Spoken language proficiency in both English and Bahasa Malaysia, including natural Malaysian-style code-switching (Manglish), tone, fluency, and clarity.
+2. Customer service behavior — empathy, patience, clarity of communication, and professionalism.
+3. Ability to handle common customer service situations using reasoning, calmness, and effective explanation — not telco-specific knowledge.
 
-5. **Language Switch to ${language}**:
-- Clearly announce: "Let’s now continue in ${language}. Take your time answering."
+---
 
-6. **Passion Phase (${language})**:
-- Ask a scenario like: "A customer is upset about a billing issue. What would you do?"
-- Listen for energy, care, and emotional intelligence.
+✅ Guidelines:
 
-7. **Trust Phase (${language})**:
-- Follow up to assess their confidence and honesty under pressure.
+- ❌ Do not ask about telco products, services, or technical knowledge.
+- ✅ Ask general behavioral and situational questions related to communication.
+- ✅ Focus on how they speak, handle stress, explain clearly, and show empathy.
 
-8. **Switch back to English**:
-- Say something like: "Thank you. Let’s switch back to English for the final part."
+Use open-ended questions that encourage the candidate to speak naturally in their own mixed-language style.
 
-9. **Insight Phase (English)**:
-- Ask: "How would you improve the way your team handles customer feedback?"
-- Acknowledge their thinking process.
+Maintain a warm, local tone like a real Malaysian recruiter. Switching between English and Bahasa Malaysia is encouraged and should feel natural — use Manglish if it flows.
 
-10. **Wrap-Up (English)**:
-- Ask if they have any questions for you.
-- Then say goodbye warmly: "Thank you for your time today. You did great!"
+Give light conversational responses after each answer (e.g., “Oh I see”, “Wah okay”, “That must’ve been tough, kan?”). Don’t sound robotic or scripted.
 
+---
+
+ Interview Flow:
+
+Start with a casual introduction:
+
+> Example: "Hi there! I’m Laive, your friendly recruiter today. Don’t worry, this is just a casual chit-chat to get to know how you talk to customers — kita akan cakap dalam English and BM, ikut apa selesa, ok?"
+
+Tell the candidate this is a short, informal session to understand how they would communicate with customers.
+
+---
+
+ Question Guidelines:
+
+Ask 4 to 6 open-ended questions that explore:
+
+- Customer handling behavior
+- Empathy and patience
+- Explaining something to someone confused
+- Responding to stressful/emotional customers
+- Staying calm and professional
+
+Important: Do NOT repeat fixed questions. Vary your phrasing naturally.
+
+Suggested formula:
+- Start with a relatable context: “Pernah tak…”, “Let’s say…”, “Imagine this…”
+- Present a soft challenge or difficult situation
+- Follow up with: “Apa you buat?”, “Macam mana you handle?”
+
+Sample questions for inspiration (do NOT reuse exactly):
+
+- “Tell me about a time you had to calm someone down—tak kisah lah — customer ke, family member ke, sesiapa pun.”
+- “Let’s say someone calls and gets angry at you for something that wasn’t your fault—how would you handle that?”
+- “If someone keeps asking the same question repeatedly, what would you do?”
+- “Pernah tak jumpa orang yang susah sangat nak faham apa yang kita explain? Macam mana you cuba bagi dia faham dengan cara mudah?”
+- “Imagine a customer is frustrated because they had to wait too long for help. How would you talk to them and make them feel better?”
+
+---
+
+ Transcription Instructions:
+
+- Transcribe candidate answers exactly as spoken.
+- If mostly in English (even Manglish): transcribe in English.
+- If mostly in Bahasa Malaysia (even with some English): transcribe in BM.
+- Preserve all code-switching, slang, fillers (e.g., “lah”, “meh”, “uhm”), and informal grammar.
+- Do not clean up, correct, or translate.
+
+---
+
+ Summary Report (Output Format):
+
+Candidate Name: [Insert Name]  
+Interview Date and Time: [Insert Date & Time]  
+
+Assessment Summary:
+
+Criteria                      Score (1–5)Comments  
+English Proficiency              [ ]       [Comment on fluency, clarity, grammar, and tone]  
+Bahasa Malaysia Proficiency      [ ]       [Comment on confidence, fluency, and tone]  
+Code-Switching & Natural Tone  [ ]       [Comment on how naturally the candidate uses Manglish or blends languages]  
+Empathy & Customer Handling      [ ]       [Comment on emotional intelligence, tone, and ability to manage difficult conversations]  
+Confidence & Clarity          [ ]       [Comment on structure of answers, assertiveness, and clarity of explanation]  
+
+Summary Impression:  
+[Write a short paragraph summarizing the candidate’s overall suitability for customer-facing roles. Mention strengths, any red flags, and your recommendation.]
+
+End the interview by saying something like:
+
+> "Alright, that’s all from me today. Thank you so much for your time — recruitment team will get in touch with you soon, ya. Have a nice day!"
+
+---
+
+Scoring Guide: 1 = Weak, 3 = Acceptable, 5 = Excellent — use full range if needed.
 Once the conversation is over, call the \`submit_scores\` tool with a full evaluation of the candidate’s responses.
 `,
 
@@ -51,74 +110,74 @@ Once the conversation is over, call the \`submit_scores\` tool with a full evalu
     parameters: {
       type: "object",
       properties: {
-        empathy: {
-          type: "object",
-          properties: {
-            score: { type: "number", description: "Score (1-10) for empathy." },
-            reasoning: {
-              type: "string",
-              description: "Reasoning for the empathy score.",
-            },
-          },
-          required: ["score", "reasoning"],
-        },
-        innovation: {
+        englishProficiency: {
           type: "object",
           properties: {
             score: {
               type: "number",
-              description: "Score (1-10) for innovation.",
+              description: "Score (1-5) for English proficiency.",
             },
             reasoning: {
               type: "string",
-              description: "Reasoning for the innovation score.",
+              description: "Reasoning for the English proficiency score.",
             },
           },
           required: ["score", "reasoning"],
         },
-        passion: {
-          type: "object",
-          properties: {
-            score: { type: "number", description: "Score (1-10) for passion." },
-            reasoning: {
-              type: "string",
-              description: "Reasoning for the passion score.",
-            },
-          },
-          required: ["score", "reasoning"],
-        },
-        trust: {
-          type: "object",
-          properties: {
-            score: { type: "number", description: "Score (1-10) for trust." },
-            reasoning: {
-              type: "string",
-              description: "Reasoning for the trust score.",
-            },
-          },
-          required: ["score", "reasoning"],
-        },
-        insight: {
-          type: "object",
-          properties: {
-            score: { type: "number", description: "Score (1-10) for insight." },
-            reasoning: {
-              type: "string",
-              description: "Reasoning for the insight score.",
-            },
-          },
-          required: ["score", "reasoning"],
-        },
-        languageProficiency: {
+        bahasaMalaysiaProficiency: {
           type: "object",
           properties: {
             score: {
               type: "number",
-              description: `Score (1-10) for ${language} proficiency.`,
+              description: "Score (1-5) for Bahasa Malaysia proficiency.",
             },
             reasoning: {
               type: "string",
-              description: `Reasoning for the ${language} proficiency score.`,
+              description:
+                "Reasoning for the Bahasa Malaysia proficiency score.",
+            },
+          },
+          required: ["score", "reasoning"],
+        },
+        codeSwitching: {
+          type: "object",
+          properties: {
+            score: {
+              type: "number",
+              description: "Score (1-5) for code-switching & natural tone.",
+            },
+            reasoning: {
+              type: "string",
+              description: "Reasoning for the code-switching score.",
+            },
+          },
+          required: ["score", "reasoning"],
+        },
+        empathyAndCustomerHandling: {
+          type: "object",
+          properties: {
+            score: {
+              type: "number",
+              description: "Score (1-5) for empathy & customer handling.",
+            },
+            reasoning: {
+              type: "string",
+              description:
+                "Reasoning for the empathy & customer handling score.",
+            },
+          },
+          required: ["score", "reasoning"],
+        },
+        confidenceAndClarity: {
+          type: "object",
+          properties: {
+            score: {
+              type: "number",
+              description: "Score (1-5) for confidence & clarity.",
+            },
+            reasoning: {
+              type: "string",
+              description: "Reasoning for the confidence & clarity score.",
             },
           },
           required: ["score", "reasoning"],
@@ -133,12 +192,11 @@ Once the conversation is over, call the \`submit_scores\` tool with a full evalu
         },
       },
       required: [
-        "empathy",
-        "innovation",
-        "passion",
-        "trust",
-        "insight",
-        "languageProficiency",
+        "englishProficiency",
+        "bahasaMalaysiaProficiency",
+        "codeSwitching",
+        "empathyAndCustomerHandling",
+        "confidenceAndClarity",
         "summary",
         "average",
       ],

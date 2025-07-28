@@ -36,12 +36,11 @@ import {
 } from "../../../utils/costEstimator";
 
 interface ScoreType {
-  empathy: { score: number; reasoning: string };
-  innovation: { score: number; reasoning: string };
-  passion: { score: number; reasoning: string };
-  trust: { score: number; reasoning: string };
-  insight: { score: number; reasoning: string };
-  languageProficiency: { score: number; reasoning: string };
+  englishProficiency: { score: number; reasoning: string };
+  bahasaMalaysiaProficiency: { score: number; reasoning: string };
+  codeSwitching: { score: number; reasoning: string };
+  empathyAndCustomerHandling: { score: number; reasoning: string };
+  confidenceAndClarity: { score: number; reasoning: string };
   summary: string;
   average: number;
 }
@@ -737,15 +736,11 @@ function ReportScreen({
   }
 
   const scoreItems = [
-    { name: "Empathy", data: scores.empathy },
-    { name: "Innovation", data: scores.innovation },
-    { name: "Passion", data: scores.passion },
-    { name: "Trust", data: scores.trust },
-    { name: "Insight", data: scores.insight },
-    {
-      name: `${language} Proficiency`,
-      data: scores.languageProficiency,
-    },
+    { name: "English Proficiency", data: scores.englishProficiency },
+    { name: "Bahasa Malaysia Proficiency", data: scores.bahasaMalaysiaProficiency },
+    { name: "Code-Switching & Natural Tone", data: scores.codeSwitching },
+    { name: "Empathy & Customer Handling", data: scores.empathyAndCustomerHandling },
+    { name: "Confidence & Clarity", data: scores.confidenceAndClarity },
   ];
 
   return (
@@ -790,7 +785,7 @@ function ReportScreen({
                       { color: theme.colors.primary },
                     ]}
                   >
-                    {scores.average.toFixed(1)}/10
+                    {scores.average.toFixed(1)}/5
                   </Text>
                 </View>
                 <Text
@@ -841,7 +836,7 @@ function ReportScreen({
                           alignSelf: "center",
                         }}
                       >
-                        {item.data.score}/10
+                        {item.data.score}/5
                       </Text>
                     )}
                     style={{
@@ -853,7 +848,7 @@ function ReportScreen({
                   >
                     <View style={{ padding: 16 }}>
                       <ProgressBar
-                        progress={item.data.score / 10}
+                        progress={item.data.score / 5}
                         color={theme.colors.primary}
                         style={{
                           marginBottom: 12,
