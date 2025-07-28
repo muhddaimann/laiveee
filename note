@@ -131,4 +131,4 @@ createInterviewConfig no need to use ${language} to evaluate all Empathy, Innova
 
 you need to keep the client.sendUserMessageContent so that the interview can properly start. InterviewPage message bubble keep talking for too long and displaying unnecessary text from createInterviewConfig. Keep it short natural and fast pacing while not displaying too much text for candidate. proceed as long as client.sendUserMessageContent and shorten the Laive speech and what it display message bubble 
 
-next task 
+current task is about revise the UI UX of the ReportScreen since current not properly manage the content within Accordion and depends on scrollview. It is better to not having scrollview in my opinion. plan your way to refine ReportScreen as long as its compact and not using scrollview. you may total redesign. dont use segmented buttons, just more compact two columns after reportHeader and button on the right column
