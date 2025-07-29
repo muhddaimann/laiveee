@@ -36,8 +36,11 @@ import {
 
 interface ScoreType {
   englishProficiency: { score: number; reasoning: string };
-  bahasaMalaysiaProficiency: { score: number; reasoning: string };
-  codeSwitching: { score: number; reasoning: string };
+  bahasaMalaysiaProficiency?: { score: number; reasoning: string };
+  mandarinProficiency?: { score: number; reasoning: string };
+  koreanProficiency?: { score: number; reasoning: string };
+  japaneseProficiency?: { score: number; reasoning: string };
+  codeSwitching?: { score: number; reasoning: string };
   empathyAndCustomerHandling: { score: number; reasoning: string };
   confidenceAndClarity: { score: number; reasoning: string };
   summary: string;
@@ -50,7 +53,8 @@ type PagePhase =
   | "interview"
   | "analyzing"
   | "report";
-type Language = "Malay" | "Mandarin" | "Korean" | "Japanese";
+const languageOptions = ["English", "Malay", "Mandarin", "Korean", "Japanese"] as const;
+type Language = typeof languageOptions[number];
 
 export default function InterviewPage() {
   return (
@@ -69,7 +73,7 @@ function InterviewFlow() {
   const handleStartInterview = (submittedName: string, lang: Language) => {
     if (submittedName.trim()) {
       setName(submittedName);
-      setLanguage(lang);
+      setLanguage(lang as any);
       setPhase("preparation");
     }
   };
@@ -191,6 +195,7 @@ function WelcomeScreen({
             value={language}
           >
             <View style={styles.radioRow}>
+              <RadioButton.Item label="English" value="English" />
               <RadioButton.Item label="Malay" value="Malay" />
               <RadioButton.Item label="Mandarin" value="Mandarin" />
             </View>
@@ -737,17 +742,24 @@ function ReportScreen({
 
   const scoreItems = [
     { name: "English Proficiency", data: scores.englishProficiency },
-    {
-      name: "Bahasa Malaysia Proficiency",
-      data: scores.bahasaMalaysiaProficiency,
-    },
-    { name: "Code-Switching & Natural Tone", data: scores.codeSwitching },
-    {
-      name: "Empathy & Customer Handling",
-      data: scores.empathyAndCustomerHandling,
-    },
-    { name: "Confidence & Clarity", data: scores.confidenceAndClarity },
   ];
+
+  if (language && (language as string) !== "English") {
+    const languageProficiencyKey = `${language.toLowerCase()}Proficiency`;
+    const languageProficiency = scores[languageProficiencyKey as keyof ScoreType] as { score: number; reasoning: string } | undefined;
+
+    if (languageProficiency) {
+      scoreItems.push({ name: `${language} Proficiency`, data: languageProficiency });
+    }
+    if (scores.codeSwitching) {
+      scoreItems.push({ name: "Code-Switching & Natural Tone", data: scores.codeSwitching });
+    }
+  }
+
+  scoreItems.push(
+    { name: "Empathy & Customer Handling", data: scores.empathyAndCustomerHandling },
+    { name: "Confidence & Clarity", data: scores.confidenceAndClarity }
+  );
 
   return (
     <View
