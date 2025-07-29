@@ -22,7 +22,6 @@ import {
   Card,
   List,
   RadioButton,
-  ProgressBar,
 } from "react-native-paper";
 import { OPENAI_API_KEY, LOCAL_RELAY_SERVER_URL } from "../../../constants/env";
 import {
@@ -823,11 +822,12 @@ function ReportScreen({
               {scoreItems.map((item, index) => (
                 <List.Accordion
                   key={index}
-                  title={`${item.name}`}
+                  title={item.name}
                   titleStyle={{
                     color: theme.colors.onSurface,
                     fontWeight: "bold",
                   }}
+                  titleNumberOfLines={2}
                   left={(props) => (
                     <List.Icon
                       {...props}
@@ -835,20 +835,37 @@ function ReportScreen({
                       color={theme.colors.primary}
                     />
                   )}
-                  right={(props) => (
-                    <Text
-                      style={{
-                        color: theme.colors.primary,
-                        alignSelf: "center",
-                      }}
-                    >
-                      {item.data.score}/5
-                    </Text>
+                  right={() => (
+                    <View style={styles.scoreDisplayContainer}>
+                      <Text
+                        style={[
+                          styles.scoreDisplayText,
+                          { color: theme.colors.primary },
+                        ]}
+                      >
+                        {item.data.score.toFixed(1)}/5
+                      </Text>
+                      <View style={styles.scoreDotsContainer}>
+                        {[...Array(5)].map((_, i) => (
+                          <View
+                            key={i}
+                            style={[
+                              styles.scoreDot,
+                              {
+                                backgroundColor:
+                                  i < Math.round(item.data.score)
+                                    ? theme.colors.primary
+                                    : theme.colors.outlineVariant,
+                              },
+                            ]}
+                          />
+                        ))}
+                      </View>
+                    </View>
                   )}
                   style={{
                     backgroundColor: theme.colors.surface,
-                    borderBottomWidth:
-                      index === scoreItems.length - 1 ? 0 : 1,
+                    borderBottomWidth: index === scoreItems.length - 1 ? 0 : 1,
                     borderBottomColor: theme.colors.outlineVariant,
                   }}
                   expanded={activeAccordion === item.name}
@@ -858,21 +875,12 @@ function ReportScreen({
                     )
                   }
                 >
-                  <View style={{ padding: 16, paddingTop: 0 }}>
-                    <ProgressBar
-                      progress={item.data.score / 5}
-                      color={theme.colors.primary}
-                      style={{
-                        marginBottom: 12,
-                        height: 8,
-                        borderRadius: 4,
-                      }}
-                    />
+                  <View style={styles.reasoningContainer}>
                     <Text
-                      style={{
-                        color: theme.colors.onSurfaceVariant,
-                        lineHeight: 20,
-                      }}
+                      style={[
+                        styles.reasoningText,
+                        { color: theme.colors.onSurfaceVariant },
+                      ]}
                     >
                       {item.data.reasoning}
                     </Text>
@@ -909,9 +917,7 @@ function ReportScreen({
               </View>
               <View style={styles.costRow}>
                 <Text>Duration (minutes)</Text>
-                <Text>
-                  {((usage.audioInputDuration ?? 0) / 60).toFixed(2)}
-                </Text>
+                <Text>{((usage.audioInputDuration ?? 0) / 60).toFixed(2)}</Text>
               </View>
               <View style={styles.costRow}>
                 <Text>GPT Input (USD)</Text>
@@ -979,9 +985,7 @@ function ReportScreen({
                           selectable
                           style={{ color: theme.colors.onSurface }}
                         >
-                          <Text style={{ fontWeight: "bold" }}>
-                            [FINAL]:{" "}
-                          </Text>
+                          <Text style={{ fontWeight: "bold" }}>[FINAL]: </Text>
                           {finalText}
                         </Text>
                       )}
@@ -1146,7 +1150,6 @@ const styles = StyleSheet.create({
   reportSubtitle: {
     fontSize: 22,
     fontWeight: "600",
-    marginTop: 24,
     marginBottom: 12,
     alignSelf: "flex-start",
     width: "100%",
@@ -1191,5 +1194,32 @@ const styles = StyleSheet.create({
   restartButton: {
     marginTop: "auto",
     paddingVertical: 8,
+  },
+  scoreDisplayContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+  scoreDisplayText: {
+    fontWeight: "bold",
+    fontSize: 16,
+    marginRight: 8,
+  },
+  scoreDotsContainer: {
+    flexDirection: "row",
+  },
+  scoreDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginHorizontal: 2,
+  },
+  reasoningContainer: {
+    padding: 16,
+    paddingVertical: 32,
+  },
+  reasoningText: {
+    lineHeight: 20,
+    textAlign: "left",
   },
 });
