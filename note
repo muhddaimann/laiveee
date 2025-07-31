@@ -40,97 +40,69 @@ LaiveV1/
 └─ tsconfig.json
 
 
-LaiveV1/
-├─ Demo/
-├─ JokeGenerator/
-├─ InterviewBot/
-│  ├─ Phase1_BasicInterview/
-│  │  ├─ UI screen to show chat bubbles & mic controls
-│  │  ├─ Starts conversation with “Hi, thanks for joining…”
-│  │  ├─ Sends 3 preset questions one by one using GPT
-│  │  ├─ Displays assistant voice + waveform + user answers
-│  │  ├─ Uses:
-│  │  │   ├─ WavRecorder
-│  │  │   ├─ WavStreamPlayer
-│  │  │   ├─ RealtimeClient
-│  │  │   ├─ OPENAI_API_KEY
-│  │
-│  ├─ Phase2_ScoringFeedback/
-│  │  ├─ Adds scoring logic in `conversation.updated` handler
-│  │  ├─ Parses assistantinternal evaluation from GPT (score + feedback)
-│  │  ├─ Renders score beside each user answer
-│  │  ├─ UI shows: “Score: 4/5 – Good communication”
-│  │
-│  ├─ Phase3_ConfigurableRoles/
-│  │  ├─ Adds config screen or modal (e.g., dropdowns or fields):
-│  │  │   ├─ Role (e.g., Customer Support, Sales)
-│  │  │   ├─ Level (e.g., Junior, Senior)
-│  │  │   ├─ Language (e.g., English, Manglish)
-│  │  ├─ Injects these into GPT instructions/persona
-│  │  ├─ Adjusts questions & scoring based on config
-│  │
-│  ├─ Phase4_ResultSummary/
-│  │  ├─ After final question, generate:
-│  │  │   ├─ Total score
-│  │  │   ├─ Key highlights (strengths, weaknesses)
-│  │  │   ├─ Final verdict (e.g., "Recommended for next round")
-│  │  ├─ Renders summary view at the end of chat
-│  │  ├─ Optionally adds “Save” or “Download” button
-│  │
-│  ├─ BonusFeatures/
-│     ├─ Chat history saving to your backend
-│     ├─ Export final summary to PDF/email
-│     ├─ Enable language switching (i18n)
+Laive
+├─ LaiveDemo
+│  ├─ 🔹 MVP: Unified playground to explore Laive AI capabilities
+│  ├─ TopicSelector/
+│  │  └─ Choose a topic and start a real-time conversation with AI
+│  └─ ToolRunner/
+│     └─ Trigger tool calls using RAG to fetch relevant knowledge base data
+│
+├─ LaiveScreen
+├─ 🔹 MVP: AI-powered interview assistant (Customer Service focus)
+├─ PreScreen
+│  ├─ Configure the interview, Prepare
+│  ├─ LanguageSelector - Select special
+│  └─ PersonaInput
+│
+├─ Interview
+│  ├─ AIConversation
+│  │  ├─ Mic recording with VAD
+│  │  ├─ RealtimeClient sends to GPT-4o
+│  │  ├─ Whisper transcription
+│  │  └─ GPT responses with persona + follow-ups
+│  ├─ Waveform - Visualizes voice input reply timing
+│  └─ ChatBubble - Display full conversation transcript (candidate + AI)
+│
+├─ Analyzer
+│  ├─ UsageTracker
+│  │  ├─ Input tokens, Output tokens
+│  │  └─ Audio duration cost (Whisper)
+│  ├─ ScoreEngine
+│  │  ├─ Language proficiency
+│  │  ├─ Communication (clarity, empathy, tone)
+│  │  └─ confidenceAndClarity (calmness, reasoning)
+│  ├─ Scenario handling - Show AI-generated feedback for candidate performance
+│  └─ AutoSummary - Show AI-generated feedback for candidate performance
+│
+├─ ReportScreen
+│  ├─ SummaryCard
+│  │  ├─ Candidate performance score
+│  │  └─ Strengths & improvement suggestions
+│  ├─ CostBreakdown
+│  │  └─ Token + time cost of session (OpenAI pricing)
+│  └─ ExportOptions
+│     └─ Download or send report as CSV or JSON
+│
+├─ LaiveDocs
+├─ 🔹 MVP: Smart resume evaluation by role applied
+├─ Upload
+│  ├─ DocumentInput - Upload resume (PDF, image)
+│  ├─ OCRProcessor - Extract raw text via OCR / PDF parse
+│  └─ TextCleaner - Normalize and sanitize extracted content
+├─ RoleSelector
+│  ├─ Select target role (e.g., Customer Service, Software Engineer)
+│  └─ Load role-specific expectations and keyword
+├─ Evaluator
+│  ├─ FieldExtractor - Identify key fields (education, skills, experience)
+│  ├─ MatchEngine
+│  │  ├─ Compare resume content to role requirements
+│  │  └─ Highlight missing or strong sections
+│  └─ ScoreSummary
+│     ├─ Fit score
+│     ├─ Strengths and gaps
+│     └─ AI-generated evaluation summary
+├─ Report
+│  ├─ Visual breakdown of match
+│  └─ Recommendation for next steps or interview readiness
 
-
-develop sidebar/d, interview page which consists of BasicInterview and ScoringFeedback. use the same tech as before as best as you can
-
-develop sidebar/d, interview page which consists of BasicInterview and ScoringFeedback. use the same tech as before as best as you can
-flesh out the new components with more functionality. BasicInterview, ScoringFeedback with tech of │  │  │   ├─ WavRecorder
-│  │  │   ├─ WavStreamPlayer
-│  │  │   ├─ RealtimeClient
-│  │  │   ├─ OPENAI_API_KEY
-
-instead of clarity, relevance, confidence, interviewer should base on empathy, innovate, passion, trust and insight. open ended question, easy and for customer service position. each ScoreType need to have their own number and reasoning and lastly summary and average percentage for the session, you may need to utils/interviewConfig this time 
-
-since its too much rows, keep const styles = StyleSheet.create({ as compact formatting
-
-InterviewPage have a good functional, but now lets focus on UI/UX. InterviewPage should popup a modal ask for text input name that will be inject in         text: `Hello! My name is ${name}, and I am ready for my customer service interview.`, a progress bar to indicates how much response you recieved before move to next properties, a loading state of finishing invterview/ generating result also a better modal view of result includes the early text input name and back button to defaulted interviewPage. you may total redesign. 
-
-ScoringFeedback moda/'s progress bar didnt work as intended and the result should be displayed on another modal, not answered by the interviewer. the result modal come with button back to default. you might need give them function of NameModal and ResultModal
-
-Binding element 'visible' implicitly has an 'any' type.ts(7031)
-
-Binding element 'onSubmit' implicitly has an 'any' type.ts(7031)
-
-
-'scores' is declared but its value is never read.ts(6133)
-
-
-Binding element 'onBack' implicitly has an 'any' type.ts(7031)
-
-
-
-Interviewer should not be the one who inform about the result. just display on the result modal with text. Interviewer should not entertain any voice after end the interview and loading state need to be obvious in generating result
-
-no need for Property 'removeAllListeners' does not exist on type 'RealtimeClient'.ts(2339) removeAllListeners. just not end the session and lets the modal to show the result instead of interviewer speech about the result
-
-proceed with this plan as long as user enter name - user start session - AI start test the candidate in the same time keep the value - alert user if try to disconnect then back to default - proper interview ending before processing result phase - displaying the result as well as entered name with a back to default. you may total redesign as you planned
-
-we should not uses Title and Paragraph from paper since it looks deprecated, use text from react-native instead. give it names to MessageBubble (Laive Interviewer) and {name} for the candidate. also report page phase need to be form like design instead of current lame looks, no need to tak a full width each phase. Basically your task here is to revise UI UX of the InterviewPage but keep the functionality.
-
-shouldnt it be 3/10 instead of 3%? revise properly how Overall Summary display result
-
-InterviewPage, InterviewContext, interviewConfig need to revise with new flow in order to asses customer service candidates better. InterviewPage still AI interviewer for customer service position but add more checking (specialize language)(English Malay) (English Mandarin) (English Korean) (English Japanese) but i dont think full immersion approach (malay/mandarin/korea/japan) is a good approach, interview will still need to start and end with english with consist of test of their specialize language (for example need to handle customer in that language etc). plan how do you gonna revise this
-
-proceed with implementing these changes as long as name and what candidate specialized language stated within text: `Hello! My name is ${name} and I am ready for my customer service interview specialized in ${language}`, natural conversation  and smooth closing from Laive Interviewer before analying and report phase page
-
-however createInterviewConfig not properly aligned with InterviewPage. Laive Interviewer should make candidate comfortable, asking how are you etc first before jumping into the interview. also theres more aspects to be evaluate empathy, innovation, passion, trust, insight etc. plan your way to revise UI UX and functionality of current InterviewPage and createInterviewConfig
-
-createInterviewConfig no need to use ${language} to evaluate all Empathy, Innovation. enough just passion and trust and then back english to evaluate insight then Concluding. english (Conversational Probing, empathy, innovation), ${language} (passion, trust), english (insight and concluding). proceed as long as not too short and not too long interview but holistic
-
-you need to keep the client.sendUserMessageContent so that the interview can properly start. InterviewPage message bubble keep talking for too long and displaying unnecessary text from createInterviewConfig. Keep it short natural and fast pacing while not displaying too much text for candidate. proceed as long as client.sendUserMessageContent and shorten the Laive speech and what it display message bubble 
-
-current task is about revise the UI UX of the ReportScreen since current not properly manage the content within Accordion and depends on scrollview. It is better to not having scrollview in my opinion. plan your way to refine ReportScreen as long as its compact and not using scrollview. you may total redesign. dont use segmented buttons, just more compact two columns after reportHeader and button on the right column
-
-since InterviewPage handles language options (Bahasa Malaysia, Mandarin, Korean, Japanese), proceed to make InterviewPage and its brains use them more intensively. im thinking of English language that just allow English ilanguage itself to be used for the session. Also if user chose diffterent language, createInterviewConfig need to adapt intensively with the choice in the instruction and scoring later. plan your strategy before proceed

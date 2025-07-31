@@ -333,6 +333,14 @@ function PreparationScreen({
   );
 }
 
+const languageCodeMapping: { [key in Language]: string } = {
+  English: "en",
+  Malay: "ms",
+  Mandarin: "zh",
+  Korean: "ko",
+  Japanese: "ja",
+};
+
 function InterviewScreen({
   onEndRequest,
   name,
@@ -504,10 +512,12 @@ function InterviewScreen({
     const wavStreamPlayer = wavStreamPlayerRef.current;
     const client = clientRef.current;
     const config = createInterviewConfig(language);
+    const transcriptionLanguage = languageCodeMapping[language] || "ms";
+
     client.updateSession({
       instructions: config.instructions,
       voice: "echo",
-      input_audio_transcription: { model: "whisper-1", language: "ms" },
+      input_audio_transcription: { model: "whisper-1", language: transcriptionLanguage },
     });
     client.addTool(config.tool, async (scores: ScoreType) => {
       setScores(scores);
