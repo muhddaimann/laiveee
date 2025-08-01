@@ -53,8 +53,14 @@ type PagePhase =
   | "interview"
   | "analyzing"
   | "report";
-const languageOptions = ["English", "Malay", "Mandarin", "Korean", "Japanese"] as const;
-type Language = typeof languageOptions[number];
+const languageOptions = [
+  "English",
+  "Malay",
+  "Mandarin",
+  "Korean",
+  "Japanese",
+] as const;
+type Language = (typeof languageOptions)[number];
 
 export default function InterviewPage() {
   return (
@@ -165,7 +171,7 @@ function WelcomeScreen({
         <Text
           style={[styles.welcomeTitle, { color: theme.colors.onBackground }]}
         >
-          AI-Powered Interview
+          LaiveScreen
         </Text>
         <Text
           style={[
@@ -517,7 +523,10 @@ function InterviewScreen({
     client.updateSession({
       instructions: config.instructions,
       voice: "echo",
-      input_audio_transcription: { model: "whisper-1", language: transcriptionLanguage },
+      input_audio_transcription: {
+        model: "whisper-1",
+        language: transcriptionLanguage,
+      },
     });
     client.addTool(config.tool, async (scores: ScoreType) => {
       setScores(scores);
@@ -756,18 +765,29 @@ function ReportScreen({
 
   if (language && (language as string) !== "English") {
     const languageProficiencyKey = `${language.toLowerCase()}Proficiency`;
-    const languageProficiency = scores[languageProficiencyKey as keyof ScoreType] as { score: number; reasoning: string } | undefined;
+    const languageProficiency = scores[
+      languageProficiencyKey as keyof ScoreType
+    ] as { score: number; reasoning: string } | undefined;
 
     if (languageProficiency) {
-      scoreItems.push({ name: `${language} Proficiency`, data: languageProficiency });
+      scoreItems.push({
+        name: `${language} Proficiency`,
+        data: languageProficiency,
+      });
     }
     if (scores.codeSwitching) {
-      scoreItems.push({ name: "Code-Switching & Natural Tone", data: scores.codeSwitching });
+      scoreItems.push({
+        name: "Code-Switching & Natural Tone",
+        data: scores.codeSwitching,
+      });
     }
   }
 
   scoreItems.push(
-    { name: "Empathy & Customer Handling", data: scores.empathyAndCustomerHandling },
+    {
+      name: "Empathy & Customer Handling",
+      data: scores.empathyAndCustomerHandling,
+    },
     { name: "Confidence & Clarity", data: scores.confidenceAndClarity }
   );
 

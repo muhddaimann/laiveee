@@ -82,7 +82,8 @@ Laive
 │  ├─ CostBreakdown
 │  │  └─ Token + time cost of session (OpenAI pricing)
 │  └─ ExportOptions
-│     └─ Download or send report as CSV or JSON
+│     ├─ PDF Export - Download full formatted interview report
+│     └─ Copy Transcript - Copy full raw transcript to clipboard
 │
 ├─ LaiveDocs
 ├─ 🔹 MVP: Smart resume evaluation by role applied
@@ -106,3 +107,150 @@ Laive
 │  ├─ Visual breakdown of match
 │  └─ Recommendation for next steps or interview readiness
 
+
+
+current task is to implement the ExportOptions PDF Export - Download full formatted interview report and Copy Transcript - Copy full raw transcript to clipboard. plan your strategy before proceed. proceed as long as you not using scrollview for interviewPage. start with turning             Take Interview Again button to be in independent full width component after reportColumn. the rows will contain retake interview, export pdf and copy Transcript
+
+instead of createInterviewConfig evaluating both english and selected language, interviewPage should just test candidate with what language the candidate choose, no dynamic testing both english and selected. same as current english one, applied for other four languages. so sendUserMessageContent need to be updated too so that the AI be more focused. plan your strategy before proceed.
+
+current task is to create another page specialized for the Talent acquisition, continuation of LaiveRecruit and LaiveScreen. since candidate done the resume checking and pre screening results, LaiveHire supposed to be a page to display it. imagine all those result tied to an ID (20250801C1). plan your strategy before proceed as long as still consistent as previous screen
+
+
+
+LaiveRecruit
+├─ Persona - Interviewer
+│  ├─ Landed to UploadScreen
+│  ├─ Upload candidate resume (PDF or DOC)
+│  ├─ Auto extracted summary appears
+│  ├─ View candidate strengths, skills, job match
+│  ├─ See suggested questions to ask
+│  ├─ Add manual notes or adjustments
+│  ├─ Export candidate report or briefing sheet
+│
+├─ Persona - AI
+│  ├─ Resume gets parsed and profiled by system
+│  ├─ May be linked to actual interview session
+│  ├─ Receives summary or feedback (if allowed)
+
+
+LaiveScreen
+├─ Persona - Candidate
+│  ├─ Landed to WelcomeScreen
+│  ├─ Candidate fills name and selects language they specialize in
+│  ├─ Taps Start → navigates to PreparationScreen
+│  ├─ On PreparationScreen:
+│  │   ├─ Candidate taps "I'm Ready" to continue
+│  │   └─ Or goes back to WelcomeScreen
+│  ├─ Lands on InterviewScreen
+│  │   ├─ System auto-sends $name and $language to client to start session
+│  │   ├─ AI begins conversation in selected language
+│  │   ├─ If English is selected → AI speaks only English
+│  │   ├─ If another language is selected:
+│  │   │   ├─ AI allows some switching but evaluates it
+│  │   │   └─ Using non-selected language affects scoring, though AI still understands
+│  │   └─ Session ends when candidate says "thank you" or manually ends
+│  ├─ Lands on AnalyzingScreen
+│  ├─ Lands on ReportScreen
+│  └─ Candidate can export their report
+│
+├─ Persona - AI
+│  ├─ Receives $language in configuration
+│  ├─ Uses config to handle interview flow and persona behavior
+│  ├─ Evaluates candidate (e.g., language use, tone, clarity)
+│  ├─ Generates summary and usage cost
+│  └─ Handles report export after session
+
+
+Recruitment Flow
+├─ Candidate starts in LaiveRecruit
+│  ├─ Upload resume (PDF/DOC)
+│  ├─ System extracts summary, strengths, questions
+│  ├─ Candidate double check and ready for Pre-Screen
+│  └─ App navigates to LaiveScreen with passed candidate data
+│
+├─ Step 2: LaiveScreen handles pre-screen interview
+│  ├─ Candidate lands in WelcomeScreen
+│  ├─ $name, $language, $candidateId passed from LaiveRecruit
+│  ├─ AI interview session starts and ends normally
+│  └─ On finish → generates report (with scores, summary, feedback)
+│
+├─ Step 3: Return result to LaiveRecruit
+│  ├─ On session end, LaiveScreen POSTs result to backend (e.g., /savePreScreenResult)
+│  ├─ Backend links result to original $candidateId or temp ID
+│  ├─ Interviewer returns to LaiveRecruit → refreshed with updated report
+│  └─ Interviewer can view updated profile, report, or export data
+
+
+LaiveHire
+├─ Persona - TA
+│  ├─ Landed to PipelineScreen
+│  │   ├─ View all candidates across stages (Applied, Pre-Screened, Interviewed, Offered)
+│  │   ├─ Filter by job role, status, interviewer, date
+│  │   ├─ Search candidate by name, tag, or ID
+│  ├─ Tap candidate → CandidateDetailScreen
+│  │   ├─ View resume, interview summary, scores
+│  │   ├─ Add comments or action tags (e.g. Shortlist, Reject)
+│  │   ├─ Assign next action (e.g. Send to Manager, Book Interview)
+│  ├─ Export reports for HR/Management
+│
+├─ Persona - System
+│  ├─ Integration from LaiveRecruit and LaiveScreen
+│  ├─ Updates candidate stage after each action
+│  ├─ Sends notifications to stakeholders (optional)
+
+
+LaiveScreen
+├─ Persona - TA (Talent Acquisition)
+│  ├─ Assign candidate to PC/station
+│  ├─ LaiveScreen loads with Resume & Assessment tabs
+│  ├─ Result Tab locked until candidate session completes
+│  ├─ After session ends, TA unlocks result tabs with credentials
+│  ├─ TA can view:
+│  │   ├─ Uploaded Resume and ResumeAI result
+│  │   └─ Assessment Report
+│  ├─ TA can export session data as CSV
+├─ Persona - Candidate
+│  ├─ Landed to Resume Tab
+│  ├─ Upload resume (PDF/Docx)
+│  ├─ Submit resume → Resume tab locked
+│  ├─ Navigate to Assessment Tab
+│  ├─ Candidate fills:
+│  │   ├─ Name
+│  │   └─ Language (used for entire conversation)
+│  ├─ Tap Start Assessment → Landed to InterviewScreen
+│  ├─ Session begins with (AI)s welcome message in selected language
+│  ├─ Must speak in selected language
+│  ├─ AI understands other languages but evaluates based on selection
+│  ├─ Session ends by:
+│  │   ├─ Auto-completion of flow (after finish asks all questions)
+│  │   └─ Candidate manually ending / saying "Thank you"
+│  ├─ Confirmation prompt to submit session
+│  ├─ Candidate clicks submit
+├─ Persona - AI
+│  ├─ Receives:
+│  │   ├─ Candidate name
+│  │   └─ Selected language
+│  ├─ Loads language-specific configuration for session
+│  ├─ Starts interview in selected language
+│  ├─ Monitors:
+│  │   ├─ Language consistency
+│  │   ├─ Fluency
+│  │   ├─ Clarity
+│  │   ├─ Relevance of answers
+│  │   └─ Code-switching
+│  ├─ Understands other languages, but applies evaluation rules
+│  ├─ Triggers session end after flow completion or end signal
+│  ├─ Analyzes recording:
+│  │   ├─ NLP and speech scoring
+│  │   ├─ Behavioral analysis
+│  │   ├─ Confidence and timing
+│  │   └─ Evaluation summary
+│  ├─ Generates report:
+│  │   ├─ Summary
+│  │   ├─ Evaluation metrics
+│  │   └─ Cost & insights
+│  └─ Provides export-ready output in PDF/CSV/JSON
+
+current task is to create another page specialized for the Talent acquisition, continuation of LaiveRecruit and LaiveScreen. since candidate done the resume checking and pre screening results, LaiveHire supposed to be a page to display it. imagine all those result tied to an ID (20250801C1). plan your strategy before proceed as long as still consistent as previous screen to e/index
+
+20250801C1
