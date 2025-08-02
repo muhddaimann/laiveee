@@ -5,9 +5,6 @@ import {
   View,
   ScrollView,
   ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { RealtimeClient } from "@openai/realtime-api-beta";
 import { ItemType } from "@openai/realtime-api-beta/dist/lib/client.js";
@@ -167,10 +164,7 @@ function WelcomeScreen({
   const canSubmit = name.trim() && role && file;
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.fullPage}
-    >
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScrollView contentContainerStyle={styles.centered}>
         <Text
           style={[styles.welcomeTitle, { color: theme.colors.onBackground }]}
@@ -186,7 +180,12 @@ function WelcomeScreen({
           Let's get to know you. Please provide your name, the role you're
           applying for, and your latest resume.
         </Text>
-        <Card style={styles.welcomeCard}>
+        <Card
+          style={[
+            styles.welcomeCard,
+            { backgroundColor: theme.colors.surface },
+          ]}
+        >
           <Card.Content>
             <TextInput
               mode="outlined"
@@ -202,14 +201,6 @@ function WelcomeScreen({
               <RadioButton.Item
                 label="Customer Service"
                 value="Customer Service"
-              />
-              <RadioButton.Item
-                label="Technical Support"
-                value="Technical Support"
-              />
-              <RadioButton.Item
-                label="Sales Associate"
-                value="Sales Associate"
               />
             </RadioButton.Group>
             <Button
@@ -232,7 +223,7 @@ function WelcomeScreen({
           Proceed
         </Button>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

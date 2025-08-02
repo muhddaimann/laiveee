@@ -5,7 +5,7 @@ import { useRouter } from "expo-router";
 
 const minHeight = Dimensions.get("window").height / 4;
 
-export default function DocCard() {
+export default function ApplyCard() {
   const theme = useTheme();
   const router = useRouter();
 
@@ -18,16 +18,16 @@ export default function DocCard() {
     >
       <View style={styles.content}>
         <Text style={[styles.title, { color: theme.colors.onSurface }]}>
-          Document Summary
+          Apply for a Role
         </Text>
         <Text style={[styles.desc, { color: theme.colors.onSurfaceVariant }]}>
-          Upload a resume, report or document and get a smart AI-generated
-          summary instantly. Ideal for quick reviews and candidate profiling.
+          Start your job application journey. Upload your resume and let our AI
+          guide you through a smart, voice-based pre-screening interview.
         </Text>
       </View>
       <Button
         mode="text"
-        onPress={() => router.push("/a")}
+        onPress={() => router.push("/c")}
         textColor={theme.colors.primary}
         style={styles.button}
         contentStyle={styles.buttonContent}

@@ -27,7 +27,7 @@ const mockAnalysis = {
 
 type PagePhase = "welcome" | "analyzing" | "report";
 
-export default function RecruitScreen() {
+export default function LaiveDoc() {
   const theme = useTheme();
   const [phase, setPhase] = useState<PagePhase>("welcome");
   const [fileName, setFileName] = useState<string | null>(null);
@@ -100,7 +100,12 @@ function WelcomeScreen({ onUpload }: { onUpload: () => void }) {
       </Text>
       <View style={styles.welcomeContainer}>
         <View style={styles.welcomeColumn}>
-          <Card style={styles.welcomeCard}>
+          <Card
+            style={[
+              styles.welcomeCard,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
             <Card.Content>
               <Text style={styles.cardTitle}>Select Your Role</Text>
               <RadioButton.Group
@@ -111,20 +116,17 @@ function WelcomeScreen({ onUpload }: { onUpload: () => void }) {
                   label="Executive - Customer Service"
                   value="Customer Service"
                 />
-                <RadioButton.Item
-                  label="Executive - Technical Support"
-                  value="Technical Support"
-                />
-                <RadioButton.Item
-                  label="Executive - Sales Associate"
-                  value="Sales Associate"
-                />
               </RadioButton.Group>
             </Card.Content>
           </Card>
         </View>
         <View style={styles.welcomeColumn}>
-          <Card style={[styles.welcomeCard, { alignItems: "center" }]}>
+          <Card
+            style={[
+              styles.welcomeCard,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
             <Card.Content style={styles.centered}>
               <Avatar.Icon
                 icon="upload"
@@ -205,7 +207,12 @@ function ReportScreen({
 
         <View style={styles.reportBody}>
           <View style={styles.reportColumn}>
-            <Card style={styles.reportCard}>
+            <Card
+              style={[
+                styles.reportCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
               <Card.Content>
                 <Text style={styles.cardTitle}>Your AI-Generated Summary</Text>
                 <TextInput
@@ -218,7 +225,12 @@ function ReportScreen({
               </Card.Content>
             </Card>
 
-            <Card style={styles.reportCard}>
+            <Card
+              style={[
+                styles.welcomeCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
               <Card.Content>
                 <Text style={styles.cardTitle}>Your Skills</Text>
                 <TextInput
@@ -234,7 +246,12 @@ function ReportScreen({
           </View>
 
           <View style={styles.reportColumn}>
-            <Card style={styles.reportCard}>
+            <Card
+              style={[
+                styles.reportCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
               <Card.Content>
                 <Text style={styles.cardTitle}>
                   Potential Interview Questions
@@ -247,7 +264,12 @@ function ReportScreen({
               </Card.Content>
             </Card>
 
-            <Card style={styles.reportCard}>
+            <Card
+              style={[
+                styles.reportCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
               <Card.Content>
                 <Text style={styles.cardTitle}>Strengths</Text>
                 <View style={styles.chipContainer}>

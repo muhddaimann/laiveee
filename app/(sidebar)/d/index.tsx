@@ -62,7 +62,7 @@ const languageOptions = [
 ] as const;
 type Language = (typeof languageOptions)[number];
 
-export default function InterviewPage() {
+export default function LaiveScreen() {
   return (
     <InterviewProvider>
       <InterviewFlow />

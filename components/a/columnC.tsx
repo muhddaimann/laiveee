@@ -1,9 +1,9 @@
 import React, { useRef, useEffect } from "react";
 import { View, Animated, StyleSheet, Dimensions, Easing } from "react-native";
-import DemoCard from "./demoCard";
-import InterviewCard from "./interviewCard";
 import DocCard from "./docCard";
-import JokeCard from "./jokeCard";
+import ScreenCard from "./screenCard";
+import RecruitCard from "./recruitCard";
+import ApplyCard from "./applyCard";
 
 const CARD_HEIGHT = Dimensions.get("window").height * 0.4 + 16;
 const TOTAL_HEIGHT = CARD_HEIGHT * 4;
@@ -36,10 +36,10 @@ export default function ColumnC() {
   }, [scrollY]);
 
   const cards = [
-    <InterviewCard key="interview1" />,
-    <DemoCard key="demo1" />,
-    <DocCard key="doc1" />,
-    <JokeCard key="joke1" />,
+    <DocCard key="interview1" />,
+    <ScreenCard key="demo1" />,
+    <RecruitCard key="doc1" />,
+    <ApplyCard key="joke1" />,
   ];
 
   const animatedStyle = {

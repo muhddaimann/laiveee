@@ -107,7 +107,7 @@ const mockCandidateData = {
 
 type Candidate = (typeof mockCandidateData)["20250801C1"];
 
-export default function HireDashboard() {
+export default function LaiveRecruit() {
   const theme = useTheme();
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(
     null
@@ -151,7 +151,6 @@ export default function HireDashboard() {
         { backgroundColor: theme.colors.background },
       ]}
     >
-      {/* Left Column */}
       <View style={styles.leftColumn}>
         {loading ? (
           <LoadingScreen />
@@ -168,7 +167,6 @@ export default function HireDashboard() {
         )}
       </View>
 
-      {/* Right Column */}
       <View style={styles.rightColumn}>
         <LookupCard onSearch={handleSearch} />
         <RecentCard
@@ -199,7 +197,12 @@ function CompletedInterviewsList({
             key={candidate.id}
             onPress={() => onSelect(candidate.id)}
           >
-            <Card style={styles.candidateCard}>
+            <Card
+              style={[
+                styles.candidateCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
               <Card.Content>
                 <View style={styles.cardHeader}>
                   <Avatar.Icon icon="account-circle" size={40} />
@@ -256,7 +259,9 @@ function ReportView({
         >
           Back to Dashboard
         </Button>
-        <Card style={styles.reportCard}>
+        <Card
+          style={[styles.reportCard, { backgroundColor: theme.colors.surface }]}
+        >
           <Card.Content style={{ alignItems: "center" }}>
             <Avatar.Icon
               icon="account-tie"
@@ -268,10 +273,7 @@ function ReportView({
           </Card.Content>
         </Card>
         <Card
-          style={[
-            styles.reportCard,
-            { backgroundColor: theme.colors.primaryContainer },
-          ]}
+          style={[styles.reportCard, { backgroundColor: theme.colors.surface }]}
         >
           <Card.Content>
             <Text style={styles.cardTitle}>Hiring Recommendation</Text>
@@ -288,7 +290,9 @@ function ReportView({
             </Text>
           </Card.Content>
         </Card>
-        <Card style={styles.reportCard}>
+        <Card
+          style={[styles.reportCard, { backgroundColor: theme.colors.surface }]}
+        >
           <Card.Content>
             <Text style={styles.cardTitle}>Interview Performance</Text>
             <List.Section>
@@ -300,6 +304,7 @@ function ReportView({
                     title={`${key.replace(/([A-Z])/g, " $1").trim()}`}
                     left={() => <List.Icon icon="star-circle" />}
                     right={() => <Text>{value.score}/5</Text>}
+                    style={{ backgroundColor: theme.colors.surface }}
                   >
                     <Text
                       style={{
@@ -320,9 +325,10 @@ function ReportView({
 }
 
 function LookupCard({ onSearch }: { onSearch: (id: string) => void }) {
+  const theme = useTheme();
   const [id, setId] = useState("");
   return (
-    <Card style={styles.rightCard}>
+    <Card style={[styles.rightCard, { backgroundColor: theme.colors.surface }]}>
       <Card.Content>
         <Text style={styles.cardTitle}>Candidate Lookup</Text>
         <TextInput
@@ -347,8 +353,10 @@ function RecentCard({
   candidate: Candidate & { id: string };
   onSelect: () => void;
 }) {
+  const theme = useTheme();
+
   return (
-    <Card style={styles.rightCard}>
+    <Card style={[styles.rightCard, { backgroundColor: theme.colors.surface }]}>
       <TouchableOpacity onPress={onSelect}>
         <Card.Content>
           <Text style={styles.cardTitle}>Recently Completed</Text>

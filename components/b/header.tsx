@@ -29,10 +29,9 @@ export default function Header() {
         <View style={styles.row}>
           <View style={styles.texts}>
             <Text style={[styles.title, { color: theme.colors.onBackground }]}>
-              Laive Assistance{" "}
+              Laive Demo{" "}
               <Text style={{ color: theme.colors.primary }}>[AI]</Text>{" "}
               <Text style={{ color: theme.colors.secondary }}>[RAG]</Text>{" "}
-              <Text style={{ color: theme.colors.outline }}>[DEMO]</Text>
             </Text>
 
             <Menu

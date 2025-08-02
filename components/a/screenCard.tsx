@@ -5,7 +5,7 @@ import { useRouter } from "expo-router";
 
 const minHeight = Dimensions.get("window").height / 4;
 
-export default function JokeCard() {
+export default function ScreenCard() {
   const theme = useTheme();
   const router = useRouter();
 
@@ -18,22 +18,21 @@ export default function JokeCard() {
     >
       <View style={styles.content}>
         <Text style={[styles.title, { color: theme.colors.onSurface }]}>
-          Joke Generator
+          Interview Simulation
         </Text>
         <Text style={[styles.desc, { color: theme.colors.onSurfaceVariant }]}>
-          Instantly generate witty, light-hearted jokes with a tap. Great for
-          icebreakers, daily laughs or just to brighten your day. Powered
-          by AI with a sense of humor.
+          Practice your customer service skills with a live AI interview. Speak
+          freely and receive intelligent, real-time feedback from Laive.
         </Text>
       </View>
       <Button
         mode="text"
-        onPress={() => router.push("/joke")}
+        onPress={() => router.push("/c")}
         textColor={theme.colors.primary}
         style={styles.button}
         contentStyle={styles.buttonContent}
       >
-        Make me laugh
+        Try now
       </Button>
     </View>
   );

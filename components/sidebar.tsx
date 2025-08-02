@@ -15,7 +15,7 @@ import { useToggle } from "../contexts/themeContext";
 const navItems = [
   { icon: "home-outline", label: "Home", route: "/a" },
   { icon: "robot-happy", label: "LaiveDemo", route: "/b" },
-  { icon: "account-tie", label: "LaiveRecruit", route: "/c" },
+  { icon: "account-tie", label: "LaiveDoc", route: "/c" },
   { icon: "account-supervisor-circle", label: "LaiveScreen", route: "/d" },
   { icon: "account-search-outline", label: "LaiveRecruit", route: "/e" },
   { icon: "form-select", label: "LaiveApply", route: "/f" },

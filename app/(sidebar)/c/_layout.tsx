@@ -8,7 +8,7 @@ export default function RecruitLayout() {
       <Stack.Screen
         name="index"
         options={{
-          headerTitle: "LaiveRecruit™",
+          headerTitle: "LaiveDoc™",
           headerStyle: { backgroundColor: theme.colors.surface },
           headerTintColor: theme.colors.onSurface,
         }}
