@@ -2,7 +2,7 @@ import { Stack } from "expo-router";
 import Header from "../../../components/b/header";
 import { useTheme } from "react-native-paper";
 
-export default function LayoutB() {
+export default function DemoLayout() {
   const theme = useTheme();
 
   return (

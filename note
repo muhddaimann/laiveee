@@ -253,4 +253,9 @@ LaiveScreen
 
 current task is to create another page specialized for the Talent acquisition, continuation of LaiveRecruit and LaiveScreen. since candidate done the resume checking and pre screening results, LaiveHire supposed to be a page to display it. imagine all those result tied to an ID (20250801C1). plan your strategy before proceed as long as still consistent as previous screen to e/index
 
-20250801C1
+current task is to base LaiveDoc and LaiveScreen for new page named LaiveApply. an unified candidate flow resume upload and pre screening. start with welcomeScreen nicely asks for shortName, positionApply and resume upload to start also bit of introduction of LaiveApply. then scanningScreen replicating document scan. then summaryScreen to display summarized also start pre screening phase. then preparationScreen. then interviewScreen. then analyzingScreen and finally EndingScreen to thanks the candidate for the session etc. plan you strategy before proceed LaiveApply on /Users/muhddaimann/react/react03/app/(sidebar)/f/index.tsx
+
+current task is to ensure full witdh is optimized which is use two columnns layout. as LaiveDoc and LaiveScreen. Revise UI UX as better as you can. focus on customer service first. radio button of a single option (Apply Position). plan your strategy before proceed
+
+
+current task is to make LaiveApply to be more friendly. Welcome Screen prompting what should we call you, what role you are looking for. reusable analyzeScreen for both scanning screen and analyzing screen with different title subtile parameters. SummaryScreen handling your resume looks on track with role you looking for here also section to choose language used for the pre screen. nothing need to change of preparation Screen. interviewScreen doesnt need to have the logic yet just dummy 3 seconds interview is running then analyzeScreen again with different title subtitle and endingScreen of thanking thecandidate for the response etc. plan your strategy before proceed

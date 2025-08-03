@@ -1,58 +1,39 @@
-import React, { useEffect, useRef, useCallback, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  StyleSheet,
-  Text,
   View,
+  StyleSheet,
   ScrollView,
-  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import { RealtimeClient } from "@openai/realtime-api-beta";
-import { ItemType } from "@openai/realtime-api-beta/dist/lib/client.js";
-import { WavRecorder, WavStreamPlayer } from "../../../lib/wavtools/index.js";
-import { WavRenderer } from "../../../utils/wavRenderer";
-import * as DocumentPicker from "expo-document-picker";
-
 import {
-  useTheme,
   Button,
-  TextInput,
-  Avatar,
   Card,
-  List,
+  Text,
+  useTheme,
+  TextInput,
+  ActivityIndicator,
+  Avatar,
   RadioButton,
 } from "react-native-paper";
-import { OPENAI_API_KEY, LOCAL_RELAY_SERVER_URL } from "../../../constants/env";
-import {
-  InterviewProvider,
-  useInterviewContext,
-} from "../../../contexts/interviewContext";
-import { createInterviewConfig } from "../../../utils/interviewConfig";
-import { UsageData } from "../../../utils/costEstimator";
+import * as DocumentPicker from "expo-document-picker";
+import { InterviewProvider } from "../../../contexts/interviewContext";
+
+type PagePhase =
+  | "welcome"
+  | "scanning"
+  | "summary"
+  | "preparation"
+  | "interview"
+  | "analyzing"
+  | "ending";
 
 const mockAnalysis = {
   summary:
     "A highly motivated software engineer with 5 years of experience in full-stack development, specializing in React and Node.js. Proven track record of leading successful projects and delivering high-quality software.",
   strengths: ["Leadership", "React", "Node.js", "Agile Methodologies"],
   skills: ["JavaScript", "TypeScript", "Python", "Docker", "AWS"],
-  suggestedQuestions: [
-    "Describe a challenging project you led and how you ensured its success.",
-    "How do you stay updated with the latest trends in front-end development?",
-    "Can you explain your experience with cloud services like AWS?",
-  ],
 };
-
-type PagePhase =
-  | "welcome"
-  | "analyzingResume"
-  | "resumeReport"
-  | "preparation"
-  | "interview"
-  | "analyzingInterview"
-  | "thankYou";
-
-const languageOptions = ["English", "Malay", "Mandarin"] as const;
-
-type Language = (typeof languageOptions)[number];
 
 export default function LaiveApply() {
   return (
@@ -64,112 +45,130 @@ export default function LaiveApply() {
 
 function ApplyFlow() {
   const [phase, setPhase] = useState<PagePhase>("welcome");
-  const [name, setName] = useState("");
-  const [role, setRole] = useState("Customer Service");
+  const [shortName, setShortName] = useState("");
+  const [positionApply, setPositionApply] = useState(
+    "Executive - Customer Service"
+  );
   const [fileName, setFileName] = useState<string | null>(null);
-  const { setScores, language, setLanguage, setUsage } = useInterviewContext();
+  const [language, setLanguage] = useState("English");
 
-  const handleWelcomeSubmit = (
-    submittedName: string,
-    submittedRole: string,
-    submittedFile: string
-  ) => {
-    setName(submittedName);
-    setRole(submittedRole);
-    setFileName(submittedFile);
-    setPhase("analyzingResume");
-    setTimeout(() => setPhase("resumeReport"), 2000);
+  const handleFileUpload = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          "application/pdf",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ],
+      });
+
+      if (result.canceled === false) {
+        setFileName(result.assets[0].name);
+      }
+    } catch (err) {
+      console.error("Unknown error: ", err);
+    }
   };
 
-  const handleProceedToInterview = () => {
-    setPhase("preparation");
+  const handleStart = () => {
+    setPhase("scanning");
   };
-
-  const handleStartInterview = () => {
-    setPhase("interview");
-  };
-
-  const handleEndInterview = useCallback(() => {
-    setPhase("analyzingInterview");
-    setTimeout(() => {
-      setPhase("thankYou");
-    }, 4000);
-  }, []);
 
   const handleRestart = () => {
-    setName("");
-    setRole("Customer Service");
-    setFileName(null);
-    setScores(null);
-    setLanguage("English");
-    setUsage(null);
     setPhase("welcome");
+    setShortName("");
+    setPositionApply("Executive - Customer Service");
+    setFileName(null);
+    setLanguage("English");
   };
 
   switch (phase) {
     case "welcome":
-      return <WelcomeScreen onSubmit={handleWelcomeSubmit} />;
-    case "analyzingResume":
-      return <AnalyzingScreen text="Analyzing Your Resume..." />;
-    case "resumeReport":
-      return <ResumeReportScreen onProceed={handleProceedToInterview} />;
-    case "preparation":
       return (
-        <PreparationScreen
-          onProceed={handleStartInterview}
-          onBack={() => setPhase("resumeReport")}
+        <WelcomeScreen
+          shortName={shortName}
+          setShortName={setShortName}
+          positionApply={positionApply}
+          setPositionApply={setPositionApply}
+          fileName={fileName}
+          onFileUpload={handleFileUpload}
+          onStart={handleStart}
         />
       );
-    case "interview":
+    case "scanning":
       return (
-        <InterviewScreen
-          onEndRequest={handleEndInterview}
-          name={name}
+        <AnalyzeScreen
+          title="Scanning Your Resume..."
+          subtitle={fileName || "Please wait"}
+          onComplete={() => setPhase("summary")}
+        />
+      );
+    case "summary":
+      return (
+        <SummaryScreen
           language={language}
+          setLanguage={setLanguage}
+          onStartInterview={() => setPhase("preparation")}
         />
       );
-    case "analyzingInterview":
-      return <AnalyzingScreen text="Analyzing Your Interview..." />;
-    case "thankYou":
-      return <ThankYouScreen onRestart={handleRestart} />;
+    case "preparation":
+      return <PreparationScreen onProceed={() => setPhase("interview")} />;
+    case "interview":
+      return <InterviewScreen onEndRequest={() => setPhase("analyzing")} />;
+    case "analyzing":
+      return (
+        <AnalyzeScreen
+          title="Analyzing your results..."
+          subtitle="Please wait a moment."
+          onComplete={() => setPhase("ending")}
+        />
+      );
+    case "ending":
+      return <EndingScreen onRestart={handleRestart} />;
     default:
-      return <WelcomeScreen onSubmit={handleWelcomeSubmit} />;
+      return null;
   }
 }
 
 function WelcomeScreen({
-  onSubmit,
+  shortName,
+  setShortName,
+  positionApply,
+  setPositionApply,
+  fileName,
+  onFileUpload,
+  onStart,
 }: {
-  onSubmit: (name: string, role: string, fileName: string) => void;
+  shortName: string;
+  setShortName: (name: string) => void;
+  positionApply: string;
+  setPositionApply: (position: string) => void;
+  fileName: string | null;
+  onFileUpload: () => void;
+  onStart: () => void;
 }) {
   const theme = useTheme();
-  const [name, setName] = useState("");
-  const [role, setRole] = useState("Customer Service");
-  const [file, setFile] = useState<DocumentPicker.DocumentPickerAsset | null>(
-    null
-  );
-
-  const handleFileUpload = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: [
-        "application/pdf",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      ],
-    });
-    if (result.canceled === false) {
-      setFile(result.assets[0]);
-    }
-  };
-
-  const canSubmit = name.trim() && role && file;
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ScrollView contentContainerStyle={styles.centered}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.fullPage}
+    >
+      <View
+        style={[styles.centered, { backgroundColor: theme.colors.background }]}
+      >
+        <Avatar.Icon
+          icon="briefcase-check"
+          size={80}
+          style={{
+            backgroundColor: theme.colors.primary,
+            marginBottom: 24,
+          }}
+          color={theme.colors.onPrimary}
+        />
         <Text
           style={[styles.welcomeTitle, { color: theme.colors.onBackground }]}
         >
-          Start Your Application
+          Welcome to LaiveApply
         </Text>
         <Text
           style={[
@@ -177,57 +176,131 @@ function WelcomeScreen({
             { color: theme.colors.onSurfaceVariant },
           ]}
         >
-          Let's get to know you. Please provide your name, the role you're
-          applying for, and your latest resume.
+          Let's get your application started. Please provide your name, the
+          position you're applying for, and upload your resume.
         </Text>
-        <Card
-          style={[
-            styles.welcomeCard,
-            { backgroundColor: theme.colors.surface },
-          ]}
-        >
-          <Card.Content>
-            <TextInput
-              mode="outlined"
-              label="What should we call you?"
-              value={name}
-              onChangeText={setName}
-              style={{ marginBottom: 16 }}
-            />
-            <Text style={{ marginBottom: 8, fontWeight: "bold" }}>
-              Which position are you applying for?
-            </Text>
-            <RadioButton.Group onValueChange={setRole} value={role}>
-              <RadioButton.Item
-                label="Customer Service"
-                value="Customer Service"
-              />
-            </RadioButton.Group>
-            <Button
-              mode="outlined"
-              icon="upload"
-              onPress={handleFileUpload}
-              style={{ marginTop: 16 }}
+        <View style={styles.welcomeContainer}>
+          <View style={styles.welcomeColumn}>
+            <Card
+              style={[
+                styles.welcomeContentCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
             >
-              {file ? `Uploaded: ${file.name}` : "Upload Your Resume"}
-            </Button>
-          </Card.Content>
-        </Card>
+              <Card.Content>
+                <TextInput
+                  label="What should we call you?"
+                  value={shortName}
+                  onChangeText={setShortName}
+                  mode="outlined"
+                  style={{ marginBottom: 16 }}
+                  autoFocus
+                />
+                <Text style={styles.cardTitle}>
+                  What role are you looking for?
+                </Text>
+                <RadioButton.Group
+                  onValueChange={(newValue) => setPositionApply(newValue)}
+                  value={positionApply}
+                >
+                  <RadioButton.Item
+                    label="Executive - Customer Service"
+                    value="Executive - Customer Service"
+                  />
+                </RadioButton.Group>
+              </Card.Content>
+            </Card>
+          </View>
+          <View style={styles.welcomeColumn}>
+            <Card
+              style={[
+                styles.welcomeContentCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
+              <Card.Content style={styles.centered}>
+                <Avatar.Icon
+                  icon="upload"
+                  size={80}
+                  style={{
+                    backgroundColor: theme.colors.primary,
+                    marginBottom: 24,
+                  }}
+                  color={theme.colors.onPrimary}
+                />
+                <Text style={styles.cardTitle}>Upload Your Resume</Text>
+                <Text style={{ textAlign: "center", marginBottom: 16 }}>
+                  {fileName ? fileName : "PDF or DOCX format"}
+                </Text>
+                <Button mode="outlined" icon="upload" onPress={onFileUpload}>
+                  Choose File
+                </Button>
+              </Card.Content>
+            </Card>
+          </View>
+        </View>
         <Button
           mode="contained"
           icon="arrow-right"
-          onPress={() => onSubmit(name, role, file!.name)}
-          disabled={!canSubmit}
-          style={{ marginTop: 24 }}
+          onPress={onStart}
+          disabled={!shortName || !positionApply || !fileName}
+          contentStyle={{ paddingVertical: 8, flexDirection: "row-reverse" }}
+          style={{ marginTop: 24, width: "100%", maxWidth: 824 }}
         >
-          Proceed
+          Start Application
         </Button>
-      </ScrollView>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+function AnalyzeScreen({
+  title,
+  subtitle,
+  onComplete,
+}: {
+  title: string;
+  subtitle: string;
+  onComplete: () => void;
+}) {
+  const theme = useTheme();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onComplete();
+    }, 3000); // Simulate processing time
+
+    return () => clearTimeout(timer);
+  }, [onComplete]);
+
+  return (
+    <View
+      style={[
+        styles.fullPage,
+        styles.centered,
+        { backgroundColor: theme.colors.background },
+      ]}
+    >
+      <ActivityIndicator size="large" color={theme.colors.primary} />
+      <Text
+        style={[styles.analyzingTitle, { color: theme.colors.onBackground }]}
+      >
+        {title}
+      </Text>
+      <Text style={{ color: theme.colors.onSurfaceVariant }}>{subtitle}</Text>
     </View>
   );
 }
 
-function ResumeReportScreen({ onProceed }: { onProceed: () => void }) {
+function SummaryScreen({
+  onStartInterview,
+  language,
+  setLanguage,
+}: {
+  onStartInterview: () => void;
+  language: string;
+  setLanguage: (lang: string) => void;
+}) {
   const theme = useTheme();
   const [summary, setSummary] = useState(mockAnalysis.summary);
   const [skills, setSkills] = useState(mockAnalysis.skills.join(", "));
@@ -235,6 +308,7 @@ function ResumeReportScreen({ onProceed }: { onProceed: () => void }) {
   return (
     <ScrollView
       style={[styles.fullPage, { backgroundColor: theme.colors.background }]}
+      contentContainerStyle={styles.centered}
     >
       <View style={styles.reportContainer}>
         <Text
@@ -248,12 +322,18 @@ function ResumeReportScreen({ onProceed }: { onProceed: () => void }) {
             { color: theme.colors.onSurfaceVariant },
           ]}
         >
-          This is how our AI sees your resume. You can edit the summary and
-          skills to best represent yourself.
+          Your resume looks on track with the role you're looking for. This is
+          how it will be presented. Feel free to make edits.
         </Text>
+
         <View style={styles.reportBody}>
           <View style={styles.reportColumn}>
-            <Card style={styles.reportCard}>
+            <Card
+              style={[
+                styles.reportCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
               <Card.Content>
                 <Text style={styles.cardTitle}>Your AI-Generated Summary</Text>
                 <TextInput
@@ -262,10 +342,19 @@ function ResumeReportScreen({ onProceed }: { onProceed: () => void }) {
                   onChangeText={setSummary}
                   multiline
                   numberOfLines={10}
+                  style={{ height: 200 }}
                 />
               </Card.Content>
             </Card>
-            <Card style={styles.reportCard}>
+          </View>
+
+          <View style={styles.reportColumn}>
+            <Card
+              style={[
+                styles.reportCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
               <Card.Content>
                 <Text style={styles.cardTitle}>Your Skills</Text>
                 <TextInput
@@ -275,51 +364,61 @@ function ResumeReportScreen({ onProceed }: { onProceed: () => void }) {
                   onChangeText={setSkills}
                   multiline
                   numberOfLines={4}
+                  style={{ height: 120, marginBottom: 16 }}
                 />
               </Card.Content>
             </Card>
-          </View>
-          <View style={styles.reportColumn}>
-            <Card style={styles.reportCard}>
+            <Card
+              style={[
+                styles.reportCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
               <Card.Content>
-                <Text style={styles.cardTitle}>
-                  Potential Interview Questions
-                </Text>
-                {mockAnalysis.suggestedQuestions.map((q, i) => (
-                  <Text key={i} style={styles.questionText}>
-                    - {q}
-                  </Text>
-                ))}
+                <Text style={styles.cardTitle}>Interview Language</Text>
+                <RadioButton.Group onValueChange={setLanguage} value={language}>
+                  <RadioButton.Item label="English" value="English" />
+                  <RadioButton.Item label="Spanish" value="Spanish" />
+                  <RadioButton.Item label="Mandarin" value="Mandarin" />
+                </RadioButton.Group>
               </Card.Content>
             </Card>
           </View>
         </View>
+
         <Button
           mode="contained"
           icon="arrow-right"
-          onPress={onProceed}
           style={styles.actionButton}
+          onPress={onStartInterview}
+          contentStyle={{ paddingVertical: 8, flexDirection: "row-reverse" }}
         >
-          Proceed to Interview
+          Start Pre-Screen Interview
         </Button>
       </View>
     </ScrollView>
   );
 }
 
-function PreparationScreen({
-  onProceed,
-  onBack,
-}: {
-  onProceed: () => void;
-  onBack: () => void;
-}) {
+function PreparationScreen({ onProceed }: { onProceed: () => void }) {
   const theme = useTheme();
   const tips = [
-    { icon: "map-marker-radius", text: "Find a quiet space." },
-    { icon: "microphone-outline", text: "Check your microphone." },
-    { icon: "lightbulb-on-outline", text: "Be ready to share examples." },
-    { icon: "account-heart-outline", text: "Be yourself! Good luck." },
+    {
+      icon: "map-marker-radius",
+      text: "Find a quiet and comfortable space where you won't be disturbed.",
+    },
+    {
+      icon: "microphone-outline",
+      text: "Ensure your microphone is working clearly. Speak at a natural pace.",
+    },
+    {
+      icon: "lightbulb-on-outline",
+      text: "Think about your past experiences and be ready to share specific examples.",
+    },
+    {
+      icon: "account-heart-outline",
+      text: "Be yourself and let your personality shine through. Good luck!",
+    },
   ];
 
   return (
@@ -331,6 +430,15 @@ function PreparationScreen({
       ]}
     >
       <View style={styles.preparationContainer}>
+        <Avatar.Icon
+          icon="shield-check-outline"
+          size={80}
+          style={{
+            backgroundColor: theme.colors.secondaryContainer,
+            marginBottom: 24,
+          }}
+          color={theme.colors.onSecondaryContainer}
+        />
         <Text
           style={[
             styles.preparationTitle,
@@ -338,6 +446,14 @@ function PreparationScreen({
           ]}
         >
           Get Ready for Your Interview
+        </Text>
+        <Text
+          style={[
+            styles.preparationSubtitle,
+            { color: theme.colors.onSurfaceVariant },
+          ]}
+        >
+          Here are a few tips to help you succeed:
         </Text>
         <Card
           style={[
@@ -351,7 +467,10 @@ function PreparationScreen({
                 <Avatar.Icon
                   icon={tip.icon}
                   size={32}
-                  style={{ backgroundColor: "transparent", marginRight: 16 }}
+                  style={{
+                    backgroundColor: "transparent",
+                    marginRight: 16,
+                  }}
                   color={theme.colors.onSurfaceVariant}
                 />
                 <Text
@@ -371,88 +490,26 @@ function PreparationScreen({
           icon="arrow-right"
           onPress={onProceed}
           style={styles.proceedButton}
+          contentStyle={{ paddingVertical: 8, flexDirection: "row-reverse" }}
         >
           I'm Ready
         </Button>
-        <Button
-          mode="text"
-          onPress={onBack}
-          style={styles.backButton}
-          icon="arrow-left"
-        >
-          Go Back
-        </Button>
       </View>
     </View>
   );
 }
 
-function InterviewScreen({
-  onEndRequest,
-  name,
-  language,
-}: {
-  onEndRequest: () => void;
-  name: string;
-  language: Language;
-}) {
+function InterviewScreen({ onEndRequest }: { onEndRequest: () => void }) {
   const theme = useTheme();
-  const { setScores } = useInterviewContext();
-  const wavRecorderRef = useRef(new WavRecorder({ sampleRate: 24000 }));
-  const wavStreamPlayerRef = useRef(new WavStreamPlayer({ sampleRate: 24000 }));
-  const clientRef = useRef(
-    new RealtimeClient(
-      LOCAL_RELAY_SERVER_URL
-        ? { url: LOCAL_RELAY_SERVER_URL }
-        : { apiKey: OPENAI_API_KEY, dangerouslyAllowAPIKeyInBrowser: true }
-    )
-  );
-  const [items, setItems] = useState<ItemType[]>([]);
-  const [muted, setMuted] = useState(false);
-  const scrollViewRef = useRef<ScrollView>(null);
-
-  const connectConversation = useCallback(async () => {
-    onEndRequest();
-  }, [name, language, onEndRequest]);
 
   useEffect(() => {
-    connectConversation();
-  }, [connectConversation]);
+    const timer = setTimeout(() => {
+      onEndRequest();
+    }, 3000); // Simulate interview time
 
-  return (
-    <View
-      style={[styles.fullPage, { backgroundColor: theme.colors.background }]}
-    >
-      <View style={styles.chatArea}>
-        <ScrollView
-          ref={scrollViewRef}
-          contentContainerStyle={styles.scrollContent}
-        >
-          <Text style={{ textAlign: "center", marginTop: 40 }}>
-            Interview in progress...
-          </Text>
-        </ScrollView>
-      </View>
-      <View
-        style={[styles.controlBar, { backgroundColor: theme.colors.surface }]}
-      >
-        <Button mode="contained" icon={muted ? "microphone-off" : "microphone"}>
-          {muted ? "Unmute" : "Mute"}
-        </Button>
-        <Button
-          mode="contained"
-          onPress={onEndRequest}
-          buttonColor={theme.colors.error}
-        >
-          End Interview
-        </Button>
-      </View>
-    </View>
-  );
-}
+    return () => clearTimeout(timer);
+  }, [onEndRequest]);
 
-function AnalyzingScreen({ text }: { text: string }) {
-  const theme = useTheme();
   return (
     <View
       style={[
@@ -465,13 +522,16 @@ function AnalyzingScreen({ text }: { text: string }) {
       <Text
         style={[styles.analyzingTitle, { color: theme.colors.onBackground }]}
       >
-        {text}
+        Interview in progress...
+      </Text>
+      <Text style={{ color: theme.colors.onSurfaceVariant }}>
+        Please wait a moment.
       </Text>
     </View>
   );
 }
 
-function ThankYouScreen({ onRestart }: { onRestart: () => void }) {
+function EndingScreen({ onRestart }: { onRestart: () => void }) {
   const theme = useTheme();
   return (
     <View
@@ -484,11 +544,14 @@ function ThankYouScreen({ onRestart }: { onRestart: () => void }) {
       <Avatar.Icon
         icon="check-decagram"
         size={80}
-        style={{ backgroundColor: theme.colors.primary, marginBottom: 24 }}
+        style={{
+          backgroundColor: theme.colors.primary,
+          marginBottom: 24,
+        }}
         color={theme.colors.onPrimary}
       />
       <Text style={[styles.welcomeTitle, { color: theme.colors.onBackground }]}>
-        Application Submitted!
+        Thank You For Your Response!
       </Text>
       <Text
         style={[
@@ -496,10 +559,15 @@ function ThankYouScreen({ onRestart }: { onRestart: () => void }) {
           { color: theme.colors.onSurfaceVariant },
         ]}
       >
-        Thank you for completing the process. The hiring team will review your
-        application and be in touch soon.
+        Your application has been submitted. We will be in touch with you
+        shortly.
       </Text>
-      <Button mode="contained" onPress={onRestart}>
+      <Button
+        mode="contained"
+        onPress={onRestart}
+        style={{ marginTop: 20 }}
+        icon="reload"
+      >
         Start Over
       </Button>
     </View>
@@ -507,8 +575,12 @@ function ThankYouScreen({ onRestart }: { onRestart: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  fullPage: { flex: 1 },
-  centered: { justifyContent: "center", alignItems: "center", padding: 24 },
+  fullPage: { flex: 1, width: "100%" },
+  centered: {
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
   welcomeTitle: {
     fontSize: 28,
     fontWeight: "bold",
@@ -521,37 +593,106 @@ const styles = StyleSheet.create({
     maxWidth: 500,
     marginBottom: 24,
   },
-  welcomeCard: { width: "100%", maxWidth: 500 },
-  reportContainer: { padding: 24 },
-  reportTitle: { fontSize: 28, fontWeight: "bold" },
-  reportSubtitle: { fontSize: 16, color: "gray", marginBottom: 24 },
-  reportBody: { flexDirection: "row", flexWrap: "wrap" },
-  reportColumn: { flex: 1, minWidth: 300, padding: 8 },
-  reportCard: { marginBottom: 16 },
-  cardTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 8 },
-  questionText: { marginVertical: 4 },
-  actionButton: { marginTop: 16 },
-  preparationContainer: { width: "100%", maxWidth: 500, padding: 24 },
+  welcomeContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    width: "100%",
+    maxWidth: 800,
+    justifyContent: "center",
+  },
+  welcomeColumn: {
+    flex: 1,
+    minWidth: 300,
+    padding: 8,
+  },
+  welcomeContentCard: {
+    flex: 1,
+    height: "100%", // Ensure cards take full height of the column
+  },
+  analyzingTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    marginTop: 20,
+  },
+  reportContainer: {
+    padding: 24,
+    width: "100%",
+    maxWidth: 900,
+    alignItems: "center",
+  },
+  reportTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  reportSubtitle: {
+    fontSize: 16,
+    color: "gray",
+    marginBottom: 24,
+    textAlign: "center",
+    maxWidth: 600,
+  },
+  reportBody: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    width: "100%",
+    justifyContent: "center",
+  },
+  reportColumn: {
+    flex: 1,
+    minWidth: 300,
+    padding: 8,
+  },
+  reportCard: {
+    marginBottom: 16,
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
+  actionButton: {
+    marginTop: 24,
+    width: "100%",
+    maxWidth: 400,
+  },
+  preparationContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+    width: "100%",
+    maxWidth: 500,
+  },
   preparationTitle: {
     fontSize: 26,
     fontWeight: "bold",
     textAlign: "center",
+    marginBottom: 12,
+  },
+  preparationSubtitle: {
+    fontSize: 16,
+    textAlign: "center",
     marginBottom: 24,
   },
-  tipsCard: { width: "100%", borderRadius: 12, marginBottom: 24 },
-  tipItem: { flexDirection: "row", alignItems: "center", marginVertical: 12 },
-  tipText: { flex: 1, fontSize: 14, lineHeight: 20 },
-  proceedButton: { width: "100%", marginTop: 8 },
-  backButton: { marginTop: 12 },
-  chatArea: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 100 },
-  controlBar: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    padding: 20,
-    borderTopWidth: 1,
-    borderColor: "#e0e0e0",
+  tipsCard: {
+    width: "100%",
+    borderRadius: 12,
+    marginBottom: 24,
   },
-  analyzingTitle: { fontSize: 20, fontWeight: "600", marginTop: 20 },
+  tipItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 12,
+  },
+  tipText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  proceedButton: {
+    width: "100%",
+    marginTop: 8,
+  },
 });
