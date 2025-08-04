@@ -259,3 +259,96 @@ current task is to ensure full witdh is optimized which is use two columnns layo
 
 
 current task is to make LaiveApply to be more friendly. Welcome Screen prompting what should we call you, what role you are looking for. reusable analyzeScreen for both scanning screen and analyzing screen with different title subtile parameters. SummaryScreen handling your resume looks on track with role you looking for here also section to choose language used for the pre screen. nothing need to change of preparation Screen. interviewScreen doesnt need to have the logic yet just dummy 3 seconds interview is running then analyzeScreen again with different title subtitle and endingScreen of thanking thecandidate for the response etc. plan your strategy before proceed
+
+LaiveScreen
+├─ Uses props: shortName, roleApplied, langPreferred
+├─ Lands directly on PreparationScreen (skips name/language input)
+│  ├─ Candidate sees greeting: "Hi $shortName, get ready for your $roleApplied interview"
+│  └─ Taps "I'm Ready" → navigates to InterviewScreen
+├─ InterviewScreen
+│  ├─ System sends shortName, roleApplied, langPreferred to AI
+│  ├─ AI starts session in langPreferred
+│  ├─ If langPreferred = English → AI uses only English
+│  ├─ If langPreferred ≠ English:
+│  │   ├─ AI allows some language switching
+│  │   └─ Penalizes use of wrong language
+│  └─ Session ends when candidate says "thank you" or taps "End Interview"
+├─ AnalyzingScreen
+│  └─ Shows loading or animation while AI evaluates session
+├─ ReportScreen
+│  ├─ Displays score, feedback, and summary
+│  └─ Candidate can download/export the report
+├─ Receives:
+│  ├─ shortName
+│  ├─ roleApplied
+│  └─ langPreferred
+├─ Configures persona behavior based on roleApplied
+├─ Uses langPreferred for main interview language
+├─ Evaluates candidate:
+│  ├─ Language proficiency
+│  ├─ Communication (clarity, empathy, tone)
+│  └─ Confidence and role-fit
+├─ Generates:
+│  ├─ Summary and feedback
+│  ├─ Token/cost usage
+│  └─ Final report
+
+
+LaiveEntry
+├─ Candidate lands on WelcomeScreen, friendly prompt for
+│  ├─ shortName (text input) What should we call you
+│  ├─ roleApplied (radio button) Customer Service Agent
+│  └─ Resume upload (PDF/DOCX using DocumentPicker)
+├─ AnalyzeSceen
+│  ├─ Title (Analyzing)
+│  ├─ Subtitle (filename)
+│  └─ Loading Indicator
+├─  SummarySceen
+│  ├─ job matching
+│  ├─ summary
+│  └─ 
+
+- Candidate
+WelcomeScreen
+AnalyzeSceen
+SummarySceen
+PreparationScreen
+InterviewScreen
+AnalyzeSceen
+EndingScreen
+
+- TA
+WelcomeScreen
+
+- LaiveEntry
+WelcomeScreen
+AnalyzeSceen
+SummaryScreen
+
+- LaiveScreen
+PreparationScreen
+InterviewScreen
+AnalyzeSceen
+EndingScreen
+
+- LaiveRecruit
+ReportView
+LookupView
+LoadingScreen
+
+- LaiveAlpha
+WelcomeScreen
+AnalyzeSceen
+SummaryScreen
+
+- LaiveBeta
+PreparationScreen
+InterviewScreen
+AnalyzeSceen
+EndingScreen
+
+
+current task is LaiveBetaScreen, createBetaConfig, BetaContext no need to handle multilingual. once candidate select a language, whole session will be selected language. ensure to just have english, bahasa malaysia, mandarin and tamil as radio button also roleApply need to be radiobutton with choice of only customer service agent for now. plan your strategy before proceed
+
+current task is to revise UI UX of WelcomeScreen to two columns layout, currently too much white space same goes to ReportScreen. no need start over button. you may total redesign to use dropdown etc. plan your strategy before proceed
+

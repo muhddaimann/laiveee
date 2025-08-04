@@ -19,6 +19,8 @@ const navItems = [
   { icon: "account-supervisor-circle", label: "LaiveScreen", route: "/d" },
   { icon: "account-search-outline", label: "LaiveRecruit", route: "/e" },
   { icon: "form-select", label: "LaiveApply", route: "/f" },
+  { icon: "form-select", label: "LaiveApply", route: "/g" },
+  { icon: "account-supervisor-circle", label: "LaiveBeta", route: "/h" },
 ];
 
 export default function Sidebar() {
