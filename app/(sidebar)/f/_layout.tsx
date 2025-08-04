@@ -1,18 +1,9 @@
 import { Stack } from "expo-router";
-import { useTheme } from "react-native-paper";
 
-export default function ApplyLayout() {
-  const theme = useTheme();
+export default function LayoutH() {
   return (
     <Stack>
-      <Stack.Screen
-        name="index"
-        options={{
-          headerTitle: "LaiveApply™",
-          headerStyle: { backgroundColor: theme.colors.surface },
-          headerTintColor: theme.colors.onSurface,
-        }}
-      />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
     </Stack>
   );
 }

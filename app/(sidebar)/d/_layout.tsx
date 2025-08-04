@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import { useTheme } from "react-native-paper";
 
-export default function ScreenLayout() {
+export default function LayoutD() {
   const theme = useTheme();
   return (
     <Stack>

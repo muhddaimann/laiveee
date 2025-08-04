@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import { useTheme } from "react-native-paper";
 
-export default function RecruitLayout() {
+export default function LayoutE() {
   const theme = useTheme();
   return (
     <Stack>

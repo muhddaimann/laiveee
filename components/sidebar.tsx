@@ -15,12 +15,10 @@ import { useToggle } from "../contexts/themeContext";
 const navItems = [
   { icon: "home-outline", label: "Home", route: "/a" },
   { icon: "robot-happy", label: "LaiveDemo", route: "/b" },
-  { icon: "account-tie", label: "LaiveDoc", route: "/c" },
+  { icon: "form-select", label: "LaiveApply", route: "/c" },
   { icon: "account-supervisor-circle", label: "LaiveScreen", route: "/d" },
   { icon: "account-search-outline", label: "LaiveRecruit", route: "/e" },
-  { icon: "form-select", label: "LaiveApply", route: "/f" },
-  { icon: "form-select", label: "LaiveApply", route: "/g" },
-  { icon: "account-supervisor-circle", label: "LaiveBeta", route: "/h" },
+  { icon: "file", label: "Revised IV", route: "/f" },
 ];
 
 export default function Sidebar() {

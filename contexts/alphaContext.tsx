@@ -1,59 +1,60 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-type LanguagePref = "English" | "Bahasa Malaysia" | "Mandarin" | "Tamil";
-
-export interface AnalysisResult {
+interface AlphaAnalysis {
+  fullName: string;
+  relatedLink: string;
   summary: string;
-  strengths: string[];
-  skills: string[];
+  strength: string[];
   jobMatch: string;
-  email: string;
-  phone: string;
+  candidateEmail: string;
+  candidatePhone: string;
 }
 
 interface AlphaState {
-  shortName: string | null;
-  setShortName: (name: string | null) => void;
-  roleApply: string | null;
-  setRoleApply: (role: string | null) => void;
-  languagePref: LanguagePref | null;
-  setLanguagePref: (lang: LanguagePref | null) => void;
+  phase: 'welcome' | 'analyzing' | 'report';
   fileName: string | null;
-  setFileName: (name: string | null) => void;
-  analysis: AnalysisResult | null;
-  setAnalysis: (result: AnalysisResult | null) => void;
+  shortName: string | null;
+  roleApply: string | null;
+  analysis: AlphaAnalysis | null;
+  setPhase: (phase: 'welcome' | 'analyzing' | 'report') => void;
+  setFileName: (fileName: string | null) => void;
+  setShortName: (name: string | null) => void;
+  setRoleApply: (role: string | null) => void;
+  setAnalysis: (analysis: AlphaAnalysis | null) => void;
+  restart: () => void;
 }
 
 const AlphaContext = createContext<AlphaState | undefined>(undefined);
 
-export const AlphaProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [shortName, setShortName] = useState<string | null>("");
-  const [roleApply, setRoleApply] = useState<string | null>(
-    "Customer Service Agent"
-  );
-  const [languagePref, setLanguagePref] = useState<LanguagePref | null>(
-    "English"
-  );
+export const AlphaProvider = ({ children }: { children: ReactNode }) => {
+  const [phase, setPhase] = useState<'welcome' | 'analyzing' | 'report'>('welcome');
   const [fileName, setFileName] = useState<string | null>(null);
-  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [shortName, setShortName] = useState<string | null>(null);
+  const [roleApply, setRoleApply] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<AlphaAnalysis | null>(null);
+
+  const restart = () => {
+    setPhase('welcome');
+    setFileName(null);
+    setShortName(null);
+    setRoleApply(null);
+    setAnalysis(null);
+  };
 
   return (
-    <AlphaContext.Provider
-      value={{
-        shortName,
-        setShortName,
-        roleApply,
-        setRoleApply,
-        languagePref,
-        setLanguagePref,
-        fileName,
-        setFileName,
-        analysis,
-        setAnalysis,
-      }}
-    >
+    <AlphaContext.Provider value={{ 
+      phase, 
+      fileName, 
+      shortName, 
+      roleApply, 
+      analysis, 
+      setPhase, 
+      setFileName, 
+      setShortName, 
+      setRoleApply, 
+      setAnalysis,
+      restart
+    }}>
       {children}
     </AlphaContext.Provider>
   );
@@ -61,8 +62,8 @@ export const AlphaProvider: React.FC<{ children: React.ReactNode }> = ({
 
 export const useAlphaContext = () => {
   const context = useContext(AlphaContext);
-  if (!context) {
-    throw new Error("useAlphaContext must be used within an AlphaProvider");
+  if (context === undefined) {
+    throw new Error('useAlphaContext must be used within an AlphaProvider');
   }
   return context;
 };
