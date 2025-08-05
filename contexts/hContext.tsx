@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, ReactNode } from "react";
+import { ItemType } from "@openai/realtime-api-beta/dist/lib/client.js";
 
 interface SkillMatch {
   name: string;
@@ -15,7 +16,7 @@ interface RoleFit {
   justification: string;
 }
 
-interface CandidateData {
+export interface CandidateData {
   fullName: string;
   candidateEmail: string;
   candidatePhone: string;
@@ -31,6 +32,18 @@ interface CandidateData {
   roleFit: RoleFit[];
 }
 
+export interface ScoreType {
+  [key: string]: { score: number; reasoning: string } | string | number;
+  summary: string;
+  average: number;
+}
+
+export interface UsageData {
+  inputTokens?: number;
+  outputTokens?: number;
+  audioInputDuration?: number;
+}
+
 type LanguagePref = "English" | "Bahasa Malaysia" | "Mandarin" | "Tamil";
 
 interface HContextType {
@@ -44,6 +57,12 @@ interface HContextType {
   setLanguagePref: (lang: LanguagePref | null) => void;
   candidateData: CandidateData | null;
   setCandidateData: (data: CandidateData | null) => void;
+  scores: ScoreType | null;
+  setScores: (scores: ScoreType | null) => void;
+  conversation: ItemType[];
+  setConversation: React.Dispatch<React.SetStateAction<ItemType[]>>;
+  usage: UsageData | null;
+  setUsage: (usage: UsageData | null) => void;
 }
 
 const HContext = createContext<HContextType | undefined>(undefined);
@@ -60,6 +79,9 @@ export function HProvider({ children }: { children: ReactNode }) {
   const [candidateData, setCandidateData] = useState<CandidateData | null>(
     null
   );
+  const [scores, setScores] = useState<ScoreType | null>(null);
+  const [conversation, setConversation] = useState<ItemType[]>([]);
+  const [usage, setUsage] = useState<UsageData | null>(null);
 
   const value = {
     shortName,
@@ -72,6 +94,12 @@ export function HProvider({ children }: { children: ReactNode }) {
     setLanguagePref,
     candidateData,
     setCandidateData,
+    scores,
+    setScores,
+    conversation,
+    setConversation,
+    usage,
+    setUsage,
   };
 
   return <HContext.Provider value={value}>{children}</HContext.Provider>;
