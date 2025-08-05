@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -18,6 +18,14 @@ import {
 } from "react-native-paper";
 import * as DocumentPicker from "expo-document-picker";
 import * as Clipboard from "expo-clipboard";
+import mammoth from "mammoth";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
+import pdfjsWorker from "pdfjs-dist/legacy/build/pdf.worker.entry";
+import { HProvider, useHContext } from "../../../contexts/hContext";
+import { createCandidateAnalyzerConfig } from "../../../utils/hConfig";
+import { OPENAI_API_KEY, COMPLETION_URL } from "../../../constants/env";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 type PagePhase =
   | "welcome"
@@ -26,22 +34,56 @@ type PagePhase =
   | "interview"
   | "ending";
 
-type LanguagePref = "English" | "Bahasa Malaysia" | "Mandarin" | "Tamil";
-
 export default function LaiveTest() {
-  const [phase, setPhase] = useState<PagePhase>("welcome");
-  const [shortName, setShortName] = useState("");
-  const [roleApply, setRoleApply] = useState("Customer Service Agent");
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [languagePref, setLanguagePref] = useState<LanguagePref>("English");
+  return (
+    <HProvider>
+      <ResumeAnalysisFlow />
+    </HProvider>
+  );
+}
 
-  const handleStart = (name: string, file: string) => {
-    setShortName(name);
-    setFileName(file);
+function ResumeAnalysisFlow() {
+  const [phase, setPhase] = useState<PagePhase>("welcome");
+  const { setCandidateData, roleApply } = useHContext();
+
+  const handleStartAnalysis = async (file: File) => {
     setPhase("analyzing");
-    setTimeout(() => {
+    try {
+      const text = await extractText(file);
+      const config = createCandidateAnalyzerConfig(roleApply || "");
+      const response = await fetch(COMPLETION_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4-turbo",
+          messages: [
+            { role: "system", content: config.instructions },
+            { role: "user", content: text },
+          ],
+          response_format: { type: "json_object" },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`API Error: ${response.status} - ${errorBody}`);
+      }
+
+      const result = await response.json();
+      const parsedData = JSON.parse(result.choices[0].message.content);
+      setCandidateData(parsedData);
       setPhase("preparation");
-    }, 2000);
+    } catch (err) {
+      console.error("Error during file upload and analysis: ", err);
+      Alert.alert(
+        "Error",
+        "An error occurred during the analysis. Please try again."
+      );
+      setPhase("welcome");
+    }
   };
 
   const handleProceed = () => {
@@ -53,21 +95,12 @@ export default function LaiveTest() {
 
   const handleRestart = () => {
     setPhase("welcome");
-    setShortName("");
-    setRoleApply("Customer Service Agent");
+    setCandidateData(null);
   };
 
   switch (phase) {
     case "welcome":
-      return (
-        <WelcomeScreen
-          onStart={handleStart}
-          shortName={shortName}
-          setShortName={setShortName}
-          roleApply={roleApply}
-          setRoleApply={setRoleApply}
-        />
-      );
+      return <WelcomeScreen onStart={handleStartAnalysis} />;
     case "analyzing":
       return (
         <AnalyzingScreen
@@ -77,14 +110,7 @@ export default function LaiveTest() {
       );
     case "preparation":
       return (
-        <PreparationScreen
-          onProceed={handleProceed}
-          onBack={handleRestart}
-          shortName={shortName}
-          fileName={fileName}
-          languagePref={languagePref}
-          setLanguagePref={setLanguagePref}
-        />
+        <PreparationScreen onProceed={handleProceed} onBack={handleRestart} />
       );
     case "interview":
       return (
@@ -94,37 +120,42 @@ export default function LaiveTest() {
         />
       );
     case "ending":
-      return <EndingScreen onRestart={handleRestart} name={shortName} />;
+      return <EndingScreen onRestart={handleRestart} />;
     default:
-      return (
-        <WelcomeScreen
-          onStart={handleStart}
-          shortName={shortName}
-          setShortName={setShortName}
-          roleApply={roleApply}
-          setRoleApply={setRoleApply}
-        />
-      );
+      return <WelcomeScreen onStart={handleStartAnalysis} />;
   }
 }
 
-function WelcomeScreen({
-  onStart,
-  shortName,
-  setShortName,
-  roleApply,
-  setRoleApply,
-}: {
-  onStart: (name: string, file: string) => void;
-  shortName: string;
-  setShortName: (name: string) => void;
-  roleApply: string;
-  setRoleApply: (role: string) => void;
-}) {
+async function extractText(file: File): Promise<string> {
+  if (file.type === "application/pdf") {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let text = "";
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map((item: any) => item.str).join(" ") + "\n";
+    }
+    return text;
+  } else if (
+    file.type ===
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ) {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return result.value;
+  } else {
+    throw new Error("Unsupported file type");
+  }
+}
+
+function WelcomeScreen({ onStart }: { onStart: (file: File) => void }) {
   const theme = useTheme();
+  const { shortName, setShortName, roleApply, setRoleApply, setFileName } =
+    useHContext();
 
   const handleUpload = async () => {
-    if (!shortName.trim() || !roleApply.trim()) {
+    if (!shortName?.trim() || !roleApply?.trim()) {
       Alert.alert(
         "Missing Information",
         "Please enter your name and the role you are applying for."
@@ -140,7 +171,12 @@ function WelcomeScreen({
       });
 
       if (result.assets && result.assets.length > 0) {
-        onStart(shortName, result.assets[0].name);
+        const asset = result.assets[0];
+        setFileName(asset.name);
+        const response = await fetch(asset.uri);
+        const blob = await response.blob();
+        const file = new File([blob], asset.name, { type: asset.mimeType });
+        onStart(file);
       } else {
       }
     } catch (err) {
@@ -187,7 +223,7 @@ function WelcomeScreen({
               <Text style={styles.cardTitle}>What should we call you?</Text>
               <TextInput
                 label="Your short name"
-                value={shortName}
+                value={shortName || ""}
                 onChangeText={setShortName}
                 mode="outlined"
               />
@@ -206,7 +242,7 @@ function WelcomeScreen({
               </Text>
               <RadioButton.Group
                 onValueChange={(newValue) => setRoleApply(newValue as string)}
-                value={roleApply}
+                value={roleApply || ""}
               >
                 <RadioButton.Item
                   label="Customer Service Agent"
@@ -231,7 +267,7 @@ function WelcomeScreen({
                 mode="contained"
                 icon="upload"
                 onPress={handleUpload}
-                disabled={!shortName.trim()}
+                disabled={!shortName?.trim()}
               >
                 Choose File
               </Button>
@@ -269,19 +305,14 @@ function AnalyzingScreen({
 function PreparationScreen({
   onProceed,
   onBack,
-  shortName,
-  fileName,
-  languagePref,
-  setLanguagePref,
 }: {
   onProceed: () => void;
   onBack: () => void;
-  shortName: string;
-  fileName: string | null;
-  languagePref: LanguagePref;
-  setLanguagePref: (language: LanguagePref) => void;
 }) {
   const theme = useTheme();
+  const { shortName, fileName, languagePref, setLanguagePref, candidateData } =
+    useHContext();
+
   const tips = [
     {
       icon: "map-marker-radius",
@@ -300,6 +331,10 @@ function PreparationScreen({
       text: "Be yourself and let your personality shine through. Good luck!",
     },
   ];
+
+  if (!candidateData) {
+    return <AnalyzingScreen title="Loading..." subtitle="" />;
+  }
 
   return (
     <View
@@ -329,27 +364,29 @@ function PreparationScreen({
               <Text style={styles.cardTitle}>Your Details</Text>
               <TextInput
                 label="Full Name"
-                value={shortName}
+                value={candidateData.fullName}
                 disabled
                 style={{ marginBottom: 16 }}
               />
               <TextInput
                 label="Email Address"
-                value="email@example.com"
+                value={candidateData.candidateEmail}
                 disabled
                 style={{ marginBottom: 16 }}
               />
-              <TextInput label="Phone Number" value="+1234567890" disabled />
+              <TextInput
+                label="Phone Number"
+                value={candidateData.candidatePhone}
+                disabled
+              />
             </Card.Content>
           </Card>
           <Card style={{ backgroundColor: theme.colors.surface }}>
             <Card.Content>
               <Text style={styles.cardTitle}>Interview Language</Text>
               <RadioButton.Group
-                onValueChange={(newValue) =>
-                  setLanguagePref(newValue as LanguagePref)
-                }
-                value={languagePref}
+                onValueChange={(newValue) => setLanguagePref(newValue as any)}
+                value={languagePref || ""}
               >
                 <RadioButton.Item label="English" value="English" />
                 <RadioButton.Item
@@ -415,6 +452,7 @@ function PreparationScreen({
               marginTop: 32,
             }}
           >
+            {" "}
             <Button mode="text" onPress={onBack} style={{ marginRight: 12 }}>
               Back
             </Button>
@@ -428,16 +466,21 @@ function PreparationScreen({
   );
 }
 
-function EndingScreen({
-  onRestart,
-  name,
-}: {
-  onRestart: () => void;
-  name: string;
-}) {
+function EndingScreen({ onRestart }: { onRestart: () => void }) {
   const theme = useTheme();
+  const { shortName, roleApply, languagePref, candidateData } = useHContext();
 
-  const summaryText = `Candidate: ${name}\nStatus: Interview Completed\nThank you for participating in the Laive AI Interview.`;
+  const summaryText = `
+Candidate: ${shortName}
+Role: ${roleApply}
+Interview Language: ${languagePref}
+Status: Interview Completed
+
+Thank you for participating in the Laive AI Interview.
+
+--- AI Analysis ---
+${JSON.stringify(candidateData, null, 2)}
+`;
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(summaryText);
@@ -456,7 +499,7 @@ function EndingScreen({
         source={require("../../../assets/ta1.png")}
         style={styles.welcomeImage}
       />
-      <Text style={styles.welcomeTitle}>You're All Set, {name}!</Text>
+      <Text style={styles.welcomeTitle}>You're All Set, {shortName}!</Text>
       <Text style={styles.welcomeSubtitle}>
         Your interview has been completed. We appreciate your time and effort.
         You're one step closer to your journey with us!
