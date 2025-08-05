@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { View, StyleSheet, ScrollView, Image, Alert } from "react-native";
 import {
   Button,
@@ -11,30 +11,36 @@ import {
   Chip as PaperChip,
 } from "react-native-paper";
 import * as DocumentPicker from "expo-document-picker";
+import mammoth from "mammoth";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
+import pdfjsWorker from "pdfjs-dist/legacy/build/pdf.worker.entry";
+import {
+  ResumeProvider,
+  useResumeContext,
+} from "../../../contexts/resumeContext";
+import { createResumeAnalyzerConfig } from "../../../utils/resumeAnalyzerConfig";
+import { OPENAI_API_KEY, COMPLETION_URL } from "../../../constants/env";
 
-const mockAnalysis = {
-  fullName: "Fauzi Fakhrul",
-  relatedLink: "https://www.linkedin.com/in/fauzifakhrul",
-  summary:
-    "A highly empathetic and patient customer service professional with a strong track record of resolving customer issues effectively. Adept at communication and de-escalation, with experience in CRM software. Proven ability to handle high-stress situations with a calm and positive demeanor. Skilled in building rapport with customers and identifying their needs to provide tailored solutions. Looking to leverage these skills in a challenging new role.",
-  strength: ["Empathy", "Patience", "Problem-Solving", "Communication"],
-  strengthJustification:
-    "The candidate's resume highlights multiple instances of going above and beyond to assist customers, demonstrating a natural ability to understand and share the feelings of others. This is a key trait for a customer service role.",
-  jobMatch: "92%",
-  candidateEmail: "fauzifakhrul@gmail.com",
-  candidatePhone: "+(60)173900822",
-};
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 type PagePhase = "welcome" | "analyzing" | "report";
-
 type LanguagePref = "English" | "Bahasa Malaysia" | "Mandarin" | "Tamil";
 
 export default function LaiveApply() {
+  return (
+    <ResumeProvider>
+      <ResumeAnalysisFlow />
+    </ResumeProvider>
+  );
+}
+
+function ResumeAnalysisFlow() {
   const [phase, setPhase] = useState<PagePhase>("welcome");
   const [fileName, setFileName] = useState<string | null>(null);
   const [shortName, setShortName] = useState("");
   const [roleApply, setRoleApply] = useState("Customer Service Agent");
   const [languagePref, setLanguagePref] = useState<LanguagePref>("English");
+  const { setResumeData } = useResumeContext();
 
   const handleFileUpload = async () => {
     if (!shortName.trim() || !roleApply.trim()) {
@@ -52,16 +58,50 @@ export default function LaiveApply() {
         ],
       });
 
-      if (result.canceled === false) {
-        setFileName(result.assets[0].name);
+      if (result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        setFileName(asset.name);
         setPhase("analyzing");
-        setTimeout(() => {
-          setPhase("report");
-        }, 3000);
-      } else {
+
+        const response = await fetch(asset.uri);
+        const blob = await response.blob();
+        const file = new File([blob], asset.name, { type: asset.mimeType });
+
+        const text = await extractText(file);
+        const config = createResumeAnalyzerConfig();
+        const apiResponse = await fetch(COMPLETION_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4-turbo",
+            messages: [
+              { role: "system", content: config.instructions },
+              { role: "user", content: text },
+            ],
+            response_format: { type: "json_object" },
+          }),
+        });
+
+        if (!apiResponse.ok) {
+          const errorBody = await apiResponse.text();
+          throw new Error(`API Error: ${apiResponse.status} - ${errorBody}`);
+        }
+
+        const apiResult = await apiResponse.json();
+        const parsedData = JSON.parse(apiResult.choices[0].message.content);
+        setResumeData(parsedData);
+        setPhase("report");
       }
     } catch (err) {
-      console.error("Unknown error: ", err);
+      console.error("Error during file upload and analysis: ", err);
+      Alert.alert(
+        "Error",
+        "An error occurred during the analysis. Please try again."
+      );
+      setPhase("welcome");
     }
   };
 
@@ -69,7 +109,8 @@ export default function LaiveApply() {
     setPhase("welcome");
     setFileName(null);
     setShortName("");
-    setRoleApply("");
+    setRoleApply("Customer Service Agent");
+    setResumeData(null);
   };
 
   if (phase === "welcome") {
@@ -91,7 +132,6 @@ export default function LaiveApply() {
   if (phase === "report") {
     return (
       <ReportScreen
-        fileName={fileName}
         onRestart={handleRestart}
         languagePref={languagePref}
         setLanguagePref={setLanguagePref}
@@ -102,6 +142,29 @@ export default function LaiveApply() {
   }
 
   return null;
+}
+
+async function extractText(file: File): Promise<string> {
+  if (file.type === "application/pdf") {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let text = "";
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map((item: any) => item.str).join(" ") + "\n";
+    }
+    return text;
+  } else if (
+    file.type ===
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ) {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return result.value;
+  } else {
+    throw new Error("Unsupported file type");
+  }
 }
 
 function WelcomeScreen({
@@ -234,14 +297,12 @@ function AnalyzingScreen({ fileName }: { fileName: string | null }) {
 }
 
 function ReportScreen({
-  fileName,
   onRestart,
   languagePref,
   setLanguagePref,
   roleApply,
   shortName,
 }: {
-  fileName: string | null;
   onRestart: () => void;
   languagePref: LanguagePref;
   setLanguagePref: (language: LanguagePref) => void;
@@ -249,14 +310,33 @@ function ReportScreen({
   shortName: string;
 }) {
   const theme = useTheme();
-  const [summary, setSummary] = useState(mockAnalysis.summary);
-  const [fullName, setFullName] = useState(mockAnalysis.fullName);
-  const [relatedLink, setRelatedLink] = useState(mockAnalysis.relatedLink);
+  const { resumeData } = useResumeContext();
+
+  if (!resumeData) {
+    return (
+      <View
+        style={[
+          styles.fullPage,
+          styles.centered,
+          { backgroundColor: theme.colors.background },
+        ]}
+      >
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={{ marginTop: 16 }}>Loading report...</Text>
+      </View>
+    );
+  }
+
+  const [summary, setSummary] = useState(resumeData.professionalSummary);
+  const [fullName, setFullName] = useState(resumeData.fullName);
+  const [relatedLink, setRelatedLink] = useState(
+    resumeData.relatedLinks.join(", ")
+  );
   const [candidateEmail, setCandidateEmail] = useState(
-    mockAnalysis.candidateEmail
+    resumeData.candidateEmail
   );
   const [candidatePhone, setCandidatePhone] = useState(
-    mockAnalysis.candidatePhone
+    resumeData.candidatePhone
   );
 
   return (
@@ -355,15 +435,15 @@ function ReportScreen({
                 Strengths
               </Text>
               <View style={styles.chipContainer}>
-                {mockAnalysis.strength.map((s) => (
+                {resumeData.strengths.map((s, index) => (
                   <PaperChip
-                    key={s}
+                    key={index}
                     icon="check"
                     style={{ marginRight: 8, marginBottom: 8 }}
                     mode="outlined"
                     elevated
                   >
-                    {s}
+                    {s.short}
                   </PaperChip>
                 ))}
               </View>
@@ -395,7 +475,7 @@ function ReportScreen({
                     {roleApply}
                   </Text>
                 </View>
-                <PercentageCircle percentage={mockAnalysis.jobMatch} />
+                <PercentageCircle percentage={resumeData.jobMatch} />
               </Card.Content>
             </Card>
             <Card

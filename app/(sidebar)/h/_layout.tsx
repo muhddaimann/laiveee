@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 
-export default function LayoutG() {
+export default function LayoutH() {
   return (
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />

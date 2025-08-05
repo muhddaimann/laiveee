@@ -20,6 +20,7 @@ const navItems = [
   { icon: "account-search-outline", label: "LaiveRecruit", route: "/e" },
   { icon: "file", label: "Revised IV", route: "/f" },
   { icon: "file", label: "LaiveUpload", route: "/g" },
+  { icon: "file", label: "LaiveTest", route: "/h" },
 ];
 
 export default function Sidebar() {

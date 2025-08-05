@@ -5,9 +5,16 @@ import {
   View,
   ActivityIndicator,
   Alert,
-  ScrollView,
+  Image,
 } from "react-native";
-import { useTheme, Button, Avatar, Card, List } from "react-native-paper";
+import {
+  useTheme,
+  Button,
+  Avatar,
+  Card,
+  TextInput,
+  Chip as PaperChip,
+} from "react-native-paper";
 import * as DocumentPicker from "expo-document-picker";
 import mammoth from "mammoth";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
@@ -17,7 +24,7 @@ import {
   useResumeContext,
 } from "../../../contexts/resumeContext";
 import { createResumeAnalyzerConfig } from "../../../utils/resumeAnalyzerConfig";
-import { OPENAI_API_KEY } from "../../../constants/env";
+import { OPENAI_API_KEY, COMPLETION_URL } from "../../../constants/env";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
@@ -40,38 +47,48 @@ function ResumeAnalysisFlow() {
     try {
       const text = await extractText(file);
       const config = createResumeAnalyzerConfig();
-      const response = await fetch(
-        "https://api.openai.com/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${OPENAI_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: "gpt-4-turbo",
-            messages: [
-              {
-                role: "system",
-                content: config.instructions,
-              },
-              {
-                role: "user",
-                content: text,
-              },
-            ],
-            response_format: { type: "json_object" },
-          }),
-        }
-      );
+      const response = await fetch(COMPLETION_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4-turbo",
+          messages: [
+            {
+              role: "system",
+              content: config.instructions,
+            },
+            {
+              role: "user",
+              content: text,
+            },
+          ],
+          response_format: { type: "json_object" },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error("API Error Response:", errorBody);
+        throw new Error(`The server returned an error: ${response.status}.`);
+      }
 
       const result = await response.json();
+
+      if (!result.choices?.[0]?.message?.content) {
+        console.error("Invalid AI Response:", JSON.stringify(result, null, 2));
+        throw new Error("The AI returned an unexpected response format.");
+      }
+      
       const parsedData = JSON.parse(result.choices[0].message.content);
       setResumeData(parsedData);
       setPhase("report");
     } catch (error) {
       console.error("Error analyzing resume:", error);
-      Alert.alert("Error", "Failed to analyze the resume. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Please try again.";
+      Alert.alert("Analysis Failed", errorMessage);
       setPhase("welcome");
     }
   };
@@ -232,72 +249,239 @@ function ReportScreen({ onRestart }: { onRestart: () => void }) {
   }
 
   return (
-    <ScrollView
-      style={[styles.fullPage, { backgroundColor: theme.colors.background }]}
-      contentContainerStyle={styles.reportContainer}
+    <View
+      style={[
+        styles.fullPage,
+        { backgroundColor: theme.colors.background, justifyContent: "center" },
+      ]}
     >
-      <Card style={styles.reportCard}>
-        <Card.Title
-          title={resumeData.fullName}
-          subtitle="Resume Analysis Report"
-          left={(props) => <Avatar.Icon {...props} icon="account" />}
-        />
-        <Card.Content>
-          <List.Section>
-            <List.Subheader>Contact Information</List.Subheader>
-            <List.Item
-              title="Email"
-              description={resumeData.candidateEmail}
-              left={() => <List.Icon icon="email" />}
-            />
-            <List.Item
-              title="Phone"
-              description={resumeData.candidatePhone}
-              left={() => <List.Icon icon="phone" />}
-            />
-          </List.Section>
-          <List.Section>
-            <List.Subheader>Professional Summary</List.Subheader>
-            <Text style={styles.summaryText}>
-              {resumeData.professionalSummary}
+      <View style={styles.reportContainer}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 16,
+            gap: 32,
+          }}
+        >
+          <Image
+            source={require("../../../assets/ta1.png")}
+            style={{ width: 120, height: 120, marginRight: 16 }}
+          />
+          <View style={{ flex: 1 }}>
+            <Text
+              style={[
+                styles.reportTitle,
+                { color: theme.colors.onBackground, textAlign: "left" },
+              ]}
+            >
+              Hi {resumeData.fullName.split(" ")[0]},
             </Text>
-          </List.Section>
-          <List.Section>
-            <List.Subheader>Analysis</List.Subheader>
-            <List.Item
-              title="Job Match Score"
-              description={`${resumeData.jobMatch}/100`}
-              left={() => <List.Icon icon="star-circle" />}
-            />
-            <List.Item
-              title="Strengths (Long)"
-              description={resumeData.longStrength}
-              left={() => <List.Icon icon="text-long" />}
-            />
-            <List.Item
-              title="Strengths (Short)"
-              description={resumeData.shortStrength}
-              left={() => <List.Icon icon="text-short" />}
-            />
-          </List.Section>
-          <List.Section>
-            <List.Subheader>Related Links</List.Subheader>
-            {resumeData.relatedLinks.map((link, index) => (
-              <List.Item
-                key={index}
-                title={link}
-                left={() => <List.Icon icon="link" />}
-              />
-            ))}
-          </List.Section>
-        </Card.Content>
-        <Card.Actions>
-          <Button onPress={onRestart}>Analyze Another</Button>
-        </Card.Actions>
-      </Card>
-    </ScrollView>
+            <Text
+              style={[
+                styles.reportSubtitle,
+                { color: theme.colors.onSurfaceVariant, textAlign: "left" },
+              ]}
+            >
+              Please review your AI-generated profile and confirm your contact
+              details below.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.reportBody}>
+          <View style={styles.reportColumn}>
+            <Card
+              style={[
+                styles.reportCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
+              <Card.Content>
+                <Text style={styles.cardTitle}>Candidate Details</Text>
+                <TextInput
+                  label="Full Name"
+                  value={resumeData.fullName}
+                  style={{ marginBottom: 16 }}
+                />
+                <TextInput
+                  label="Related Link (Social Media, Website, etc)"
+                  value={resumeData.relatedLinks.join(", ")}
+                />
+              </Card.Content>
+            </Card>
+            <Card
+              style={[
+                styles.reportCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
+              <Card.Content>
+                <Text style={styles.cardTitle}>Your AI-Generated Summary</Text>
+                <TextInput
+                  mode="outlined"
+                  value={resumeData.professionalSummary}
+                  multiline
+                  numberOfLines={6}
+                />
+              </Card.Content>
+            </Card>
+
+            <View style={{ marginBottom: 24 }}>
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: "bold",
+                  marginBottom: 12,
+                  color: theme.colors.onSurface,
+                  textAlign: "left",
+                }}
+              >
+                Strengths
+              </Text>
+              <View style={styles.chipContainer}>
+                {resumeData.strengths.map((s, index) => (
+                  <PaperChip
+                    key={index}
+                    icon="check"
+                    style={{ marginRight: 8, marginBottom: 8 }}
+                    mode="outlined"
+                    elevated
+                  >
+                    {s.short}
+                  </PaperChip>
+                ))}
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.reportColumn}>
+            <Card
+              style={[
+                styles.reportCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
+              <Card.Content
+                style={{ flexDirection: "row", alignItems: "center" }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontSize: 16,
+                      fontWeight: "bold",
+                      color: theme.colors.onSurface,
+                      marginBottom: 4,
+                    }}
+                  >
+                    Role Fit Percentage
+                  </Text>
+                  <Text style={{ color: theme.colors.onSurfaceVariant }}>
+                    Customer Service Agent
+                  </Text>
+                </View>
+                <PercentageCircle percentage={`${resumeData.jobMatch}%`} />
+              </Card.Content>
+            </Card>
+            <Card
+              style={[
+                styles.reportCard,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
+              <Card.Content>
+                <Text style={styles.cardTitle}>Contact Information</Text>
+                <TextInput
+                  label="Email Address"
+                  value={resumeData.candidateEmail}
+                  style={{ marginBottom: 16 }}
+                />
+                <TextInput
+                  label="Phone Number"
+                  value={resumeData.candidatePhone}
+                />
+              </Card.Content>
+            </Card>
+          </View>
+        </View>
+
+        <View style={styles.buttonContainer}>
+          <Button
+            mode="outlined"
+            icon="reload"
+            onPress={onRestart}
+            style={styles.actionButton}
+          >
+            Start Over
+          </Button>
+          <Button
+            mode="contained"
+            icon="arrow-right"
+            style={styles.actionButton}
+          >
+            Analyze Another
+          </Button>
+        </View>
+      </View>
+    </View>
   );
 }
+
+const PercentageCircle = ({ percentage }: { percentage: string }) => {
+  const theme = useTheme();
+  const p = parseInt(percentage.replace("%", ""));
+  const size = 120;
+  const strokeWidth = 10;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const progress = p / 100;
+  const strokeDashoffset = circumference * (1 - progress);
+
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle
+          stroke={theme.colors.surfaceVariant}
+          fill="transparent"
+          strokeWidth={strokeWidth}
+          r={radius}
+          cx={size / 2}
+          cy={size / 2}
+        />
+        <circle
+          stroke={theme.colors.primary}
+          fill="transparent"
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          r={radius}
+          cx={size / 2}
+          cy={size / 2}
+        />
+      </svg>
+      <Text
+        style={{
+          position: "absolute",
+          fontSize: 24,
+          fontWeight: "bold",
+          color: theme.colors.primary,
+        }}
+      >
+        {percentage}
+      </Text>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   fullPage: { flex: 1, width: "100%" },
@@ -333,17 +517,52 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   reportContainer: {
-    padding: 16,
-    justifyContent: "center",
+    flex: 1,
+    padding: 24,
     alignItems: "center",
+    justifyContent: "center",
   },
-  reportCard: {
+  reportTitle: { fontSize: 28, fontWeight: "bold", marginBottom: 8 },
+  reportSubtitle: {
+    fontSize: 16,
+    color: "gray",
+    marginBottom: 24,
+    textAlign: "center",
+  },
+  reportBody: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     width: "100%",
-    maxWidth: 800,
+    maxWidth: 1200,
   },
-  summaryText: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    lineHeight: 22,
+  reportColumn: { flex: 1, minWidth: 400, padding: 8 },
+  reportCard: { marginBottom: 16 },
+  roleFitCardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
+  roleFitTextContainer: { flex: 1, paddingRight: 16 },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  chipContainer: { flexDirection: "row", flexWrap: "wrap", marginBottom: 8 },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    margin: 4,
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    width: "100%",
+    marginTop: 16,
+  },
+  actionButton: { marginHorizontal: 8, flex: 1, maxWidth: 300 },
 });

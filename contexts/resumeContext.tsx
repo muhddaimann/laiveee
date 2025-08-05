@@ -1,5 +1,9 @@
+import React, { createContext, useState, useContext, ReactNode } from "react";
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
+interface Strength {
+  short: string;
+  justification: string;
+}
 
 interface ResumeData {
   fullName: string;
@@ -7,9 +11,8 @@ interface ResumeData {
   candidatePhone: string;
   relatedLinks: string[];
   professionalSummary: string;
-  jobMatch: number;
-  longStrength: string;
-  shortStrength: string;
+  strengths: Strength[];
+  jobMatch: string;
 }
 
 interface ResumeContextType {
