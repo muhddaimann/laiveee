@@ -382,3 +382,174 @@ current task is to revise UI UX of WelcomeScreen to two columns layout, currentl
   In summary, the current design minimizes the number of AI calls by using the client-side code to assemble the
   final report from the data it has already gathered. This results in a faster, more responsive, and less
   expensive user experience.
+
+
+
+  {
+  "candidateDetails": {
+    "shortName": "Khris",
+    "roleAppliedFor": "Customer Service Agent",
+    "interviewLanguage": "English"
+  },
+  "resumeAnalysis": {
+    "fullName": "Muhammad Aiman",
+    "email": "muhddaimannn@gmail.com",
+    "phone": "+60113900822",
+    "relatedLinks": [
+      "tiktok.com/nssawsmas"
+    ],
+    "highestEducation": {
+      "degree": "Bachelor of Computer Engineering with Honours",
+      "major": "Computer Engineering",
+      "institution": "Universiti Teknikal Malaysia Melaka (UTeM)",
+      "date": "Sep 2021–Present"
+    },
+    "certificationsRelated": [
+      {
+        "name": "Effective Communication in Customer Service",
+        "source": "LinkedIn Learning",
+        "year": null
+      },
+      {
+        "name": "Customer Support Fundamentals",
+        "source": "Coursera",
+        "year": null
+      },
+      {
+        "name": "Conflict Resolution and Empathy Skills Training",
+        "source": null,
+        "year": null
+      }
+    ],
+    "currentRole": "Final-Year Student",
+    "totalExperienceYears": 0,
+    "professionalSummary": "Muhammad Aiman is a final-year Computer Engineering student demonstrating strong capabilities in customer service and technical support. He is proficient in handling customer inquiries, resolving issues, and improving service processes. Aiman has a proven record of excellent communication skills and has been recognized for service excellence and proactive problem-solving in academic settings.",
+    "skillMatch": [
+      {
+        "name": "Communication",
+        "justification": "Recognized with 'Effective Communication in Customer Service' certification from LinkedIn Learning."
+      },
+      {
+        "name": "Customer Support Skills",
+        "justification": "Trained through academic and certification programs like Customer Support Fundamentals."
+      },
+      {
+        "name": "Problem-solving",
+        "justification": "Recognized for proactive approach in problem-solving in academic customer engagement simulations."
+      }
+    ],
+    "experienceMatch": [
+      {
+        "area": "Handling customer issues",
+        "justification": "Has coursework emphasizing customer experience and received training through relevant certifications."
+      },
+      {
+        "area": "Improving service processes",
+        "justification": "Has academic experience in technical support with a focus on improving user experience."
+      },
+      {
+        "area": "Team collaboration",
+        "justification": "Coursework and certifications highlight skills in team collaboration."
+      }
+    ],
+    "concernAreas": [
+      "Lack of formal professional experience in a work setting",
+      "Primarily academic and course-based knowledge, rather than real-world application"
+    ],
+    "roleFitTraits": [
+      {
+        "trait": "Empathy",
+        "justification": "Completed training in 'Conflict Resolution and Empathy Skills'."
+      },
+      {
+        "trait": "Technical aptitude",
+        "justification": "Pursuing a degree in Computer Engineering with relevant coursework and technical support focus."
+      },
+      {
+        "trait": "Customer orientation",
+        "justification": "Demonstrated focus on customer experience and communication in both academic and training environments."
+      }
+    ]
+  },
+  "interviewPerformance": {
+    "averageScore": "1.0/5",
+    "summary": "The interview was ended prematurely by the candidate, providing no basis for an assessment of their English proficiency, role knowledge, or communication skills.",
+    "scoreBreakdown": {
+      "language Proficiency": {
+        "score": "1.0/5",
+        "reasoning": "The candidate did not demonstrate spoken English proficiency during the interview."
+      },
+      "role Knowledge": {
+        "score": "1.0/5",
+        "reasoning": "The interview was cut short, so there was no opportunity to assess the candidate's knowledge of the Customer Service Agent role."
+      },
+      "clarity And Confidence": {
+        "score": "1.0/5",
+        "reasoning": "Due to the early termination of the interview, there was insufficient interaction to evaluate the candidate's clarity and confidence."
+      }
+    }
+  },
+  "costEstimation": {
+    "resumeAnalysis": {
+      "inputTokens": 771,
+      "outputTokens": 650,
+      "costUSD": "0.0136"
+    },
+    "interview": {
+      "inputTokens": 99,
+      "outputTokens": 40.25,
+      "audioDurationSeconds": 23.332,
+      "costUSD": "0.0034"
+    },
+    "total": {
+      "costUSD": "0.0170",
+      "costMYR": "0.08"
+    }
+  },
+  "fullTranscript": [
+    {
+      "speaker": "Khris",
+      "text": "Hello! My name is Khris, and I am ready for my interview for the Customer Service Agent role, speaking in English."
+    },
+    {
+      "speaker": "Laive Interviewer",
+      "text": "..."
+    },
+    {
+      "speaker": "Khris",
+      "text": " "
+    },
+    {
+      "speaker": "Laive Interviewer",
+      "text": "Hi there,"
+    },
+    {
+      "speaker": "Khris",
+      "text": "Oops."
+    },
+    {
+      "speaker": "Laive Interviewer",
+      "text": "I’m Laive. Thanks for joining today. This will be a short interview for the Customer Service Agent role. Shall we begin?"
+    },
+    {
+      "speaker": "Khris",
+      "text": "Just end the session. Thank you."
+    },
+    {
+      "speaker": "Laive Interviewer",
+      "text": "Great, thank you for your time. Our team will be in touch with you soon. Have a great day!"
+    },
+    {
+      "speaker": "Khris",
+      "text": "Bye."
+    },
+    {
+      "speaker": "Khris",
+      "text": "We will see you guys."
+    },
+    {
+      "speaker": "Laive Interviewer",
+      "text": "..."
+    }
+  ]
+}

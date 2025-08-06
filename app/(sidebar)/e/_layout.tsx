@@ -13,6 +13,22 @@ export default function LayoutE() {
           headerTintColor: theme.colors.onSurface,
         }}
       />
+      <Stack.Screen
+        name="LaiveConfigure"
+        options={{
+          headerTitle: "Configure Laive",
+          headerStyle: { backgroundColor: theme.colors.surface },
+          headerTintColor: theme.colors.onSurface,
+        }}
+      />
+      <Stack.Screen
+        name="LaiveApplicant"
+        options={{
+          headerTitle: "Applicant Details",
+          headerStyle: { backgroundColor: theme.colors.surface },
+          headerTintColor: theme.colors.onSurface,
+        }}
+      />
     </Stack>
   );
 }

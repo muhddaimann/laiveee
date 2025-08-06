@@ -1,6 +1,7 @@
 import React from "react";
 import {
   View,
+  Image,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -16,6 +17,7 @@ import {
   Divider,
 } from "react-native-paper";
 import { useCandidates, Candidate } from "../../../hooks/useCandidate";
+import { useRouter } from "expo-router";
 
 export default function LaiveRecruit() {
   const theme = useTheme();
@@ -47,8 +49,8 @@ export default function LaiveRecruit() {
           />
         )}
       </View>
-
       <View style={styles.right}>
+        <ProfileCard />
         <LookupCard onSearch={handleSearch} />
         {candidates.length > 0 && (
           <RecentCard
@@ -78,144 +80,183 @@ function DashboardView({
   const totalRoles = Object.keys(roleCounts).length;
 
   return (
-    <ScrollView contentContainerStyle={styles.dashboardContent}>
+    <View style={styles.dashboardContent}>
       <View style={styles.widgetRow}>
         <Card
           style={[styles.widgetCard, { backgroundColor: theme.colors.surface }]}
         >
-          <Card.Content>
+          <Card.Content style={styles.widgetContent}>
             <Avatar.Icon
               icon="account-group"
               size={48}
-              style={{
-                marginBottom: 12,
-                backgroundColor: theme.colors.primaryContainer,
-              }}
+              style={{ backgroundColor: theme.colors.background }}
               color={theme.colors.primary}
             />
-            <Text style={styles.widgetTitle}>Total Candidates</Text>
-            <Text style={[styles.widgetValue, { color: theme.colors.primary }]}>
-              {totalCandidates}
-            </Text>
+            <View style={styles.widgetTextContainer}>
+              <Text
+                style={[styles.widgetTitle, { color: theme.colors.onSurface }]}
+              >
+                Total Candidates
+              </Text>
+              <Text
+                style={[styles.widgetValue, { color: theme.colors.primary }]}
+              >
+                {totalCandidates}
+              </Text>
+            </View>
           </Card.Content>
         </Card>
-
         <Card
           style={[styles.widgetCard, { backgroundColor: theme.colors.surface }]}
         >
-          <Card.Content>
+          <Card.Content style={styles.widgetContent}>
             <Avatar.Icon
               icon="briefcase"
               size={48}
-              style={{
-                marginBottom: 12,
-                backgroundColor: theme.colors.primaryContainer,
-              }}
+              style={{ backgroundColor: theme.colors.background }}
               color={theme.colors.primary}
             />
-            <Text style={styles.widgetTitle}>Roles Open</Text>
-            <Text style={[styles.widgetValue, { color: theme.colors.primary }]}>
-              {totalRoles}
-            </Text>
+            <View style={styles.widgetTextContainer}>
+              <Text
+                style={[styles.widgetTitle, { color: theme.colors.onSurface }]}
+              >
+                Roles Open
+              </Text>
+              <Text
+                style={[styles.widgetValue, { color: theme.colors.primary }]}
+              >
+                {totalRoles}
+              </Text>
+            </View>
           </Card.Content>
         </Card>
       </View>
 
       <View style={styles.widgetRow}>
-        <Card
-          style={[
-            styles.largeCard,
-            { flex: 1, backgroundColor: theme.colors.surface },
-          ]}
-        >
+        <Card style={[{ flex: 2, backgroundColor: theme.colors.surface }]}>
           <Card.Content>
-            <Text style={styles.widgetTitle}>Candidates per Role</Text>
-            <View style={styles.chartContainer}>
-              {Object.entries(roleCounts).map(([role, count], idx) => (
-                <View
-                  key={role}
+            <Text
+              style={[styles.widgetTitle, { color: theme.colors.onSurface }]}
+            >
+              Candidate Per Role
+            </Text>
+            <View style={styles.ringChartGrid}>
+              <View style={styles.ringChartItem}>
+                <PercentageCircle percentage="68%" />
+                <Text
                   style={[
-                    styles.bar,
-                    {
-                      height: `${Math.min(100, count * 20)}%`,
-                      backgroundColor:
-                        idx % 3 === 0
-                          ? theme.colors.primary
-                          : idx % 3 === 1
-                          ? theme.colors.secondary
-                          : theme.colors.tertiary,
-                    },
+                    styles.chartLabel,
+                    { color: theme.colors.onSurfaceVariant },
                   ]}
-                />
-              ))}
+                >
+                  Customer Service
+                </Text>
+              </View>
             </View>
           </Card.Content>
         </Card>
 
-        <Card
-          style={[
-            styles.largeCard,
-            { flex: 3, backgroundColor: theme.colors.surface },
-          ]}
-        >
+        <Card style={[{ flex: 2, backgroundColor: theme.colors.surface }]}>
           <Card.Content>
-            <Text style={styles.widgetTitle}>Application Trend</Text>
-            <View style={styles.chartContainer}>
-              <View
-                style={[
-                  styles.lineSegment,
-                  {
-                    transform: [{ rotate: "-10deg" }],
-                    width: "25%",
-                    bottom: "20%",
-                    left: "0%",
-                    backgroundColor: theme.colors.primary,
-                  },
-                ]}
-              />
-              <View
-                style={[
-                  styles.lineSegment,
-                  {
-                    transform: [{ rotate: "20deg" }],
-                    width: "25%",
-                    bottom: "30%",
-                    left: "25%",
-                    backgroundColor: theme.colors.primary,
-                  },
-                ]}
-              />
-              <View
-                style={[
-                  styles.lineSegment,
-                  {
-                    transform: [{ rotate: "-5deg" }],
-                    width: "25%",
-                    bottom: "45%",
-                    left: "50%",
-                    backgroundColor: theme.colors.primary,
-                  },
-                ]}
-              />
-              <View
-                style={[
-                  styles.lineSegment,
-                  {
-                    transform: [{ rotate: "15deg" }],
-                    width: "25%",
-                    bottom: "40%",
-                    left: "75%",
-                    backgroundColor: theme.colors.primary,
-                  },
-                ]}
-              />
+            <Text
+              style={[styles.widgetTitle, { color: theme.colors.onSurface }]}
+            >
+              Top Performing Candidates
+            </Text>
+            <View style={styles.ringChartGrid}>
+              <View style={styles.ringChartItem}>
+                <PercentageCircle percentage="85%" />
+                <Text
+                  style={[
+                    styles.chartLabel,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  Customer Service
+                </Text>
+              </View>
             </View>
           </Card.Content>
         </Card>
+
+        <View
+          style={[
+            {
+              flex: 1,
+              backgroundColor: theme.colors.surfaceVariant,
+              borderRadius: 12,
+              padding: 16,
+            },
+          ]}
+        >
+          <View style={{ flex: 1, justifyContent: "space-between" }}>
+            <View>
+              <Text
+                style={[styles.widgetTitle, { color: theme.colors.onSurface }]}
+              >
+                Configure Laive
+              </Text>
+              <Text
+                style={[
+                  styles.configureDesc,
+                  { color: theme.colors.onSurfaceVariant, paddingRight: 100 },
+                ]}
+              >
+                Customize prompts, scoring and other settings for the
+                recruitment process.
+              </Text>
+            </View>
+
+            <View style={{ alignSelf: "flex-end" }}>
+              <Avatar.Icon
+                icon="chevron-right"
+                size={40}
+                color={theme.colors.onPrimary}
+                style={[
+                  styles.configureIcon,
+                  { backgroundColor: theme.colors.primary },
+                ]}
+              />
+            </View>
+          </View>
+        </View>
       </View>
 
       <CandidateTable candidates={candidates} onSelect={onSelect} />
-    </ScrollView>
+    </View>
+  );
+}
+
+function SectionHeader({ title }: { title: string }) {
+  const theme = useTheme();
+  const router = useRouter();
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingHorizontal: 8,
+        marginBottom: 12,
+      }}
+    >
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <TouchableOpacity
+        style={{ flexDirection: "row", alignItems: "center" }}
+        onPress={() => router.push("e/laiveApplicant")}
+      >
+        <Text style={{ color: theme.colors.primary, marginRight: -8 }}>
+          View all
+        </Text>
+        <Avatar.Icon
+          icon="chevron-right"
+          size={32}
+          color={theme.colors.primary}
+          style={{ backgroundColor: "transparent" }}
+        />
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -229,9 +270,7 @@ function CandidateTable({
   const theme = useTheme();
   return (
     <>
-      <Text style={[styles.sectionTitle, { marginBottom: 12 }]}>
-        All Candidates
-      </Text>
+      <SectionHeader title="All Candidates" />
       <Card
         style={[styles.largeCard, { backgroundColor: theme.colors.surface }]}
       >
@@ -274,22 +313,17 @@ function ReportView({
   return (
     <ScrollView>
       <View style={styles.reportContainer}>
-        <Button
-          icon="arrow-left"
-          onPress={onBack}
-          style={{ alignSelf: "flex-start", marginBottom: 16 }}
-        >
+        <Button icon="arrow-left" onPress={onBack} style={styles.backButton}>
           Back
         </Button>
-
         <Card
           style={[styles.reportCard, { backgroundColor: theme.colors.surface }]}
         >
-          <Card.Content style={{ alignItems: "center" }}>
+          <Card.Content style={styles.reportContent}>
             <Avatar.Icon
               icon="account-tie"
               size={80}
-              style={{ marginBottom: 16 }}
+              style={styles.reportAvatar}
             />
             <Text style={styles.reportTitle}>{resumeAnalysis.fullName}</Text>
             <Text style={styles.reportSubtitle}>
@@ -297,7 +331,6 @@ function ReportView({
             </Text>
           </Card.Content>
         </Card>
-
         <Card
           style={[styles.reportCard, { backgroundColor: theme.colors.surface }]}
         >
@@ -312,19 +345,21 @@ function ReportView({
               {interviewPerformance.averageScore}
             </Text>
             <Text
-              style={{ color: theme.colors.onPrimaryContainer, marginTop: 8 }}
+              style={[
+                styles.recommendationText,
+                { color: theme.colors.onPrimaryContainer },
+              ]}
             >
               {interviewPerformance.summary}
             </Text>
           </Card.Content>
         </Card>
-
         <Card
           style={[styles.reportCard, { backgroundColor: theme.colors.surface }]}
         >
           <Card.Content>
             <Text style={styles.cardTitle}>Score Breakdown</Text>
-            <Divider style={{ marginBottom: 12 }} />
+            <Divider style={styles.divider} />
             {Object.entries(interviewPerformance.scoreBreakdown).map(
               ([key, value]: [string, any]) => (
                 <View key={key} style={styles.breakdownItem}>
@@ -357,7 +392,7 @@ function LookupCard({ onSearch }: { onSearch: (id: string) => void }) {
           label="Enter Candidate ID"
           value={id}
           onChangeText={setId}
-          style={{ marginBottom: 12 }}
+          style={styles.lookupInput}
         />
         <Button mode="contained" onPress={() => onSearch(id)} disabled={!id}>
           Search
@@ -375,32 +410,51 @@ function RecentCard({
   onSelect: () => void;
 }) {
   const theme = useTheme();
-
   return (
     <>
-      <Text style={[styles.sectionTitle, { marginBottom: 12 }]}>
-        Recently Completed
-      </Text>
+      <Text style={styles.sectionTitle}>Recently Completed</Text>
       <Card
         style={[styles.rightCard, { backgroundColor: theme.colors.surface }]}
       >
         <TouchableOpacity onPress={onSelect}>
-          <Card.Content>
-            <View style={{ alignItems: "center" }}>
-              <Avatar.Icon
-                icon="account-check"
-                size={50}
-                style={{ marginBottom: 8 }}
-              />
+          <Card.Content style={styles.recentContent}>
+            <Avatar.Icon
+              icon="account-check"
+              size={48}
+              style={[
+                styles.recentAvatar,
+                { backgroundColor: theme.colors.primaryContainer },
+              ]}
+              color={theme.colors.primary}
+            />
+            <View style={styles.recentTextContainer}>
               <Text style={styles.candidateName}>
                 {candidate.resumeAnalysis.fullName}
               </Text>
-              <Text>{candidate.candidateDetails.roleAppliedFor}</Text>
+              <Text style={{ color: theme.colors.onSurfaceVariant }}>
+                {candidate.candidateDetails.roleAppliedFor}
+              </Text>
             </View>
           </Card.Content>
         </TouchableOpacity>
       </Card>
     </>
+  );
+}
+
+function ProfileCard() {
+  const theme = useTheme();
+  return (
+    <View style={styles.profileCard}>
+      <Image
+        source={require("../../../assets/ta1.png")}
+        style={styles.profileImage}
+      />
+      <Text style={styles.candidateName}>Laive Recruiter</Text>
+      <Text style={{ color: theme.colors.onSurfaceVariant }}>
+        August 6th 2025
+      </Text>
+    </View>
   );
 }
 
@@ -416,29 +470,78 @@ function LoadingScreen() {
   );
 }
 
+const PercentageCircle = ({ percentage }: { percentage: string }) => {
+  const theme = useTheme();
+  const p = parseInt(percentage.replace("%", ""));
+  const size = 120;
+  const strokeWidth = 10;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const progress = p / 100;
+  const strokeDashoffset = circumference * (1 - progress);
+
+  return (
+    <View style={styles.percentageCircle}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle
+          stroke={theme.colors.background}
+          fill="transparent"
+          strokeWidth={strokeWidth}
+          r={radius}
+          cx={size / 2}
+          cy={size / 2}
+        />
+        <circle
+          stroke={theme.colors.primary}
+          fill="transparent"
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          r={radius}
+          cx={size / 2}
+          cy={size / 2}
+        />
+      </svg>
+      <Text style={styles.percentageText}>{percentage}</Text>
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
   container: { flex: 1, flexDirection: "row" },
   left: { flex: 4, padding: 24, borderRightWidth: 1, borderRightColor: "#eee" },
   right: { flex: 1, padding: 16 },
   fullPage: { flex: 1 },
   centered: { justifyContent: "center", alignItems: "center" },
-  sectionTitle: { fontSize: 18, fontWeight: "600", marginBottom: 12 },
   dashboardContent: { paddingBottom: 32 },
-  widgetRow: { flexDirection: "row", gap: 12, marginBottom: 24 },
-  widgetCard: { flex: 1, padding: 16 },
-  widgetTitle: { fontSize: 16, marginBottom: 4 },
-  widgetValue: { fontSize: 28, fontWeight: "bold" },
-  largeCard: { padding: 16 },
-  chartContainer: {
-    flex: 1,
+  widgetRow: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 4,
-    position: "relative",
-    height: 100,
+    gap: 12,
+    marginBottom: 24,
+    alignItems: "stretch",
   },
-  bar: { width: 20, borderRadius: 4 },
-  lineSegment: { position: "absolute", height: 3, borderRadius: 2 },
+  widgetCard: { flex: 1, paddingVertical: 16, paddingHorizontal: 12 },
+  widgetContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  widgetTextContainer: { flex: 1, marginLeft: 16, alignItems: "flex-end" },
+  widgetTitle: { fontSize: 16, fontWeight: "500" },
+  widgetValue: { fontSize: 24, fontWeight: "bold", marginTop: 4 },
+  sectionTitle: { fontSize: 18, fontWeight: "600", marginBottom: 8 },
+  ringChartGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 24,
+    marginTop: 16,
+  },
+  ringChartItem: { alignItems: "center", width: 120 },
+  chartLabel: { textAlign: "center", marginTop: 8, fontSize: 14 },
+  largeCard: { paddingHorizontal: 16 },
   tableHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -458,14 +561,44 @@ const styles = StyleSheet.create({
   tableCell: { flex: 1 },
   reportContainer: { paddingBottom: 32 },
   reportCard: { marginBottom: 16 },
+  reportContent: { alignItems: "center" },
+  reportAvatar: { marginBottom: 16 },
   reportTitle: { fontSize: 24, fontWeight: "bold" },
   reportSubtitle: { fontSize: 16, color: "gray", marginBottom: 16 },
   cardTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 8 },
   recommendationScore: { fontSize: 24, fontWeight: "bold" },
+  recommendationText: { marginTop: 8 },
+  divider: { marginBottom: 12 },
   breakdownItem: { marginBottom: 16 },
   breakdownTitle: { fontSize: 16, fontWeight: "500" },
   breakdownScore: { fontSize: 14, color: "gray", marginTop: 4 },
-  breakdownReasoning: { fontSize: 14, marginTop: 4, color: "#555" },
+  breakdownReasoning: { fontSize: 14, marginTop: 4 },
+  recentContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+  },
+  recentTextContainer: { flex: 1, alignItems: "flex-end" },
+  recentAvatar: { marginRight: 12 },
   rightCard: { marginBottom: 16 },
   candidateName: { fontSize: 16, fontWeight: "bold", textAlign: "center" },
+  profileCard: { alignItems: "center", marginBottom: 24 },
+  profileImage: { width: 150, height: 150, borderRadius: 100, marginBottom: 8 },
+  lookupInput: { marginBottom: 12 },
+  configureDesc: {
+    marginTop: 4,
+    fontSize: 14,
+  },
+  configureIcon: {
+    elevation: 4,
+  },
+  backButton: { alignSelf: "flex-start", marginBottom: 16 },
+  percentageCircle: {
+    width: 120,
+    height: 120,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  percentageText: { position: "absolute", fontSize: 24, fontWeight: "bold" },
 });
