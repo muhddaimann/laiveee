@@ -1,0 +1,172 @@
+{
+  "candidateDetails": {
+    "shortName": "Aiman",
+    "roleAppliedFor": "Customer Service Agent",
+    "interviewLanguage": "English"
+  },
+  "resumeAnalysis": {
+    "fullName": "Muhammad Aiman",
+    "email": "muhddaimannn@gmail.com",
+    "phone": "+60113900822",
+    "relatedLinks": [
+      "tiktok.com/nssawsmas"
+    ],
+    "highestEducation": {
+      "degree": "Bachelor of Computer Engineering with Honours",
+      "major": "Computer Engineering",
+      "institution": "Universiti Teknikal Malaysia Melaka (UTeM)",
+      "date": "Sep 2021–Present"
+    },
+    "certificationsRelated": [
+      {
+        "name": "Effective Communication in Customer Service",
+        "issuingBody": "LinkedIn Learning"
+      },
+      {
+        "name": "Customer Support Fundamentals",
+        "issuingBody": "Coursera"
+      },
+      {
+        "name": "Conflict Resolution and Empathy Skills Training"
+      }
+    ],
+    "currentRole": "Final-Year Student",
+    "totalExperienceYears": 1,
+    "professionalSummary": "Muhammad Aiman, a student of Computer Engineering with a CGPA of 3.50, demonstrates knowledge and application in technical support, troubleshooting, and customer service through his educational background and recognition like the Dean's list. His coursework includes relevant skills such as communication and customer experience, making him suitable for a role where technical understanding is paired with customer interaction.",
+    "skillMatch": [
+      {
+        "name": "Communication",
+        "justification": "Recognized in education (CGPA includes communication skills) and through certifications (Effective Communication in Customer Service)."
+      },
+      {
+        "name": "Customer experience",
+        "justification": "Bachelors program coursework included customer experience subjects."
+      },
+      {
+        "name": "Problem-solving",
+        "justification": "Recognized for service excellence and proactive problem-solving abilities."
+      },
+      {
+        "name": "Technical skills",
+        "justification": "Pursuing a Bachelor of Computer Engineering, indicating strong technical skills."
+      }
+    ],
+    "experienceMatch": [
+      {
+        "area": "Dealing with customers",
+        "justification": "Certifications and academic simulation experiences focused on customer engagement."
+      },
+      {
+        "area": "Team collaboration",
+        "justification": "Team collaboration highlighted in educational course work."
+      }
+    ],
+    "concernAreas": [
+      "Lack of formal work experience",
+      "Currently still studying"
+    ],
+    "roleFitTraits": [
+      {
+        "trait": "Problem-solving",
+        "justification": "Proactive approach in improving service processes."
+      },
+      {
+        "trait": "Responsiveness",
+        "justification": "Handled high volumes of customer interactions effectively."
+      },
+      {
+        "trait": "Empathy",
+        "justification": "Certified training in empathy skills and conflict resolution."
+      }
+    ]
+  },
+  "interviewPerformance": {
+    "averageScore": "2.3/5",
+    "summary": "Muhammad Aiman displayed basic English language skills but was reluctant to engage in detailed discussion, which impacted the evaluation of his fit for the customer service role. His responses were brief and lacked specific examples, making it challenging to gauge his problem-solving abilities and knowledge relevant to the position.",
+    "scoreBreakdown": {
+      "language Proficiency": {
+        "score": "3.0/5",
+        "reasoning": "The candidate's English proficiency appears adequate, but there was limited opportunity to fully assess fluency due to the brief responses."
+      },
+      "role Knowledge": {
+        "score": "2.0/5",
+        "reasoning": "The candidate did not provide specific examples or details when asked about problem-solving skills, making it difficult to assess their knowledge of the role."
+      },
+      "clarity And Confidence": {
+        "score": "2.0/5",
+        "reasoning": "The candidate seemed hesitant and opted to end the interview early, affecting the assessment of their clarity and confidence."
+      }
+    }
+  },
+  "costEstimation": {
+    "resumeAnalysis": {
+      "inputTokens": 771,
+      "outputTokens": 604,
+      "costUSD": "0.0129"
+    },
+    "interview": {
+      "inputTokens": 169,
+      "outputTokens": 83.5,
+      "audioDurationSeconds": 62.897,
+      "costUSD": "0.0084"
+    },
+    "total": {
+      "costUSD": "0.0213",
+      "costMYR": "0.10"
+    }
+  },
+  "fullTranscript": [
+    {
+      "speaker": "Aiman",
+      "text": "Hello! My name is Aiman, and I am ready for my interview for the Customer Service Agent role, speaking in English."
+    },
+    {
+      "speaker": "Laive Interviewer",
+      "text": "Hi, Aiman! I’m Laive. Thanks for joining today. Let's get started with the interview for the Customer Service Agent role. First, can you tell me about a time when you had to use your problem-solving skills to assist a customer?"
+    },
+    {
+      "speaker": "Aiman",
+      "text": "Hello"
+    },
+    {
+      "speaker": "Aiman",
+      "text": "I have three years experience with building castles."
+    },
+    {
+      "speaker": "Aiman",
+      "text": "So, of course, we have always problem-solving skills."
+    },
+    {
+      "speaker": "Aiman",
+      "text": "to exit the customer."
+    },
+    {
+      "speaker": "Laive Interviewer",
+      "text": "..."
+    },
+    {
+      "speaker": "Aiman",
+      "text": "Now"
+    },
+    {
+      "speaker": "Aiman",
+      "text": "I don't think I want to share during this end session."
+    },
+    {
+      "speaker": "Laive Interviewer",
+      "text": "Certainly, Aiman. I understand. Thank you for your time today. Our team will be in touch with you soon. Have a great day! Goodbye!"
+    },
+    {
+      "speaker": "Aiman",
+      "text": "Bye"
+    },
+    {
+      "speaker": "Aiman",
+      "text": "Bye-bye."
+    },
+    {
+      "speaker": "Laive Interviewer",
+      "text": "..."
+    }
+  ]
+}

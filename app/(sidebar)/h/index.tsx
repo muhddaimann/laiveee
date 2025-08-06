@@ -37,6 +37,7 @@ import { WavRecorder, WavStreamPlayer } from "../../../lib/wavtools/index";
 import { WavRenderer } from "../../../utils/wavRenderer";
 import {
   calculateInterviewCost,
+  calculateGptCost,
   UsageData,
 } from "../../../utils/costEstimator";
 
@@ -59,8 +60,14 @@ export default function LaiveTest() {
 
 function ResumeAnalysisFlow() {
   const [phase, setPhase] = useState<PagePhase>("welcome");
-  const { setCandidateData, roleApply, setConversation, setScores, setUsage } =
-    useHContext();
+  const {
+    setCandidateData,
+    roleApply,
+    setConversation,
+    setScores,
+    setAnalysisUsage,
+    setInterviewUsage,
+  } = useHContext();
 
   const handleStartAnalysis = async (file: File) => {
     setPhase("analyzing");
@@ -91,6 +98,15 @@ function ResumeAnalysisFlow() {
       const result = await response.json();
       const parsedData = JSON.parse(result.choices[0].message.content);
       setCandidateData(parsedData);
+
+      const usage = result.usage;
+      if (usage) {
+        setAnalysisUsage({
+          inputTokens: usage.prompt_tokens,
+          outputTokens: usage.completion_tokens,
+        });
+      }
+
       setPhase("preparation");
     } catch (err) {
       console.error("Error during file upload and analysis: ", err);
@@ -118,7 +134,8 @@ function ResumeAnalysisFlow() {
     setCandidateData(null);
     setScores(null);
     setConversation([]);
-    setUsage(null);
+    setAnalysisUsage(null);
+    setInterviewUsage(null);
   };
 
   switch (phase) {
@@ -507,7 +524,7 @@ function InterviewScreen({
   const {
     scores,
     setScores,
-    setUsage,
+    setInterviewUsage,
     shortName,
     roleApply,
     languagePref,
@@ -609,7 +626,7 @@ function InterviewScreen({
         outputTokens: scores.summary.length / 4,
         audioInputDuration: durationInSeconds,
       };
-      setUsage(usage);
+      setInterviewUsage(usage);
 
       const client = clientRef.current;
       client.disconnect();
@@ -619,7 +636,7 @@ function InterviewScreen({
       wavStreamPlayer.interrupt();
       onEndRequest();
     }
-  }, [scores, onEndRequest, items, setUsage]);
+  }, [scores, onEndRequest, items, setInterviewUsage]);
 
   useEffect(() => {
     connectConversation();
@@ -854,62 +871,100 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
     candidateData,
     scores,
     conversation,
-    usage,
+    interviewUsage,
+    analysisUsage,
   } = useHContext();
 
-  const costResult = usage ? calculateInterviewCost(usage) : null;
+  const analysisCost = analysisUsage
+    ? calculateGptCost(
+        analysisUsage.inputTokens || 0,
+        analysisUsage.outputTokens || 0
+      )
+    : null;
+  const interviewCostResult = interviewUsage
+    ? calculateInterviewCost(interviewUsage)
+    : null;
+
+  const totalCostUSD =
+    (analysisCost?.totalCost || 0) + (interviewCostResult?.totalCostUSD || 0);
+  const totalCostMYR = totalCostUSD * 4.7;
 
   const handleCopy = async () => {
-    if (!candidateData || !scores || !costResult) {
+    if (!candidateData || !scores || !analysisCost || !interviewCostResult) {
       Alert.alert("Error", "No summary available to copy.");
       return;
     }
-    const summaryText = `
-# LaiveApply Interview Summary
 
-## Candidate Details
-- **Name:** ${shortName}
-- **Role Applied For:** ${roleApply}
-- **Interview Language:** ${languagePref}
+    const summaryJson = {
+      candidateDetails: {
+        shortName: shortName,
+        roleAppliedFor: roleApply,
+        interviewLanguage: languagePref,
+      },
+      resumeAnalysis: {
+        fullName: candidateData.fullName,
+        email: candidateData.candidateEmail,
+        phone: candidateData.candidatePhone,
+        relatedLinks: candidateData.relatedLink || [],
+        highestEducation: candidateData.highestEducation,
+        certificationsRelated: candidateData.certsRelate || [],
+        currentRole: candidateData.currentRole,
+        totalExperienceYears: candidateData.yearExperience,
+        professionalSummary: candidateData.professionalSummary,
+        skillMatch: candidateData.skillMatch || [],
+        experienceMatch: candidateData.experienceMatch || [],
+        concernAreas: candidateData.concernArea || [],
+        roleFitTraits: candidateData.roleFit || [],
+      },
+      interviewPerformance: {
+        averageScore: scores.average.toFixed(1) + "/5",
+        summary: scores.summary,
+        scoreBreakdown: Object.fromEntries(
+          Object.entries(scores)
+            .filter(([key]) => key !== "summary" && key !== "average")
+            .map(([key, value]) => {
+              const typedValue = value as { score: number; reasoning: string };
+              const formattedKey = key.replace(/([A-Z])/g, " $1").trim();
+              return [
+                formattedKey,
+                {
+                  score: typedValue.score.toFixed(1) + "/5",
+                  reasoning: typedValue.reasoning,
+                },
+              ];
+            })
+        ),
+      },
+      costEstimation: {
+        resumeAnalysis: {
+          inputTokens: analysisUsage?.inputTokens,
+          outputTokens: analysisUsage?.outputTokens,
+          costUSD: analysisCost.totalCost.toFixed(4),
+        },
+        interview: {
+          inputTokens: interviewUsage?.inputTokens,
+          outputTokens: interviewUsage?.outputTokens,
+          audioDurationSeconds: interviewUsage?.audioInputDuration,
+          costUSD: interviewCostResult.totalCostUSD.toFixed(4),
+        },
+        total: {
+          costUSD: totalCostUSD.toFixed(4),
+          costMYR: totalCostMYR.toFixed(2),
+        },
+      },
+      fullTranscript: conversation.map((item) => {
+        const speaker = item.role === "user" ? shortName : "Laive Interviewer";
+        const text =
+          item.formatted?.text || item.formatted?.transcript || "...";
+        return { speaker, text };
+      }),
+    };
 
-## AI-Powered Resume Analysis
-- **Full Name:** ${candidateData.fullName}
-- **Email:** ${candidateData.candidateEmail}
-- **Phone:** ${candidateData.candidatePhone}
-- **Summary:** ${candidateData.professionalSummary}
-
-## AI-Powered Interview Performance
-- **Overall Average Score:** ${scores.average.toFixed(1)}/5
-- **Overall Summary:** ${scores.summary}
-
-### Score Breakdown
-${Object.entries(scores)
-  .filter(([key]) => key !== "summary" && key !== "average")
-  .map(([key, value]) => {
-    const typedValue = value as { score: number; reasoning: string };
-    const formattedKey = key.replace(/([A-Z])/g, " $1").trim();
-    return `- **${formattedKey}:** ${typedValue.score.toFixed(
-      1
-    )}/5\n  - *Reasoning:* ${typedValue.reasoning}`;
-  })
-  .join("\n")}
-
-## Cost Estimation
-- **Total Cost (USD):** $${costResult.totalCostUSD}
-- **Total Cost (MYR):** RM${costResult.totalCostMYR.toFixed(2)}
-
-## Full Transcript
-${conversation
-  .map((item) => {
-    const speaker = item.role === "user" ? shortName : "Laive Interviewer";
-    const text = item.formatted?.text || item.formatted?.transcript || "...";
-    return `**${speaker}:** ${text}`;
-  })
-  .join("\n")}
-`;
-
-    await Clipboard.setStringAsync(summaryText);
-    Alert.alert("Copied!", "Interview summary copied to clipboard.");
+    await Clipboard.setStringAsync(JSON.stringify(summaryJson, null, 2));
+    Alert.alert(
+      "Copied!",
+      "Full interview summary copied to clipboard as JSON."
+    );
   };
 
   return (

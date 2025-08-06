@@ -61,8 +61,10 @@ interface HContextType {
   setScores: (scores: ScoreType | null) => void;
   conversation: ItemType[];
   setConversation: React.Dispatch<React.SetStateAction<ItemType[]>>;
-  usage: UsageData | null;
-  setUsage: (usage: UsageData | null) => void;
+  interviewUsage: UsageData | null;
+  setInterviewUsage: (usage: UsageData | null) => void;
+  analysisUsage: UsageData | null;
+  setAnalysisUsage: (usage: UsageData | null) => void;
 }
 
 const HContext = createContext<HContextType | undefined>(undefined);
@@ -81,7 +83,8 @@ export function HProvider({ children }: { children: ReactNode }) {
   );
   const [scores, setScores] = useState<ScoreType | null>(null);
   const [conversation, setConversation] = useState<ItemType[]>([]);
-  const [usage, setUsage] = useState<UsageData | null>(null);
+  const [interviewUsage, setInterviewUsage] = useState<UsageData | null>(null);
+  const [analysisUsage, setAnalysisUsage] = useState<UsageData | null>(null);
 
   const value = {
     shortName,
@@ -98,8 +101,10 @@ export function HProvider({ children }: { children: ReactNode }) {
     setScores,
     conversation,
     setConversation,
-    usage,
-    setUsage,
+    interviewUsage,
+    setInterviewUsage,
+    analysisUsage,
+    setAnalysisUsage,
   };
 
   return <HContext.Provider value={value}>{children}</HContext.Provider>;

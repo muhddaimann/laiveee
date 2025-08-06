@@ -4,6 +4,12 @@
  * @description A module to estimate the cost of an AI voice interview session.
  */
 
+// --- Pricing Constants ---
+const GPT_INPUT_RATE = 0.005 / 1000; // $0.005 per 1K tokens
+const GPT_OUTPUT_RATE = 0.015 / 1000; // $0.015 per 1K tokens
+const WHISPER_RATE_PER_MINUTE = 0.006; // $0.006 per minute
+const USD_TO_MYR_RATE = 4.7;
+
 /**
  * Defines the structure for the usage data required to calculate the cost.
  * @interface UsageData
@@ -36,11 +42,21 @@ export interface CostResult {
   usdToMyrRate: number;
 }
 
-// --- Pricing Constants ---
-const GPT_INPUT_RATE = 0.005 / 1000; // $0.005 per 1K tokens
-const GPT_OUTPUT_RATE = 0.015 / 1000; // $0.015 per 1K tokens
-const WHISPER_RATE_PER_MINUTE = 0.006; // $0.006 per minute
-const USD_TO_MYR_RATE = 4.7;
+/**
+ * Calculates the cost of a GPT API call based on input and output tokens.
+ * @param {number} inputTokens - The number of input tokens.
+ * @param {number} outputTokens - The number of output tokens.
+ * @returns {{inputCost: number, outputCost: number, totalCost: number}}
+ */
+export function calculateGptCost(inputTokens: number, outputTokens: number) {
+  const inputCost = inputTokens * GPT_INPUT_RATE;
+  const outputCost = outputTokens * GPT_OUTPUT_RATE;
+  return {
+    inputCost,
+    outputCost,
+    totalCost: inputCost + outputCost,
+  };
+}
 
 /**
  * Calculates the estimated cost of an AI interview session based on token usage and audio duration.
@@ -55,19 +71,18 @@ export function calculateInterviewCost(usage: UsageData): CostResult {
   const audioInputDuration = usage.audioInputDuration || 0;
 
   // Calculate cost for each component
-  const gptInputCostUSD = inputTokens * GPT_INPUT_RATE;
-  const gptOutputCostUSD = outputTokens * GPT_OUTPUT_RATE;
+  const gptCosts = calculateGptCost(inputTokens, outputTokens);
   const whisperCostUSD = (audioInputDuration / 60) * WHISPER_RATE_PER_MINUTE;
 
   // Calculate total cost in USD
-  const totalCostUSD = gptInputCostUSD + gptOutputCostUSD + whisperCostUSD;
+  const totalCostUSD = gptCosts.totalCost + whisperCostUSD;
 
   // Convert to MYR
   const totalCostMYR = totalCostUSD * USD_TO_MYR_RATE;
 
   return {
-    gptInputCostUSD,
-    gptOutputCostUSD,
+    gptInputCostUSD: gptCosts.inputCost,
+    gptOutputCostUSD: gptCosts.outputCost,
     whisperCostUSD,
     totalCostUSD: parseFloat(totalCostUSD.toFixed(4)), // Rounded to 4 decimal places
     totalCostMYR,

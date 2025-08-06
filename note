@@ -352,3 +352,33 @@ current task is LaiveBetaScreen, createBetaConfig, BetaContext no need to handle
 
 current task is to revise UI UX of WelcomeScreen to two columns layout, currently too much white space same goes to ReportScreen. no need start over button. you may total redesign to use dropdown etc. plan your strategy before proceed
 
+ That's an excellent question, and it highlights a key architectural choice in how the application is designed.
+  You're right that we could have the AI handle the final JSON creation, but the current approach is intentionally
+  designed to be more efficient and cost-effective.
+
+  Here’s a breakdown of why it's set up this way:
+
+   1. Efficiency and Cost: To create the final summary, we need data from three different sources:
+       * The resume analysis (first AI call).
+       * The interview scores (second AI call).
+       * The cost calculation (done on the client).
+
+      If we were to have the AI generate the final JSON, we would need to make a third AI call, sending it all
+  the data from the first two calls and asking it to combine them. The current approach avoids this extra step.
+  The handleCopy function simply assembles the data that has already been collected and is available within the
+  app. This is faster and cheaper.
+
+   2. No Need for a Tool in `createCandidateAnalyzerConfig`: The OpenAI API has a feature called "JSON Mode" which
+      we are already using (response_format: { type: "json_object" }). This forces the AI to output a valid JSON
+      object that matches the structure described in the prompt. A "tool" is typically used when you need the AI to
+      call a function in your code. Since we only need it to return structured data, JSON Mode is the more direct
+      and efficient way to accomplish this.
+
+   3. Handling Missing Information: Your point about handling missing information is very important. Instead of
+      creating another tool, the best practice is to instruct the AI on how to handle these cases directly in the
+      prompt. For example, we can tell it to return null or an empty array ([]) for any fields it cannot find in the
+      resume. This keeps the output as valid JSON while clearly indicating that the information was not present.
+
+  In summary, the current design minimizes the number of AI calls by using the client-side code to assemble the
+  final report from the data it has already gathered. This results in a faster, more responsive, and less
+  expensive user experience.
