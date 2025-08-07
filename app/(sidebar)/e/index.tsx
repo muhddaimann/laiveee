@@ -18,6 +18,7 @@ import {
 } from "react-native-paper";
 import { useCandidates, Candidate } from "../../../hooks/useCandidate";
 import { useRouter } from "expo-router";
+import Header from "../../../components/e/header";
 
 export default function LaiveRecruit() {
   const theme = useTheme();
@@ -31,33 +32,36 @@ export default function LaiveRecruit() {
   } = useCandidates();
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
-      <View style={styles.left}>
-        {loading ? (
-          <LoadingScreen />
-        ) : selectedCandidateData ? (
-          <ReportView
-            candidateData={selectedCandidateData}
-            onBack={handleBackToDashboard}
-          />
-        ) : (
-          <DashboardView
-            candidates={candidates}
-            onSelect={handleSelectCandidate}
-          />
-        )}
-      </View>
-      <View style={styles.right}>
-        <ProfileCard />
-        <LookupCard onSearch={handleSearch} />
-        {candidates.length > 0 && (
-          <RecentCard
-            candidate={candidates[0]}
-            onSelect={() => handleSelectCandidate(candidates[0].id)}
-          />
-        )}
+    <View style={{ flex: 1 }}>
+      <Header title="LaiveRecruit™" showBack={false} />
+      <View
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
+        <View style={styles.left}>
+          {loading ? (
+            <LoadingScreen />
+          ) : selectedCandidateData ? (
+            <ReportView
+              candidateData={selectedCandidateData}
+              onBack={handleBackToDashboard}
+            />
+          ) : (
+            <DashboardView
+              candidates={candidates}
+              onSelect={handleSelectCandidate}
+            />
+          )}
+        </View>
+        <View style={styles.right}>
+          <ProfileCard />
+          <LookupCard onSearch={handleSearch} />
+          {candidates.length > 0 && (
+            <RecentCard
+              candidate={candidates[0]}
+              onSelect={() => handleSelectCandidate(candidates[0].id)}
+            />
+          )}
+        </View>
       </View>
     </View>
   );
@@ -71,6 +75,7 @@ function DashboardView({
   onSelect: (id: string) => void;
 }) {
   const theme = useTheme();
+  const router = useRouter();
   const totalCandidates = candidates.length;
   const roleCounts = candidates.reduce((acc, c) => {
     const role = c.candidateDetails.roleAppliedFor;
@@ -207,17 +212,15 @@ function DashboardView({
               </Text>
             </View>
 
-            <View style={{ alignSelf: "flex-end" }}>
-              <Avatar.Icon
-                icon="chevron-right"
-                size={40}
-                color={theme.colors.onPrimary}
-                style={[
-                  styles.configureIcon,
-                  { backgroundColor: theme.colors.primary },
-                ]}
-              />
-            </View>
+            <Button
+              mode="contained"
+              style={{ alignSelf: "flex-end" }}
+              onPress={() => router.push("e/laiveConfigure")}
+              icon="chevron-right"
+              contentStyle={{ flexDirection: "row-reverse" }}
+            >
+              Configure
+            </Button>
           </View>
         </View>
       </View>
@@ -228,8 +231,8 @@ function DashboardView({
 }
 
 function SectionHeader({ title }: { title: string }) {
-  const theme = useTheme();
   const router = useRouter();
+  const theme = useTheme();
 
   return (
     <View
@@ -238,24 +241,27 @@ function SectionHeader({ title }: { title: string }) {
         justifyContent: "space-between",
         alignItems: "center",
         paddingHorizontal: 8,
-        marginBottom: 12,
+        paddingVertical: 4,
       }}
     >
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <TouchableOpacity
-        style={{ flexDirection: "row", alignItems: "center" }}
-        onPress={() => router.push("e/laiveApplicant")}
+      <Text
+        style={{
+          fontSize: 16,
+          fontWeight: "600",    
+          color: theme.colors.onBackground,
+        }}
       >
-        <Text style={{ color: theme.colors.primary, marginRight: -8 }}>
-          View all
-        </Text>
-        <Avatar.Icon
-          icon="chevron-right"
-          size={32}
-          color={theme.colors.primary}
-          style={{ backgroundColor: "transparent" }}
-        />
-      </TouchableOpacity>
+        {title}
+      </Text>
+      <Button
+        mode="text"
+        onPress={() => router.push("e/laiveApplicant")}
+        icon="chevron-right"
+        contentStyle={{ flexDirection: "row-reverse", alignItems: "center" }}
+        labelStyle={{ fontSize: 14, color: theme.colors.primary }}
+      >
+        View all
+      </Button>
     </View>
   );
 }
