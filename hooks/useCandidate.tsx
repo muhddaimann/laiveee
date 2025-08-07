@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 
-const mockCandidateData = {
+export const mockCandidateData = {
   "20250806C1": {
     candidateDetails: {
       shortName: "Aiman",
@@ -9,31 +9,53 @@ const mockCandidateData = {
     },
     resumeAnalysis: {
       fullName: "Muhammad Aiman",
-      email: "aiman@example.com",
-      phone: "+60113900822",
-      relatedLinks: [],
-      highestEducation: {
-        degree: "Bachelor of Engineering",
-        major: "Computer Engineering",
-        institution: "UTeM",
-        date: "2021–Present",
-      },
-      certificationsRelated: [],
+      candidateEmail: "aiman@example.com",
+      candidatePhone: "+60113900822",
+      relatedLink: [],
+      highestEducation: "Bachelor of Engineering (Computer Engineering), UTeM",
       currentRole: "Final-Year Student",
-      totalExperienceYears: 1,
-      professionalSummary: "Summary 1",
-      skillMatch: [],
-      experienceMatch: [],
-      concernAreas: [],
-      roleFitTraits: [],
+      yearExperience: 1,
+      certsRelate: [],
+      professionalSummary:
+        "A passionate final-year student with customer-facing experience and tech-savvy communication skills.",
+      skillMatch: [
+        {
+          name: "Communication",
+          justification: "Clearly articulated responses during the interview.",
+        },
+      ],
+      experienceMatch: [
+        {
+          area: "Customer Service",
+          justification: "Internship at a call center for 6 months.",
+        },
+      ],
+      roleFit: [
+        {
+          trait: "Empathy",
+          justification: "Shows understanding of customer concerns.",
+        },
+      ],
+      concernArea: ["Lack of real-world full-time experience"],
     },
     interviewPerformance: {
-      averageScore: "2.3/5",
-      summary: "Summary 1",
+      averageScore: 2.3,
+      summary:
+        "Good foundational skills, but lacks practical experience in real customer service scenarios.",
       scoreBreakdown: {
-        languageProficiency: { score: "3.0/5", reasoning: "Reason 1" },
-        roleKnowledge: { score: "2.0/5", reasoning: "Reason 1" },
-        clarityAndConfidence: { score: "2.0/5", reasoning: "Reason 1" },
+        LanguageProficiency: {
+          score: 3.0,
+          reasoning: "Good command of English with minor fluency gaps.",
+        },
+        RoleKnowledge: {
+          score: 2.0,
+          reasoning:
+            "Basic understanding of customer service responsibilities.",
+        },
+        ClarityAndConfidence: {
+          score: 2.0,
+          reasoning: "Some hesitation in responses, but clear intent.",
+        },
       },
     },
     costEstimation: {
@@ -55,218 +77,289 @@ const mockCandidateData = {
     },
     fullTranscript: [],
   },
+
   "20250806C2": {
     candidateDetails: {
-      shortName: "Bella",
-      roleAppliedFor: "Sales Assistant",
-      interviewLanguage: "English",
+      shortName: "Sarah",
+      roleAppliedFor: "Customer Service Agent",
+      interviewLanguage: "Manglish",
     },
     resumeAnalysis: {
-      fullName: "Isabella Tan",
-      email: "bella@example.com",
-      phone: "+60112223333",
-      relatedLinks: [],
-      highestEducation: {
-        degree: "Diploma",
-        major: "Retail Management",
-        institution: "Sunway College",
-        date: "2019–2021",
-      },
-      certificationsRelated: [],
-      currentRole: "Sales Intern",
-      totalExperienceYears: 2,
-      professionalSummary: "Summary 2",
-      skillMatch: [],
-      experienceMatch: [],
-      concernAreas: [],
-      roleFitTraits: [],
+      fullName: "Nur Sarah Binti Ahmad",
+      candidateEmail: "sarah@example.com",
+      candidatePhone: "+60123456789",
+      relatedLink: ["linkedin.com/in/sarahahmad"],
+      highestEducation: "Diploma in Mass Communication, UiTM",
+      currentRole: "Retail Assistant",
+      yearExperience: 3,
+      certsRelate: ["Customer Service Excellence"],
+      professionalSummary:
+        "Energetic retail assistant with excellent interpersonal skills and a passion for helping people.",
+      skillMatch: [
+        {
+          name: "Customer Handling",
+          justification:
+            "Handled hundreds of customer queries weekly in-store.",
+        },
+      ],
+      experienceMatch: [
+        {
+          area: "Retail Service",
+          justification: "Over 3 years in high-volume retail environment.",
+        },
+      ],
+      roleFit: [
+        {
+          trait: "Friendliness",
+          justification: "Warm tone and casual communication style.",
+        },
+      ],
+      concernArea: [],
     },
     interviewPerformance: {
-      averageScore: "3.8/5",
-      summary: "Summary 2",
+      averageScore: 4.2,
+      summary:
+        "Great interpersonal and communication skills; highly suitable for front-facing roles.",
       scoreBreakdown: {
-        languageProficiency: { score: "4.0/5", reasoning: "Reason 2" },
-        roleKnowledge: { score: "3.5/5", reasoning: "Reason 2" },
-        clarityAndConfidence: { score: "4.0/5", reasoning: "Reason 2" },
+        LanguageProficiency: {
+          score: 4.0,
+          reasoning: "Conversational Manglish used effectively.",
+        },
+        RoleKnowledge: {
+          score: 4.5,
+          reasoning: "Shows clear understanding of service standards.",
+        },
+        ClarityAndConfidence: {
+          score: 4.0,
+          reasoning: "Very confident and articulate.",
+        },
       },
     },
     costEstimation: {
       resumeAnalysis: {
-        inputTokens: 500,
-        outputTokens: 400,
-        costUSD: "0.0100",
-      },
-      interview: {
-        inputTokens: 120,
-        outputTokens: 90,
-        audioDurationSeconds: 48.234,
-        costUSD: "0.0075",
-      },
-      total: {
-        costUSD: "0.0175",
-        costMYR: "0.08",
-      },
-    },
-    fullTranscript: [],
-  },
-  "20250806C3": {
-    candidateDetails: {
-      shortName: "Chan",
-      roleAppliedFor: "Customer Support",
-      interviewLanguage: "Mandarin",
-    },
-    resumeAnalysis: {
-      fullName: "Chan Wai Kit",
-      email: "chan@example.com",
-      phone: "+60118889999",
-      relatedLinks: [],
-      highestEducation: {
-        degree: "Bachelor",
-        major: "Mass Communication",
-        institution: "UTAR",
-        date: "2020–2024",
-      },
-      certificationsRelated: [],
-      currentRole: "Student",
-      totalExperienceYears: 0,
-      professionalSummary: "Summary 3",
-      skillMatch: [],
-      experienceMatch: [],
-      concernAreas: [],
-      roleFitTraits: [],
-    },
-    interviewPerformance: {
-      averageScore: "4.5/5",
-      summary: "Summary 3",
-      scoreBreakdown: {
-        languageProficiency: { score: "5.0/5", reasoning: "Reason 3" },
-        roleKnowledge: { score: "4.0/5", reasoning: "Reason 3" },
-        clarityAndConfidence: { score: "4.5/5", reasoning: "Reason 3" },
-      },
-    },
-    costEstimation: {
-      resumeAnalysis: {
-        inputTokens: 600,
-        outputTokens: 420,
+        inputTokens: 654,
+        outputTokens: 582,
         costUSD: "0.0112",
       },
       interview: {
-        inputTokens: 110,
-        outputTokens: 85,
-        audioDurationSeconds: 54.712,
+        inputTokens: 190,
+        outputTokens: 92,
+        audioDurationSeconds: 75.4,
+        costUSD: "0.0095",
+      },
+      total: {
+        costUSD: "0.0207",
+        costMYR: "0.10",
+      },
+    },
+    fullTranscript: [],
+  },
+
+  "20250806C3": {
+    candidateDetails: {
+      shortName: "John",
+      roleAppliedFor: "Customer Support Executive",
+      interviewLanguage: "English",
+    },
+    resumeAnalysis: {
+      fullName: "John Lim",
+      candidateEmail: "johnlim@example.com",
+      candidatePhone: "+60123411234",
+      relatedLink: [],
+      highestEducation: "Bachelor of Business Administration, MMU",
+      currentRole: "Call Center Executive",
+      yearExperience: 5,
+      certsRelate: ["Call Center Fundamentals"],
+      professionalSummary:
+        "Experienced support executive with a track record of meeting SLAs and improving team efficiency.",
+      skillMatch: [
+        {
+          name: "Problem Solving",
+          justification: "Quick resolution examples provided.",
+        },
+      ],
+      experienceMatch: [
+        {
+          area: "BPO",
+          justification: "Worked for large BPO clients across regions.",
+        },
+      ],
+      roleFit: [
+        { trait: "Composure", justification: "Handled stress scenarios well." },
+      ],
+      concernArea: ["Some answers were too brief"],
+    },
+    interviewPerformance: {
+      averageScore: 3.8,
+      summary:
+        "Solid experience and confident demeanor, though could elaborate more.",
+      scoreBreakdown: {
+        LanguageProficiency: { score: 4.0, reasoning: "Clear and fluent." },
+        RoleKnowledge: {
+          score: 3.5,
+          reasoning: "Good but lacked details on escalation.",
+        },
+        ClarityAndConfidence: {
+          score: 4.0,
+          reasoning: "Spoke calmly and confidently.",
+        },
+      },
+    },
+    costEstimation: {
+      resumeAnalysis: {
+        inputTokens: 810,
+        outputTokens: 612,
+        costUSD: "0.0135",
+      },
+      interview: {
+        inputTokens: 203,
+        outputTokens: 104,
+        audioDurationSeconds: 82.1,
+        costUSD: "0.0102",
+      },
+      total: {
+        costUSD: "0.0237",
+        costMYR: "0.11",
+      },
+    },
+    fullTranscript: [],
+  },
+
+  "20250806C4": {
+    candidateDetails: {
+      shortName: "Farah",
+      roleAppliedFor: "Live Chat Agent",
+      interviewLanguage: "English",
+    },
+    resumeAnalysis: {
+      fullName: "Farah Lee",
+      candidateEmail: "farahlee@example.com",
+      candidatePhone: "+60119999888",
+      relatedLink: ["portfolio.farahlee.my"],
+      highestEducation: "Diploma in IT, Politeknik Ungku Omar",
+      currentRole: "Freelancer",
+      yearExperience: 2,
+      certsRelate: ["Typing Speed Test 90WPM"],
+      professionalSummary:
+        "Tech-savvy freelancer with fast typing skills and strong written communication background.",
+      skillMatch: [
+        {
+          name: "Written Communication",
+          justification:
+            "Provided clear, concise written replies in the interview.",
+        },
+      ],
+      experienceMatch: [
+        {
+          area: "Online Support",
+          justification:
+            "Experience managing chat platforms for online stores.",
+        },
+      ],
+      roleFit: [
+        {
+          trait: "Attention to Detail",
+          justification: "Spotted inconsistencies in hypothetical scenarios.",
+        },
+      ],
+      concernArea: [],
+    },
+    interviewPerformance: {
+      averageScore: 4.5,
+      summary:
+        "Excellent candidate for live chat roles with quick thinking and clarity.",
+      scoreBreakdown: {
+        LanguageProficiency: {
+          score: 4.5,
+          reasoning: "Very polished written tone.",
+        },
+        RoleKnowledge: {
+          score: 4.5,
+          reasoning: "Understood nuances of live chat support.",
+        },
+        ClarityAndConfidence: {
+          score: 4.5,
+          reasoning: "Quick and composed answers.",
+        },
+      },
+    },
+    costEstimation: {
+      resumeAnalysis: {
+        inputTokens: 690,
+        outputTokens: 510,
+        costUSD: "0.0110",
+      },
+      interview: {
+        inputTokens: 180,
+        outputTokens: 90,
+        audioDurationSeconds: 61.8,
+        costUSD: "0.0089",
+      },
+      total: {
+        costUSD: "0.0199",
+        costMYR: "0.09",
+      },
+    },
+    fullTranscript: [],
+  },
+
+  "20250806C5": {
+    candidateDetails: {
+      shortName: "Hafiz",
+      roleAppliedFor: "Customer Advisor",
+      interviewLanguage: "English",
+    },
+    resumeAnalysis: {
+      fullName: "Mohd Hafiz Bin Karim",
+      candidateEmail: "hafizkarim@example.com",
+      candidatePhone: "+60127894567",
+      relatedLink: [],
+      highestEducation: "SPM",
+      currentRole: "Unemployed",
+      yearExperience: 0,
+      certsRelate: [],
+      professionalSummary:
+        "Eager to start a customer service career; fast learner with good interpersonal potential.",
+      skillMatch: [],
+      experienceMatch: [],
+      roleFit: [
+        {
+          trait: "Willingness to Learn",
+          justification: "Showed high interest in training.",
+        },
+      ],
+      concernArea: ["No work experience", "Lack of real examples"],
+    },
+    interviewPerformance: {
+      averageScore: 1.8,
+      summary: "Very new candidate; needs training but has potential.",
+      scoreBreakdown: {
+        LanguageProficiency: {
+          score: 2.0,
+          reasoning: "Understood basic questions.",
+        },
+        RoleKnowledge: { score: 1.5, reasoning: "Needs more exposure." },
+        ClarityAndConfidence: {
+          score: 2.0,
+          reasoning: "Shy but tried to respond.",
+        },
+      },
+    },
+    costEstimation: {
+      resumeAnalysis: {
+        inputTokens: 480,
+        outputTokens: 402,
+        costUSD: "0.0094",
+      },
+      interview: {
+        inputTokens: 145,
+        outputTokens: 70,
+        audioDurationSeconds: 48.1,
         costUSD: "0.0069",
       },
       total: {
-        costUSD: "0.0181",
-        costMYR: "0.09",
-      },
-    },
-    fullTranscript: [],
-  },
-  "20250806C4": {
-    candidateDetails: {
-      shortName: "Dina",
-      roleAppliedFor: "Admin Executive",
-      interviewLanguage: "English",
-    },
-    resumeAnalysis: {
-      fullName: "Nur Dina",
-      email: "dina@example.com",
-      phone: "+60117778888",
-      relatedLinks: [],
-      highestEducation: {
-        degree: "Bachelor",
-        major: "Business Administration",
-        institution: "UiTM",
-        date: "2019–2023",
-      },
-      certificationsRelated: [],
-      currentRole: "Admin Assistant",
-      totalExperienceYears: 1,
-      professionalSummary: "Summary 4",
-      skillMatch: [],
-      experienceMatch: [],
-      concernAreas: [],
-      roleFitTraits: [],
-    },
-    interviewPerformance: {
-      averageScore: "4.0/5",
-      summary: "Summary 4",
-      scoreBreakdown: {
-        languageProficiency: { score: "4.0/5", reasoning: "Reason 4" },
-        roleKnowledge: { score: "4.0/5", reasoning: "Reason 4" },
-        clarityAndConfidence: { score: "4.0/5", reasoning: "Reason 4" },
-      },
-    },
-    costEstimation: {
-      resumeAnalysis: {
-        inputTokens: 580,
-        outputTokens: 410,
-        costUSD: "0.0108",
-      },
-      interview: {
-        inputTokens: 140,
-        outputTokens: 95,
-        audioDurationSeconds: 58.103,
-        costUSD: "0.0072",
-      },
-      total: {
-        costUSD: "0.0180",
-        costMYR: "0.09",
-      },
-    },
-    fullTranscript: [],
-  },
-  "20250806C5": {
-    candidateDetails: {
-      shortName: "Elvin",
-      roleAppliedFor: "Marketing Assistant",
-      interviewLanguage: "English",
-    },
-    resumeAnalysis: {
-      fullName: "Elvin Low",
-      email: "elvin@example.com",
-      phone: "+60110011234",
-      relatedLinks: [],
-      highestEducation: {
-        degree: "Diploma",
-        major: "Marketing",
-        institution: "TARUC",
-        date: "2020–2022",
-      },
-      certificationsRelated: [],
-      currentRole: "Marketing Trainee",
-      totalExperienceYears: 1,
-      professionalSummary: "Summary 5",
-      skillMatch: [],
-      experienceMatch: [],
-      concernAreas: [],
-      roleFitTraits: [],
-    },
-    interviewPerformance: {
-      averageScore: "3.2/5",
-      summary: "Summary 5",
-      scoreBreakdown: {
-        languageProficiency: { score: "3.0/5", reasoning: "Reason 5" },
-        roleKnowledge: { score: "3.5/5", reasoning: "Reason 5" },
-        clarityAndConfidence: { score: "3.0/5", reasoning: "Reason 5" },
-      },
-    },
-    costEstimation: {
-      resumeAnalysis: {
-        inputTokens: 640,
-        outputTokens: 470,
-        costUSD: "0.0115",
-      },
-      interview: {
-        inputTokens: 125,
-        outputTokens: 90,
-        audioDurationSeconds: 59.431,
-        costUSD: "0.0071",
-      },
-      total: {
-        costUSD: "0.0186",
-        costMYR: "0.09",
+        costUSD: "0.0163",
+        costMYR: "0.08",
       },
     },
     fullTranscript: [],

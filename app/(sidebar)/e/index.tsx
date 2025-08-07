@@ -15,6 +15,8 @@ import {
   TextInput,
   Avatar,
   Divider,
+  List,
+  Chip,
 } from "react-native-paper";
 import { useCandidates, Candidate } from "../../../hooks/useCandidate";
 import { useRouter } from "expo-router";
@@ -85,7 +87,7 @@ function DashboardView({
   const totalRoles = Object.keys(roleCounts).length;
 
   return (
-    <View style={styles.dashboardContent}>
+    <View>
       <View style={styles.widgetRow}>
         <Card
           style={[styles.widgetCard, { backgroundColor: theme.colors.surface }]}
@@ -136,7 +138,6 @@ function DashboardView({
           </Card.Content>
         </Card>
       </View>
-
       <View style={styles.widgetRow}>
         <Card style={[{ flex: 2, backgroundColor: theme.colors.surface }]}>
           <Card.Content>
@@ -224,7 +225,6 @@ function DashboardView({
           </View>
         </View>
       </View>
-
       <CandidateTable candidates={candidates} onSelect={onSelect} />
     </View>
   );
@@ -240,14 +240,14 @@ function SectionHeader({ title }: { title: string }) {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
+        paddingBottom: 8,
         paddingHorizontal: 8,
-        paddingVertical: 4,
       }}
     >
       <Text
         style={{
           fontSize: 16,
-          fontWeight: "600",    
+          fontWeight: "600",
           color: theme.colors.onBackground,
         }}
       >
@@ -316,73 +316,261 @@ function ReportView({
   const { candidateDetails, resumeAnalysis, interviewPerformance } =
     candidateData;
 
+  const InfoRow = ({
+    label,
+    value,
+  }: {
+    label: string;
+    value: string | number;
+  }) => (
+    <View style={styles.infoRow}>
+      <Text style={[styles.infoRowLabel, { color: theme.colors.onSurface }]}>
+        {label}
+      </Text>
+      <Text
+        style={[styles.infoRowValue, { color: theme.colors.onSurfaceVariant }]}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+
   return (
-    <ScrollView>
-      <View style={styles.reportContainer}>
-        <Button icon="arrow-left" onPress={onBack} style={styles.backButton}>
-          Back
+    <View style={{ flex: 1 }}>
+      <View style={{ paddingRight: 16, paddingBottom: 16 }}>
+        <Button
+          icon="arrow-left"
+          onPress={onBack}
+          style={{ alignSelf: "flex-end" }}
+        >
+          Back to Dashboard
         </Button>
-        <Card
-          style={[styles.reportCard, { backgroundColor: theme.colors.surface }]}
-        >
-          <Card.Content style={styles.reportContent}>
-            <Avatar.Icon
-              icon="account-tie"
-              size={80}
-              style={styles.reportAvatar}
-            />
-            <Text style={styles.reportTitle}>{resumeAnalysis.fullName}</Text>
-            <Text style={styles.reportSubtitle}>
-              {candidateDetails.roleAppliedFor}
-            </Text>
-          </Card.Content>
-        </Card>
-        <Card
-          style={[styles.reportCard, { backgroundColor: theme.colors.surface }]}
-        >
-          <Card.Content>
-            <Text style={styles.cardTitle}>Recommendation</Text>
-            <Text
-              style={[
-                styles.recommendationScore,
-                { color: theme.colors.primary },
-              ]}
-            >
-              {interviewPerformance.averageScore}
-            </Text>
-            <Text
-              style={[
-                styles.recommendationText,
-                { color: theme.colors.onPrimaryContainer },
-              ]}
-            >
-              {interviewPerformance.summary}
-            </Text>
-          </Card.Content>
-        </Card>
-        <Card
-          style={[styles.reportCard, { backgroundColor: theme.colors.surface }]}
-        >
-          <Card.Content>
-            <Text style={styles.cardTitle}>Score Breakdown</Text>
-            <Divider style={styles.divider} />
-            {Object.entries(interviewPerformance.scoreBreakdown).map(
-              ([key, value]: [string, any]) => (
-                <View key={key} style={styles.breakdownItem}>
-                  <Text style={styles.breakdownTitle}>
-                    {key.replace(/([A-Z])/g, " $1").trim()}
-                  </Text>
-                  <Text style={styles.breakdownScore}>{value.score}</Text>
-                  <Text style={styles.breakdownReasoning}>
-                    {value.reasoning}
-                  </Text>
-                </View>
-              )
-            )}
-          </Card.Content>
-        </Card>
       </View>
-    </ScrollView>
+      <ScrollView>
+        <View style={[styles.reportContainer, { paddingTop: 0 }]}>
+          <Card
+            style={[
+              styles.reportCard,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content style={styles.reportContent}>
+              <Avatar.Icon
+                icon="account-tie"
+                size={80}
+                style={styles.reportAvatar}
+              />
+              <Text style={styles.reportTitle}>{resumeAnalysis.fullName}</Text>
+              <Text style={styles.reportSubtitle}>
+                {candidateDetails.roleAppliedFor}
+              </Text>
+            </Card.Content>
+          </Card>
+
+          <Card
+            style={[
+              styles.reportCard,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <Text style={styles.cardTitle}>AI Recommendation</Text>
+              <View style={styles.recommendationHeader}>
+                <Text
+                  style={[
+                    styles.recommendationScore,
+                    { color: theme.colors.primary },
+                  ]}
+                >
+                  {interviewPerformance.averageScore} / 5.0
+                </Text>
+                <Text style={styles.recommendationText}>
+                  {interviewPerformance.summary}
+                </Text>
+              </View>
+            </Card.Content>
+          </Card>
+
+          <View style={styles.reportLayout}>
+            <View style={styles.reportColumn}>
+              <Card
+                style={[
+                  styles.reportCard,
+                  { backgroundColor: theme.colors.surface },
+                ]}
+              >
+                <Card.Content>
+                  <Text style={styles.cardTitle}>Candidate Details</Text>
+                  <InfoRow label="Full Name" value={resumeAnalysis.fullName} />
+                  <InfoRow
+                    label="Email"
+                    value={resumeAnalysis.candidateEmail}
+                  />
+                  <InfoRow
+                    label="Phone"
+                    value={resumeAnalysis.candidatePhone}
+                  />
+                  <InfoRow
+                    label="Links"
+                    value={resumeAnalysis.relatedLink?.join(", ") || "N/A"}
+                  />
+                  <Divider style={styles.divider} />
+                  <InfoRow
+                    label="Highest Education"
+                    value={resumeAnalysis.highestEducation}
+                  />
+                  <InfoRow
+                    label="Current Role"
+                    value={resumeAnalysis.currentRole}
+                  />
+                  <InfoRow
+                    label="Experience"
+                    value={`${resumeAnalysis.yearExperience} years`}
+                  />
+                  <InfoRow
+                    label="Certifications"
+                    value={resumeAnalysis.certsRelate?.join(", ") || "N/A"}
+                  />
+                </Card.Content>
+              </Card>
+
+              <Card
+                style={[
+                  styles.reportCard,
+                  { backgroundColor: theme.colors.surface },
+                ]}
+              >
+                <Card.Content>
+                  <Text style={styles.cardTitle}>AI-Generated Summary</Text>
+                  <Text style={styles.summaryText}>
+                    {resumeAnalysis.professionalSummary}
+                  </Text>
+                </Card.Content>
+              </Card>
+            </View>
+
+            <View style={styles.reportColumn}>
+              <Card
+                style={[
+                  styles.reportCard,
+                  { backgroundColor: theme.colors.surface },
+                ]}
+              >
+                <Card.Content>
+                  <Text style={styles.cardTitle}>
+                    Interview Score Breakdown
+                  </Text>
+                  <List.Section>
+                    {Object.entries(interviewPerformance.scoreBreakdown).map(
+                      ([key, value]: [string, any]) => (
+                        <List.Accordion
+                          key={key}
+                          title={`${key.replace(/([A-Z])/g, " $1").trim()} (${
+                            value.score
+                          }/5)`}
+                          titleStyle={{ fontWeight: "bold" }}
+                          left={(props) => (
+                            <List.Icon {...props} icon="star-circle-outline" />
+                          )}
+                        >
+                          <List.Item
+                            title="Reasoning"
+                            description={value.reasoning}
+                            descriptionNumberOfLines={10}
+                          />
+                        </List.Accordion>
+                      )
+                    )}
+                  </List.Section>
+                </Card.Content>
+              </Card>
+
+              <Card
+                style={[
+                  styles.reportCard,
+                  { backgroundColor: theme.colors.surface },
+                ]}
+              >
+                <Card.Content>
+                  <Text style={styles.cardTitle}>AI Analysis</Text>
+                  <List.Section>
+                    <List.Accordion
+                      title="Skill Match"
+                      left={(props) => (
+                        <List.Icon {...props} icon="check-decagram" />
+                      )}
+                    >
+                      {resumeAnalysis.skillMatch?.map(
+                        (item: any, i: number) => (
+                          <List.Item
+                            key={i}
+                            title={item.name}
+                            description={item.justification}
+                            descriptionNumberOfLines={5}
+                          />
+                        )
+                      )}
+                    </List.Accordion>
+                    <List.Accordion
+                      title="Experience Match"
+                      left={(props) => (
+                        <List.Icon {...props} icon="briefcase-check" />
+                      )}
+                    >
+                      {resumeAnalysis.experienceMatch?.map(
+                        (item: any, i: number) => (
+                          <List.Item
+                            key={i}
+                            title={item.area}
+                            description={item.justification}
+                            descriptionNumberOfLines={5}
+                          />
+                        )
+                      )}
+                    </List.Accordion>
+                    <List.Accordion
+                      title="Role Fit Traits"
+                      left={(props) => (
+                        <List.Icon {...props} icon="account-star" />
+                      )}
+                    >
+                      {resumeAnalysis.roleFit?.map((item: any, i: number) => (
+                        <List.Item
+                          key={i}
+                          title={item.trait}
+                          description={item.justification}
+                          descriptionNumberOfLines={5}
+                        />
+                      ))}
+                    </List.Accordion>
+                    <List.Accordion
+                      title="Concern Areas"
+                      left={(props) => (
+                        <List.Icon {...props} icon="alert-circle-outline" />
+                      )}
+                    >
+                      <View style={styles.chipContainer}>
+                        {resumeAnalysis.concernArea?.map(
+                          (item: string, i: number) => (
+                            <Chip
+                              key={i}
+                              style={styles.chip}
+                              icon="information"
+                            >
+                              {item}
+                            </Chip>
+                          )
+                        )}
+                      </View>
+                    </List.Accordion>
+                  </List.Section>
+                </Card.Content>
+              </Card>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -516,17 +704,22 @@ const PercentageCircle = ({ percentage }: { percentage: string }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, flexDirection: "row" },
-  left: { flex: 4, padding: 24, borderRightWidth: 1, borderRightColor: "#eee" },
-  right: { flex: 1, padding: 16 },
+  container: {
+    flex: 1,
+    flexDirection: "row",
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    gap: 24,
+  },
+  left: { flex: 4 },
+  right: { flex: 1, paddingVertical: 24 },
   fullPage: { flex: 1 },
   centered: { justifyContent: "center", alignItems: "center" },
-  dashboardContent: { paddingBottom: 32 },
   widgetRow: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 24,
     alignItems: "stretch",
+    gap: 12,
+    paddingBottom: 16,
   },
   widgetCard: { flex: 1, paddingVertical: 16, paddingHorizontal: 12 },
   widgetContent: {
@@ -565,16 +758,35 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
   },
   tableCell: { flex: 1 },
-  reportContainer: { paddingBottom: 32 },
+  reportContainer: { paddingHorizontal: 16 },
   reportCard: { marginBottom: 16 },
-  reportContent: { alignItems: "center" },
+  reportContent: { alignItems: "center", padding: 8 },
   reportAvatar: { marginBottom: 16 },
   reportTitle: { fontSize: 24, fontWeight: "bold" },
   reportSubtitle: { fontSize: 16, color: "gray", marginBottom: 16 },
-  cardTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 8 },
-  recommendationScore: { fontSize: 24, fontWeight: "bold" },
-  recommendationText: { marginTop: 8 },
-  divider: { marginBottom: 12 },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  recommendationHeader: {
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+  recommendationScore: { fontSize: 28, fontWeight: "bold" },
+  recommendationText: {
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+  },
+  summaryText: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontStyle: "italic",
+  },
+  divider: { marginVertical: 8 },
   breakdownItem: { marginBottom: 16 },
   breakdownTitle: { fontSize: 16, fontWeight: "500" },
   breakdownScore: { fontSize: 14, color: "gray", marginTop: 4 },
@@ -590,7 +802,12 @@ const styles = StyleSheet.create({
   rightCard: { marginBottom: 16 },
   candidateName: { fontSize: 16, fontWeight: "bold", textAlign: "center" },
   profileCard: { alignItems: "center", marginBottom: 24 },
-  profileImage: { width: 150, height: 150, borderRadius: 100, marginBottom: 8 },
+  profileImage: {
+    width: 150,
+    height: 150,
+    borderRadius: 100,
+    marginBottom: 8,
+  },
   lookupInput: { marginBottom: 12 },
   configureDesc: {
     marginTop: 4,
@@ -599,7 +816,7 @@ const styles = StyleSheet.create({
   configureIcon: {
     elevation: 4,
   },
-  backButton: { alignSelf: "flex-start", marginBottom: 16 },
+
   percentageCircle: {
     width: 120,
     height: 120,
@@ -607,4 +824,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   percentageText: { position: "absolute", fontSize: 24, fontWeight: "bold" },
+  reportLayout: {
+    flexDirection: "row",
+    gap: 16,
+    alignItems: "flex-start",
+  },
+  reportColumn: {
+    flex: 1,
+  },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  infoRowLabel: {
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  infoRowValue: {
+    fontSize: 14,
+    flex: 1,
+    textAlign: "right",
+  },
+  chipContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    padding: 8,
+  },
+  chip: {
+    height: 32,
+  },
 });

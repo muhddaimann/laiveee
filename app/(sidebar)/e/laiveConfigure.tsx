@@ -188,9 +188,9 @@ function ConfigOverview({ analyzerConfig, interviewConfig }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, flexDirection: "row" },
-  left: { flex: 3, padding: 24 },
-  right: { flex: 1, padding: 16, paddingTop: 60 },
+  container: { flex: 1, flexDirection: "row", padding: 24, gap: 16 },
+  left: { flex: 2 },
+  right: { flex: 1 },
   card: { marginBottom: 16, borderRadius: 12 },
   cardTitle: { fontSize: 18, fontWeight: "600", marginBottom: 12 },
   input: { marginBottom: 12 },
