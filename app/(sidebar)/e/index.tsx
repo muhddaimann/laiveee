@@ -57,12 +57,7 @@ export default function LaiveRecruit() {
         <View style={styles.right}>
           <ProfileCard />
           <LookupCard onSearch={handleSearch} />
-          {candidates.length > 0 && (
-            <RecentCard
-              candidate={candidates[0]}
-              onSelect={() => handleSelectCandidate(candidates[0].id)}
-            />
-          )}
+          <EmptyRecentCard />
         </View>
       </View>
     </View>
@@ -636,6 +631,61 @@ function RecentCard({
   );
 }
 
+function EmptyRecentCard() {
+  const theme = useTheme();
+
+  return (
+    <View style={{ marginTop: 16 }}>
+      <Text
+        style={{
+          fontSize: 16,
+          fontWeight: "600",
+          marginBottom: 12,
+          color: theme.colors.onBackground,
+        }}
+      >
+        Recently Completed
+      </Text>
+
+      <View
+        style={{
+          alignItems: "center",
+          paddingVertical: 100,
+        }}
+      >
+        <Avatar.Icon
+          icon="clock-alert-outline"
+          size={56}
+          style={{
+            backgroundColor: theme.colors.surface,
+            marginBottom: 12,
+          }}
+          color={theme.colors.onSurfaceVariant}
+        />
+        <Text
+          style={{
+            fontSize: 15,
+            fontWeight: "500",
+            color: theme.colors.onSurfaceVariant,
+            marginBottom: 4,
+          }}
+        >
+          No recent completions
+        </Text>
+        <Text
+          style={{
+            fontSize: 13,
+            color: theme.colors.onSurfaceDisabled,
+            textAlign: "center",
+          }}
+        >
+          Try refreshing or check back later.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 function ProfileCard() {
   const theme = useTheme();
   return (
@@ -646,7 +696,7 @@ function ProfileCard() {
       />
       <Text style={styles.candidateName}>Laive Recruiter</Text>
       <Text style={{ color: theme.colors.onSurfaceVariant }}>
-        August 6th 2025
+        August 7th 2025
       </Text>
     </View>
   );

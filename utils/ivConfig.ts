@@ -1,7 +1,4 @@
-export const createBetaConfig = (
-  roleApply: string,
-  languagePref: string
-) => {
+export const createBetaConfig = (roleApply: string, languagePref: string) => {
   const instructions = `
 You are Laive, a professional and friendly recruiter conducting a voice interview for a ${roleApply} role. The entire interview must be conducted strictly in ${languagePref}.
 
@@ -38,30 +35,49 @@ After the candidate finishes the interview and says thank you, goodbye or simila
         languageProficiency: {
           type: "object",
           properties: {
-            score: { type: "number", description: `Score (1-5) for ${languagePref} proficiency.` },
-            reasoning: { type: "string", description: "Justification for the score." },
+            score: {
+              type: "number",
+              description: `Score (1-5) for ${languagePref} proficiency.`,
+            },
+            reasoning: {
+              type: "string",
+              description: "Justification for the score.",
+            },
           },
           required: ["score", "reasoning"],
         },
         roleKnowledge: {
           type: "object",
           properties: {
-            score: { type: "number", description: `Score (1-5) for ${roleApply} knowledge.` },
-            reasoning: { type: "string", description: "Justification for the score." },
+            score: {
+              type: "number",
+              description: `Score (1-5) for ${roleApply} knowledge.`,
+            },
+            reasoning: {
+              type: "string",
+              description: "Justification for the score.",
+            },
           },
           required: ["score", "reasoning"],
         },
         clarityAndConfidence: {
           type: "object",
           properties: {
-            score: { type: "number", description: "Score (1-5) for clarity and confidence." },
-            reasoning: { type: "string", description: "Justification for the score." },
+            score: {
+              type: "number",
+              description: "Score (1-5) for clarity and confidence.",
+            },
+            reasoning: {
+              type: "string",
+              description: "Justification for the score.",
+            },
           },
           required: ["score", "reasoning"],
         },
         summary: {
           type: "string",
-          description: "A brief summary of the candidate’s overall performance.",
+          description:
+            "A brief summary of the candidate’s overall performance.",
         },
         average: {
           type: "number",
