@@ -8,7 +8,7 @@ export const mockCandidateData = {
       interviewLanguage: "English",
     },
     resumeAnalysis: {
-      fullName: "Muhammad Aiman bin Othman",
+      fullName: "Muhammad Aiman",
       candidateEmail: "muhddaimann@gmail.com",
       candidatePhone: "012-3456789",
       relatedLink: ["linkedin.com/in/maimano"],
@@ -113,7 +113,10 @@ export const useCandidates = () => {
   };
 
   const selectedCandidateData = selectedCandidateId
-    ? { id: selectedCandidateId, ...(mockCandidateData as any)[selectedCandidateId] }
+    ? {
+        id: selectedCandidateId,
+        ...(mockCandidateData as any)[selectedCandidateId],
+      }
     : null;
 
   return {

@@ -342,7 +342,6 @@ function ReportView({
         </Button>
       </View>
       <ScrollView contentContainerStyle={styles.reportContainer}>
-        {/* First Row */}
         <View style={styles.row}>
           <Card
             style={[
@@ -394,7 +393,6 @@ function ReportView({
           </Card>
         </View>
 
-        {/* Second Row */}
         <View style={styles.row}>
           <Card
             style={[
