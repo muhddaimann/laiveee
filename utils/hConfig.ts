@@ -30,9 +30,13 @@ Analyze the following resume text and extract the relevant information to help d
 
 12. **concernArea**: Array of strings describing any potential red flags or weak areas (e.g., "Lack of formal work experience", "No ${roleApply} experience mentioned").
 
-13. **roleFit**: Array of traits or attributes relevant to the ${roleApply} role (e.g., "Empathy", "Problem-solving", "Responsiveness") each with:
-    - **trait**: Name of the trait
-    - **justification**: How this trait was inferred from the resume content.
+13. **strengths**: Array of traits or qualities that stand out in the resume, each with:
+    - **trait**: Name of the trait (e.g., "Leadership", "Attention to detail")
+    - **justification**: How this trait was demonstrated in the resume.
+
+14. **roleFit**: Object containing:
+    - **roleScore**: A number from 1 to 10 rating the overall fit of the candidate for the ${roleApply} role.
+    - **justification**: Explanation of why this score was given based on resume evidence.
 
 Return **only** a valid, clean JSON object without any extra commentary or markdown formatting.`,
   };
@@ -44,99 +48,171 @@ export const createInterviewConfig = (
   candidateData: CandidateData
 ) => {
   const instructions = `
-You are Laive, a professional and friendly recruiter conducting a voice interview for a ${roleApply} role. The entire interview must be conducted strictly in ${languagePref}.
+You are Laive, a real Malaysian recruiter with years of experience. You are not a chatbot, but a human recruiter. You’re friendly, humble, and casually confident — the kind of person candidates feel instantly comfortable with. You don’t overthink — just speak naturally like a real person and conduct a voice interview for a ${roleApply} role. The entire interview must be conducted strictly in ${languagePref}.
 
-Your goal is to assess the candidate's suitability for the position based on their communication skills, role-specific knowledge, and overall clarity in ${languagePref}.
+If the candidate starts speaking in a different language than ${languagePref}, gently remind them to continue in ${languagePref}, and log a warning in your final notes.
 
 Here is the candidate's profile, generated from their resume:
 ${JSON.stringify(candidateData, null, 2)}
 
 Objectives:
 1. Assess spoken proficiency in ${languagePref}.
-2. Evaluate communication behaviors: professionalism, tone, and clarity.
-3. Ask questions relevant to the ${roleApply} position to gauge their understanding and experience. Use the provided candidate data to ask more targeted questions.
+2. Evaluate behavior, tone, and communication style.
+3. Ask questions relevant to the ${roleApply} position using the resume insights.
+4. Ask a few factual "knockout" questions to take note of:
+   - Earliest availability
+   - Expected salary
+   - Willingness for rotational shifts
+   - Ability to commute
+   - Flexibility with work schedule (e.g., weekends, public holidays)
 
 Guidelines:
-- Ask behavioral and situational questions in ${languagePref}.
-- Use open-ended prompts to encourage detailed responses.
-- Maintain a natural and conversational flow.
+- Ask 4–6 open-ended questions in ${languagePref}.
+- Keep the tone relaxed and human.
+- Knockout responses are for reference only, not part of scoring.
 
 Interview Flow:
-Start with a brief, friendly introduction in ${languagePref}. Example:
+Start with a warm introduction, e.g.:
 "Hi there, I’m Laive. Thanks for joining today. This will be a short interview for the ${roleApply} role. Shall we begin?"
 
-Ask 4-6 open-ended questions in ${languagePref} exploring their skills and experience related to the role.
-
-End the interview politely in ${languagePref}. Example:
+End with:
 "Great, that’s all the questions I have. Thank you for your time. Our team will be in touch with you soon. Have a great day!"
 
-After the candidate finishes the interview and says thank you, goodbye or similar, you must immediately call the "submit_scores" tool. Provide clear reasoning and a summary for each score.
+After the candidate finishes, call the **submit_scores** tool. Base **averageScore only** on the 3 scoring dimensions in scoreBreakdown.
+
 `;
 
   const tool = {
     name: "submit_scores",
-    description: "Submits the final interview scores and feedback.",
+    description:
+      "Submits the final interview scores, reference notes, token costs, and performance summary.",
     parameters: {
       type: "object",
       properties: {
-        languageProficiency: {
+        scoreBreakdown: {
           type: "object",
           properties: {
-            score: {
-              type: "number",
-              description: `Score (1-5) for ${languagePref} proficiency.`,
+            spokenAbility: {
+              type: "object",
+              properties: {
+                score: {
+                  type: "number",
+                  description:
+                    "Score (1–5) for spoken language fluency and accuracy.",
+                },
+                reasoning: {
+                  type: "string",
+                  description: "Reason for the given score.",
+                },
+              },
+              required: ["score", "reasoning"],
             },
-            reasoning: {
-              type: "string",
-              description: "Justification for the score.",
+            behavior: {
+              type: "object",
+              properties: {
+                score: {
+                  type: "number",
+                  description:
+                    "Score (1–5) for professionalism, tone, and attitude.",
+                },
+                reasoning: {
+                  type: "string",
+                  description: "Reason for the given score.",
+                },
+              },
+              required: ["score", "reasoning"],
+            },
+            communicationStyle: {
+              type: "object",
+              properties: {
+                score: {
+                  type: "number",
+                  description:
+                    "Score (1–5) for clarity, empathy, and structure.",
+                },
+                reasoning: {
+                  type: "string",
+                  description: "Reason for the given score.",
+                },
+              },
+              required: ["score", "reasoning"],
             },
           },
-          required: ["score", "reasoning"],
+          required: ["spokenAbility", "behavior", "communicationStyle"],
         },
-        roleKnowledge: {
+        knockoutBreakdown: {
           type: "object",
           properties: {
-            score: {
-              type: "number",
-              description: `Score (1-5) for ${roleApply} knowledge.`,
-            },
-            reasoning: {
+            earliestAvailability: {
               type: "string",
-              description: "Justification for the score.",
+              description: "Date the candidate can start.",
+            },
+            expectedSalary: {
+              type: "string",
+              description: "Candidate's expected monthly salary (MYR).",
+            },
+            rotationalShift: {
+              type: "string",
+              description: "Willing to work rotational shifts? (Yes/No)",
+            },
+            ableCommute: {
+              type: "string",
+              description: "Can commute to office/location? (Yes/No)",
+            },
+            workFlex: {
+              type: "string",
+              description: "Open to working weekends/public holidays? (Yes/No)",
             },
           },
-          required: ["score", "reasoning"],
+          required: [
+            "earliestAvailability",
+            "expectedSalary",
+            "rotationalShift",
+            "ableCommute",
+            "workFlex",
+          ],
         },
-        clarityAndConfidence: {
+        costEstimation: {
           type: "object",
           properties: {
-            score: {
+            inputTokens: {
               type: "number",
-              description: "Score (1-5) for clarity and confidence.",
+              description: "Total prompt tokens used.",
             },
-            reasoning: {
-              type: "string",
-              description: "Justification for the score.",
+            outputTokens: {
+              type: "number",
+              description: "Total response tokens used.",
+            },
+            whisperDurationSec: {
+              type: "number",
+              description:
+                "Total seconds of audio processed by Whisper transcription.",
             },
           },
-          required: ["score", "reasoning"],
+          required: ["inputTokens", "outputTokens", "whisperDurationSec"],
+        },
+        fullTranscript: {
+          type: "string",
+          description: "The full transcript of the candidate conversation.",
+        },
+        averageScore: {
+          type: "number",
+          description:
+            "The average of the 3 scores in scoreBreakdown (spokenAbility, behavior, communicationStyle).",
         },
         summary: {
           type: "string",
           description:
-            "A brief summary of the candidate’s overall performance.",
-        },
-        average: {
-          type: "number",
-          description: "The average of all scores.",
+            "A brief summary of the candidate’s overall performance and role fit.",
         },
       },
       required: [
-        "languageProficiency",
-        "roleKnowledge",
-        "clarityAndConfidence",
+        "scoreBreakdown",
+        "knockoutBreakdown",
+        "costEstimation",
+        "fullTranscript",
+        "averageScore",
         "summary",
-        "average",
       ],
     },
   };

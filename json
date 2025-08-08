@@ -20,99 +20,98 @@
     "certificationsRelated": [
       {
         "name": "Effective Communication in Customer Service",
-        "issuingBody": "LinkedIn Learning"
+        "issuer": "LinkedIn Learning",
+        "year": null
       },
       {
         "name": "Customer Support Fundamentals",
-        "issuingBody": "Coursera"
+        "issuer": "Coursera",
+        "year": null
       },
       {
-        "name": "Conflict Resolution and Empathy Skills Training"
+        "name": "Conflict Resolution and Empathy Skills Training",
+        "issuer": null,
+        "year": null
       }
     ],
-    "currentRole": "Final-Year Student",
-    "totalExperienceYears": 1,
-    "professionalSummary": "Muhammad Aiman, a student of Computer Engineering with a CGPA of 3.50, demonstrates knowledge and application in technical support, troubleshooting, and customer service through his educational background and recognition like the Dean's list. His coursework includes relevant skills such as communication and customer experience, making him suitable for a role where technical understanding is paired with customer interaction.",
+    "currentRole": "Student",
+    "totalExperienceYears": 0,
+    "professionalSummary": "Muhammad Aiman, currently studying computer engineering with a commendable CGPA, has shown aptitude in customer service through award-winning role plays and rigorous coursework. With certifications including 'Effective Communication in Customer Service' and 'Customer Support Fundamentals,' Aiman is adept at resolving conflicts, understanding customer needs, and delivering top-tier service.",
     "skillMatch": [
       {
         "name": "Communication",
-        "justification": "Recognized in education (CGPA includes communication skills) and through certifications (Effective Communication in Customer Service)."
-      },
-      {
-        "name": "Customer experience",
-        "justification": "Bachelors program coursework included customer experience subjects."
+        "justification": "Courses and certifications in communication and customer service noted on the resume."
       },
       {
         "name": "Problem-solving",
-        "justification": "Recognized for service excellence and proactive problem-solving abilities."
+        "justification": "Recognized for service excellence and proactive problem-solving skills."
       },
       {
-        "name": "Technical skills",
-        "justification": "Pursuing a Bachelor of Computer Engineering, indicating strong technical skills."
+        "name": "Technical Support",
+        "justification": "Educational background and coursework relevant to technical support."
       }
     ],
     "experienceMatch": [
       {
         "area": "Dealing with customers",
-        "justification": "Certifications and academic simulation experiences focused on customer engagement."
+        "justification": "Participated in service excellence simulations and customer engagement labs."
       },
       {
-        "area": "Team collaboration",
-        "justification": "Team collaboration highlighted in educational course work."
+        "area": "Using support systems",
+        "justification": "Educational courses detailed knowledge in digital tools and support procedures."
       }
     ],
     "concernAreas": [
-      "Lack of formal work experience",
-      "Currently still studying"
+      "Limited professional work experience in a dedicated customer service role"
     ],
     "roleFitTraits": [
       {
-        "trait": "Problem-solving",
-        "justification": "Proactive approach in improving service processes."
-      },
-      {
-        "trait": "Responsiveness",
-        "justification": "Handled high volumes of customer interactions effectively."
-      },
-      {
         "trait": "Empathy",
-        "justification": "Certified training in empathy skills and conflict resolution."
+        "justification": "Completed a training session on 'Conflict Resolution and Empathy Skills'."
+      },
+      {
+        "trait": "Problem-solving",
+        "justification": "Recognized in academic settings for proactive approach to problem-solving."
+      },
+      {
+        "trait": "Communication",
+        "justification": "Certifications and educational achievements highlight strong communication skills."
       }
     ]
   },
   "interviewPerformance": {
-    "averageScore": "2.3/5",
-    "summary": "Muhammad Aiman displayed basic English language skills but was reluctant to engage in detailed discussion, which impacted the evaluation of his fit for the customer service role. His responses were brief and lacked specific examples, making it challenging to gauge his problem-solving abilities and knowledge relevant to the position.",
+    "averageScore": "1.0/5",
+    "summary": "Muhammad Aiman did not effectively participate in the interview, providing minimal interaction. Therefore, it was difficult to assess his suitability for the Customer Service Agent role.",
     "scoreBreakdown": {
       "language Proficiency": {
-        "score": "3.0/5",
-        "reasoning": "The candidate's English proficiency appears adequate, but there was limited opportunity to fully assess fluency due to the brief responses."
+        "score": "1.0/5",
+        "reasoning": "The candidate did not demonstrate their English proficiency during this interaction."
       },
       "role Knowledge": {
-        "score": "2.0/5",
-        "reasoning": "The candidate did not provide specific examples or details when asked about problem-solving skills, making it difficult to assess their knowledge of the role."
+        "score": "1.0/5",
+        "reasoning": "The candidate did not provide any responses related to the Customer Service Agent role."
       },
       "clarity And Confidence": {
-        "score": "2.0/5",
-        "reasoning": "The candidate seemed hesitant and opted to end the interview early, affecting the assessment of their clarity and confidence."
+        "score": "1.0/5",
+        "reasoning": "The candidate's participation was limited, and they did not demonstrate clarity or confidence in their communication."
       }
     }
   },
   "costEstimation": {
     "resumeAnalysis": {
       "inputTokens": 771,
-      "outputTokens": 604,
-      "costUSD": "0.0129"
+      "outputTokens": 588,
+      "costUSD": "0.0127"
     },
     "interview": {
-      "inputTokens": 169,
-      "outputTokens": 83.5,
-      "audioDurationSeconds": 62.897,
-      "costUSD": "0.0084"
+      "inputTokens": 146,
+      "outputTokens": 46.5,
+      "audioDurationSeconds": 55.411,
+      "costUSD": "0.0070"
     },
     "total": {
-      "costUSD": "0.0213",
-      "costMYR": "0.10"
+      "costUSD": "0.0197",
+      "costMYR": "0.09"
     }
   },
   "fullTranscript": [
@@ -122,23 +121,35 @@
     },
     {
       "speaker": "Laive Interviewer",
-      "text": "Hi, Aiman! I’m Laive. Thanks for joining today. Let's get started with the interview for the Customer Service Agent role. First, can you tell me about a time when you had to use your problem-solving skills to assist a customer?"
+      "text": "..."
     },
     {
       "speaker": "Aiman",
-      "text": "Hello"
+      "text": " "
     },
     {
       "speaker": "Aiman",
-      "text": "I have three years experience with building castles."
+      "text": "Hello."
     },
     {
       "speaker": "Aiman",
-      "text": "So, of course, we have always problem-solving skills."
+      "text": "Yeah."
+    },
+    {
+      "speaker": "Laive Interviewer",
+      "text": "Hi Aiman, I'm Laive. Thanks for joining today. This will be a short interview for the Customer Service Agent role. Shall we begin? \n\nFirst, can you tell me about a time when you had to resolve a conflict or problem? How did you approach it, and what was the outcome?"
     },
     {
       "speaker": "Aiman",
-      "text": "to exit the customer."
+      "text": "It's convenient to end the session, thank you."
+    },
+    {
+      "speaker": "Laive Interviewer",
+      "text": "Sure, take your time. Let me know when you're ready to continue."
+    },
+    {
+      "speaker": "Aiman",
+      "text": "Yes, yes, that's the best thing. Thank you."
     },
     {
       "speaker": "Laive Interviewer",
@@ -146,23 +157,11 @@
     },
     {
       "speaker": "Aiman",
-      "text": "Now"
+      "text": " "
     },
     {
       "speaker": "Aiman",
-      "text": "I don't think I want to share during this end session."
-    },
-    {
-      "speaker": "Laive Interviewer",
-      "text": "Certainly, Aiman. I understand. Thank you for your time today. Our team will be in touch with you soon. Have a great day! Goodbye!"
-    },
-    {
-      "speaker": "Aiman",
-      "text": "Bye"
-    },
-    {
-      "speaker": "Aiman",
-      "text": "Bye-bye."
+      "text": "Let's end this session. Thank you"
     },
     {
       "speaker": "Laive Interviewer",

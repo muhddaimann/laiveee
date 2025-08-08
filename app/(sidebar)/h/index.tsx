@@ -492,7 +492,6 @@ function PreparationScreen({
               marginTop: 32,
             }}
           >
-            {" "}
             <Button mode="text" onPress={onBack} style={{ marginRight: 12 }}>
               Back
             </Button>
@@ -914,26 +913,14 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
         skillMatch: candidateData.skillMatch || [],
         experienceMatch: candidateData.experienceMatch || [],
         concernAreas: candidateData.concernArea || [],
-        roleFitTraits: candidateData.roleFit || [],
+        strengths: candidateData.strengths || [],
+        roleFit: candidateData.roleFit,
       },
       interviewPerformance: {
-        averageScore: scores.average.toFixed(1) + "/5",
+        averageScore: scores.averageScore.toFixed(1) + "/5",
         summary: scores.summary,
-        scoreBreakdown: Object.fromEntries(
-          Object.entries(scores)
-            .filter(([key]) => key !== "summary" && key !== "average")
-            .map(([key, value]) => {
-              const typedValue = value as { score: number; reasoning: string };
-              const formattedKey = key.replace(/([A-Z])/g, " $1").trim();
-              return [
-                formattedKey,
-                {
-                  score: typedValue.score.toFixed(1) + "/5",
-                  reasoning: typedValue.reasoning,
-                },
-              ];
-            })
-        ),
+        scoreBreakdown: scores.scoreBreakdown,
+        knockoutBreakdown: scores.knockoutBreakdown,
       },
       costEstimation: {
         resumeAnalysis: {

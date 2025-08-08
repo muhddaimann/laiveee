@@ -16,7 +16,6 @@ import {
   Avatar,
   Divider,
   List,
-  Chip,
 } from "react-native-paper";
 import { useCandidates, Candidate } from "../../../hooks/useCandidate";
 import { useRouter } from "expo-router";
@@ -57,7 +56,14 @@ export default function LaiveRecruit() {
         <View style={styles.right}>
           <ProfileCard />
           <LookupCard onSearch={handleSearch} />
-          <EmptyRecentCard />
+          {candidates.length > 0 ? (
+            <RecentCard
+              candidate={candidates[0]}
+              onSelect={() => handleSelectCandidate(candidates[0].id)}
+            />
+          ) : (
+            <EmptyRecentCard />
+          )}
         </View>
       </View>
     </View>
@@ -304,26 +310,20 @@ function ReportView({
   candidateData,
   onBack,
 }: {
-  candidateData: Candidate;
+  candidateData: Candidate & { id: string };
   onBack: () => void;
 }) {
   const theme = useTheme();
-  const { candidateDetails, resumeAnalysis, interviewPerformance } =
+  const { id, candidateDetails, resumeAnalysis, interviewPerformance } =
     candidateData;
 
-  const InfoRow = ({
-    label,
-    value,
-  }: {
-    label: string;
-    value: string | number;
-  }) => (
+  const InfoRow = ({ label, value }: { label: string; value: any }) => (
     <View style={styles.infoRow}>
-      <Text style={[styles.infoRowLabel, { color: theme.colors.onSurface }]}>
+      <Text style={[styles.infoLabel, { color: theme.colors.onSurface }]}>
         {label}
       </Text>
       <Text
-        style={[styles.infoRowValue, { color: theme.colors.onSurfaceVariant }]}
+        style={[styles.infoValue, { color: theme.colors.onSurfaceVariant }]}
       >
         {value}
       </Text>
@@ -341,228 +341,185 @@ function ReportView({
           Back to Dashboard
         </Button>
       </View>
-      <ScrollView>
-        <View style={[styles.reportContainer, { paddingTop: 0 }]}>
+      <ScrollView contentContainerStyle={styles.reportContainer}>
+        {/* First Row */}
+        <View style={styles.row}>
           <Card
             style={[
-              styles.reportCard,
-              { backgroundColor: theme.colors.surface },
-            ]}
-          >
-            <Card.Content style={styles.reportContent}>
-              <Avatar.Icon
-                icon="account-tie"
-                size={80}
-                style={styles.reportAvatar}
-              />
-              <Text style={styles.reportTitle}>{resumeAnalysis.fullName}</Text>
-              <Text style={styles.reportSubtitle}>
-                {candidateDetails.roleAppliedFor}
-              </Text>
-            </Card.Content>
-          </Card>
-
-          <Card
-            style={[
-              styles.reportCard,
+              styles.card,
+              styles.flex1,
               { backgroundColor: theme.colors.surface },
             ]}
           >
             <Card.Content>
-              <Text style={styles.cardTitle}>AI Recommendation</Text>
-              <View style={styles.recommendationHeader}>
-                <Text
-                  style={[
-                    styles.recommendationScore,
-                    { color: theme.colors.primary },
-                  ]}
-                >
-                  {interviewPerformance.averageScore} / 5.0
-                </Text>
-                <Text style={styles.recommendationText}>
-                  {interviewPerformance.summary}
-                </Text>
-              </View>
+              <Text style={styles.reportTitle}>{resumeAnalysis.fullName}</Text>
+              <Text style={styles.reportSubtitle}>
+                {candidateDetails.roleAppliedFor} #{id}
+              </Text>
             </Card.Content>
           </Card>
+          <Card
+            style={[
+              styles.card,
+              styles.flex1,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <Text style={styles.cardTitle}>Role Fit</Text>
+              <Text style={[styles.score, { color: theme.colors.primary }]}>
+                {resumeAnalysis.roleFit.roleScore} / 10
+              </Text>
+              <Text style={styles.justification}>
+                {resumeAnalysis.roleFit.justification}
+              </Text>
+            </Card.Content>
+          </Card>
+          <Card
+            style={[
+              styles.card,
+              styles.flex1,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <Text style={styles.cardTitle}>Interview Score</Text>
+              <Text style={[styles.score, { color: theme.colors.primary }]}>
+                {interviewPerformance.averageScore.toFixed(1)} / 5.0
+              </Text>
+              <Text style={styles.justification}>
+                {interviewPerformance.summary}
+              </Text>
+            </Card.Content>
+          </Card>
+        </View>
 
-          <View style={styles.reportLayout}>
-            <View style={styles.reportColumn}>
-              <Card
-                style={[
-                  styles.reportCard,
-                  { backgroundColor: theme.colors.surface },
-                ]}
-              >
-                <Card.Content>
-                  <Text style={styles.cardTitle}>Candidate Details</Text>
-                  <InfoRow label="Full Name" value={resumeAnalysis.fullName} />
-                  <InfoRow
-                    label="Email"
-                    value={resumeAnalysis.candidateEmail}
-                  />
-                  <InfoRow
-                    label="Phone"
-                    value={resumeAnalysis.candidatePhone}
-                  />
-                  <InfoRow
-                    label="Links"
-                    value={resumeAnalysis.relatedLink?.join(", ") || "N/A"}
-                  />
-                  <Divider style={styles.divider} />
-                  <InfoRow
-                    label="Highest Education"
-                    value={resumeAnalysis.highestEducation}
-                  />
-                  <InfoRow
-                    label="Current Role"
-                    value={resumeAnalysis.currentRole}
-                  />
-                  <InfoRow
-                    label="Experience"
-                    value={`${resumeAnalysis.yearExperience} years`}
-                  />
-                  <InfoRow
-                    label="Certifications"
-                    value={resumeAnalysis.certsRelate?.join(", ") || "N/A"}
-                  />
-                </Card.Content>
-              </Card>
+        {/* Second Row */}
+        <View style={styles.row}>
+          <Card
+            style={[
+              styles.card,
+              styles.flex2,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <Text style={styles.cardTitle}>Professional Summary</Text>
+              <Text style={styles.summaryText}>
+                {resumeAnalysis.professionalSummary}
+              </Text>
+            </Card.Content>
+          </Card>
+          <Card
+            style={[
+              styles.card,
+              styles.flex1,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <Text style={styles.cardTitle}>Candidate Details</Text>
+              <InfoRow label="Email" value={resumeAnalysis.candidateEmail} />
+              <InfoRow label="Phone" value={resumeAnalysis.candidatePhone} />
+              <InfoRow
+                label="Links"
+                value={resumeAnalysis.relatedLink?.join(", ") || "N/A"}
+              />
+              <Divider style={{ marginVertical: 8 }} />
+              <InfoRow
+                label="Education"
+                value={resumeAnalysis.highestEducation}
+              />
+              <InfoRow label="Experience" value={resumeAnalysis.currentRole} />
+            </Card.Content>
+          </Card>
+        </View>
 
-              <Card
-                style={[
-                  styles.reportCard,
-                  { backgroundColor: theme.colors.surface },
-                ]}
-              >
-                <Card.Content>
-                  <Text style={styles.cardTitle}>AI-Generated Summary</Text>
-                  <Text style={styles.summaryText}>
-                    {resumeAnalysis.professionalSummary}
-                  </Text>
-                </Card.Content>
-              </Card>
-            </View>
-
-            <View style={styles.reportColumn}>
-              <Card
-                style={[
-                  styles.reportCard,
-                  { backgroundColor: theme.colors.surface },
-                ]}
-              >
-                <Card.Content>
-                  <Text style={styles.cardTitle}>
-                    Interview Score Breakdown
-                  </Text>
-                  <List.Section>
-                    {Object.entries(interviewPerformance.scoreBreakdown).map(
-                      ([key, value]: [string, any]) => (
-                        <List.Accordion
-                          key={key}
-                          title={`${key.replace(/([A-Z])/g, " $1").trim()} (${
-                            value.score
-                          }/5)`}
-                          titleStyle={{ fontWeight: "bold" }}
-                          left={(props) => (
-                            <List.Icon {...props} icon="star-circle-outline" />
-                          )}
-                        >
-                          <List.Item
-                            title="Reasoning"
-                            description={value.reasoning}
-                            descriptionNumberOfLines={10}
-                          />
-                        </List.Accordion>
-                      )
-                    )}
-                  </List.Section>
-                </Card.Content>
-              </Card>
-
-              <Card
-                style={[
-                  styles.reportCard,
-                  { backgroundColor: theme.colors.surface },
-                ]}
-              >
-                <Card.Content>
-                  <Text style={styles.cardTitle}>AI Analysis</Text>
-                  <List.Section>
-                    <List.Accordion
-                      title="Skill Match"
-                      left={(props) => (
-                        <List.Icon {...props} icon="check-decagram" />
-                      )}
-                    >
-                      {resumeAnalysis.skillMatch?.map(
-                        (item: any, i: number) => (
-                          <List.Item
-                            key={i}
-                            title={item.name}
-                            description={item.justification}
-                            descriptionNumberOfLines={5}
-                          />
-                        )
-                      )}
-                    </List.Accordion>
-                    <List.Accordion
-                      title="Experience Match"
-                      left={(props) => (
-                        <List.Icon {...props} icon="briefcase-check" />
-                      )}
-                    >
-                      {resumeAnalysis.experienceMatch?.map(
-                        (item: any, i: number) => (
-                          <List.Item
-                            key={i}
-                            title={item.area}
-                            description={item.justification}
-                            descriptionNumberOfLines={5}
-                          />
-                        )
-                      )}
-                    </List.Accordion>
-                    <List.Accordion
-                      title="Role Fit Traits"
-                      left={(props) => (
-                        <List.Icon {...props} icon="account-star" />
-                      )}
-                    >
-                      {resumeAnalysis.roleFit?.map((item: any, i: number) => (
-                        <List.Item
-                          key={i}
-                          title={item.trait}
-                          description={item.justification}
-                          descriptionNumberOfLines={5}
-                        />
-                      ))}
-                    </List.Accordion>
-                    <List.Accordion
-                      title="Concern Areas"
-                      left={(props) => (
-                        <List.Icon {...props} icon="alert-circle-outline" />
-                      )}
-                    >
-                      <View style={styles.chipContainer}>
-                        {resumeAnalysis.concernArea?.map(
-                          (item: string, i: number) => (
-                            <Chip
-                              key={i}
-                              style={styles.chip}
-                              icon="information"
-                            >
-                              {item}
-                            </Chip>
-                          )
-                        )}
-                      </View>
-                    </List.Accordion>
-                  </List.Section>
-                </Card.Content>
-              </Card>
-            </View>
-          </View>
+        {/* Third Row */}
+        <View style={styles.row}>
+          <Card
+            style={[
+              styles.card,
+              styles.flex1,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <List.Section title="Resume Analysis">
+                <List.Accordion title="Strengths">
+                  {resumeAnalysis.strengths?.map((item: any, i: number) => (
+                    <List.Item
+                      key={i}
+                      title={item.trait}
+                      description={item.justification}
+                    />
+                  ))}
+                </List.Accordion>
+                <List.Accordion title="Skill Match">
+                  {resumeAnalysis.skillMatch?.map((item: any, i: number) => (
+                    <List.Item
+                      key={i}
+                      title={item.name}
+                      description={item.justification}
+                    />
+                  ))}
+                </List.Accordion>
+                <List.Accordion title="Experience Match">
+                  {resumeAnalysis.experienceMatch?.map(
+                    (item: any, i: number) => (
+                      <List.Item
+                        key={i}
+                        title={item.area}
+                        description={item.justification}
+                      />
+                    )
+                  )}
+                </List.Accordion>
+                <List.Accordion title="Concern Areas">
+                  {resumeAnalysis.concernArea?.map((item: any, i: number) => (
+                    <List.Item key={i} title={item} />
+                  ))}
+                </List.Accordion>
+              </List.Section>
+            </Card.Content>
+          </Card>
+          <Card
+            style={[
+              styles.card,
+              styles.flex1,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <List.Section title="Interview Analysis">
+                <List.Accordion title="Score Breakdown">
+                  {Object.entries(interviewPerformance.scoreBreakdown).map(
+                    ([key, value]: [string, any]) => (
+                      <List.Item
+                        key={key}
+                        title={`${key.replace(/([A-Z])/g, " $1").trim()} - ${
+                          value.score
+                        }/5`}
+                        description={value.reasoning}
+                        descriptionNumberOfLines={5}
+                      />
+                    )
+                  )}
+                </List.Accordion>
+                <List.Accordion title="Knockout Questions">
+                  {Object.entries(interviewPerformance.knockoutBreakdown).map(
+                    ([key, value]: [string, any]) => (
+                      <List.Item
+                        key={key}
+                        title={key.replace(/([A-Z])/g, " $1").trim()}
+                        description={value}
+                      />
+                    )
+                  )}
+                </List.Accordion>
+              </List.Section>
+            </Card.Content>
+          </Card>
         </View>
       </ScrollView>
     </View>
@@ -758,7 +715,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     paddingVertical: 16,
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     gap: 24,
   },
   left: { flex: 4 },
@@ -809,38 +766,23 @@ const styles = StyleSheet.create({
   },
   tableCell: { flex: 1 },
   reportContainer: { paddingHorizontal: 16 },
-  reportCard: { marginBottom: 16 },
-  reportContent: { alignItems: "center", padding: 8 },
-  reportAvatar: { marginBottom: 16 },
+  row: { flexDirection: "row", gap: 16, marginBottom: 16 },
+  card: { borderRadius: 12 },
+  flex1: { flex: 1 },
+  flex2: { flex: 2 },
   reportTitle: { fontSize: 24, fontWeight: "bold" },
-  reportSubtitle: { fontSize: 16, color: "gray", marginBottom: 16 },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 12,
-    textAlign: "center",
+  reportSubtitle: { fontSize: 16, color: "gray" },
+  cardTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 12 },
+  score: { fontSize: 28, fontWeight: "bold", color: "#6200ee" },
+  justification: { fontSize: 14, color: "gray", marginTop: 8 },
+  summaryText: { fontSize: 14, lineHeight: 20 },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginVertical: 4,
   },
-  recommendationHeader: {
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 16,
-  },
-  recommendationScore: { fontSize: 28, fontWeight: "bold" },
-  recommendationText: {
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: "center",
-  },
-  summaryText: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontStyle: "italic",
-  },
-  divider: { marginVertical: 8 },
-  breakdownItem: { marginBottom: 16 },
-  breakdownTitle: { fontSize: 16, fontWeight: "500" },
-  breakdownScore: { fontSize: 14, color: "gray", marginTop: 4 },
-  breakdownReasoning: { fontSize: 14, marginTop: 4 },
+  infoLabel: { fontWeight: "bold" },
+  infoValue: { color: "gray" },
   recentContent: {
     flexDirection: "row",
     alignItems: "center",
@@ -863,10 +805,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 14,
   },
-  configureIcon: {
-    elevation: 4,
-  },
-
   percentageCircle: {
     width: 120,
     height: 120,
@@ -874,37 +812,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   percentageText: { position: "absolute", fontSize: 24, fontWeight: "bold" },
-  reportLayout: {
-    flexDirection: "row",
-    gap: 16,
-    alignItems: "flex-start",
-  },
-  reportColumn: {
-    flex: 1,
-  },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  infoRowLabel: {
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  infoRowValue: {
-    fontSize: 14,
-    flex: 1,
-    textAlign: "right",
-  },
-  chipContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    padding: 8,
-  },
-  chip: {
-    height: 32,
-  },
 });

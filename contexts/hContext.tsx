@@ -11,8 +11,13 @@ interface ExperienceMatch {
   justification: string;
 }
 
-interface RoleFit {
+interface Strength {
   trait: string;
+  justification: string;
+}
+
+interface RoleFit {
+  roleScore: number;
   justification: string;
 }
 
@@ -29,13 +34,31 @@ export interface CandidateData {
   skillMatch: SkillMatch[];
   experienceMatch: ExperienceMatch[];
   concernArea: string[];
-  roleFit: RoleFit[];
+  strengths: Strength[];
+  roleFit: RoleFit;
 }
 
-export interface ScoreType {
-  [key: string]: { score: number; reasoning: string } | string | number;
+export interface InterviewScores {
+  scoreBreakdown: {
+    spokenAbility: { score: number; reasoning: string };
+    behavior: { score: number; reasoning: string };
+    communicationStyle: { score: number; reasoning: string };
+  };
+  knockoutBreakdown: {
+    earliestAvailability: string;
+    expectedSalary: string;
+    rotationalShift: string;
+    ableCommute: string;
+    workFlex: string;
+  };
+  costEstimation: {
+    inputTokens: number;
+    outputTokens: number;
+    whisperDurationSec: number;
+  };
+  fullTranscript: string;
+  averageScore: number;
   summary: string;
-  average: number;
 }
 
 export interface UsageData {
@@ -57,8 +80,8 @@ interface HContextType {
   setLanguagePref: (lang: LanguagePref | null) => void;
   candidateData: CandidateData | null;
   setCandidateData: (data: CandidateData | null) => void;
-  scores: ScoreType | null;
-  setScores: (scores: ScoreType | null) => void;
+  scores: InterviewScores | null;
+  setScores: (scores: InterviewScores | null) => void;
   conversation: ItemType[];
   setConversation: React.Dispatch<React.SetStateAction<ItemType[]>>;
   interviewUsage: UsageData | null;
@@ -81,7 +104,7 @@ export function HProvider({ children }: { children: ReactNode }) {
   const [candidateData, setCandidateData] = useState<CandidateData | null>(
     null
   );
-  const [scores, setScores] = useState<ScoreType | null>(null);
+  const [scores, setScores] = useState<InterviewScores | null>(null);
   const [conversation, setConversation] = useState<ItemType[]>([]);
   const [interviewUsage, setInterviewUsage] = useState<UsageData | null>(null);
   const [analysisUsage, setAnalysisUsage] = useState<UsageData | null>(null);

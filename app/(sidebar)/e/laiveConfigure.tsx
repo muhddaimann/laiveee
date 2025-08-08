@@ -33,9 +33,13 @@ const initialCandidateData: CandidateData = {
     { area: "Customer Interaction", justification: "Handled user tickets" },
   ],
   concernArea: ["Limited direct customer service experience"],
-  roleFit: [
+  strengths: [
     { trait: "Problem-Solving", justification: "Resolved technical issues" },
   ],
+  roleFit: {
+    roleScore: 8,
+    justification: "Strong technical skills and a customer-focused attitude.",
+  },
 };
 
 export default function LaiveConfigure() {
@@ -140,6 +144,7 @@ function ConfigOverview({ analyzerConfig, interviewConfig }: any) {
     "skillMatch",
     "experienceMatch",
     "concernArea",
+    "strengths",
     "roleFit",
   ];
 
