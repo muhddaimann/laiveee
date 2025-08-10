@@ -17,7 +17,6 @@ import {
   Avatar,
 } from "react-native-paper";
 import * as DocumentPicker from "expo-document-picker";
-import * as Clipboard from "expo-clipboard";
 import mammoth from "mammoth";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
 import pdfjsWorker from "pdfjs-dist/legacy/build/pdf.worker.entry";
@@ -29,6 +28,8 @@ import {
 import {
   OPENAI_API_KEY,
   COMPLETION_URL,
+  AUTH_TOKEN,
+  CANDIDATE_URL,
   LOCAL_RELAY_SERVER_URL,
 } from "../../../constants/env";
 import { RealtimeClient } from "@openai/realtime-api-beta";
@@ -888,70 +889,111 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
     (analysisCost?.totalCost || 0) + (interviewCostResult?.totalCostUSD || 0);
   const totalCostMYR = totalCostUSD * 4.7;
 
-  const handleCopy = async () => {
-    if (!candidateData || !scores || !analysisCost || !interviewCostResult) {
-      Alert.alert("Error", "No summary available to copy.");
+  const handleSubmit = async () => {
+    if (!candidateData || !scores) {
+      Alert.alert("Error", "No data available to submit.");
       return;
     }
 
-    const summaryJson = {
-      candidateDetails: {
-        shortName: shortName,
-        roleAppliedFor: roleApply,
-        interviewLanguage: languagePref,
-      },
-      resumeAnalysis: {
-        fullName: candidateData.fullName,
-        email: candidateData.candidateEmail,
-        phone: candidateData.candidatePhone,
-        relatedLinks: candidateData.relatedLink || [],
-        highestEducation: candidateData.highestEducation,
-        certificationsRelated: candidateData.certsRelate || [],
-        currentRole: candidateData.currentRole,
-        totalExperienceYears: candidateData.yearExperience,
-        professionalSummary: candidateData.professionalSummary,
-        skillMatch: candidateData.skillMatch || [],
-        experienceMatch: candidateData.experienceMatch || [],
-        concernAreas: candidateData.concernArea || [],
-        strengths: candidateData.strengths || [],
-        roleFit: candidateData.roleFit,
-      },
-      interviewPerformance: {
-        averageScore: scores.averageScore.toFixed(1) + "/5",
-        summary: scores.summary,
-        scoreBreakdown: scores.scoreBreakdown,
-        knockoutBreakdown: scores.knockoutBreakdown,
-      },
-      costEstimation: {
-        resumeAnalysis: {
-          inputTokens: analysisUsage?.inputTokens,
-          outputTokens: analysisUsage?.outputTokens,
-          costUSD: analysisCost.totalCost.toFixed(4),
-        },
-        interview: {
-          inputTokens: interviewUsage?.inputTokens,
-          outputTokens: interviewUsage?.outputTokens,
-          audioDurationSeconds: interviewUsage?.audioInputDuration,
-          costUSD: interviewCostResult.totalCostUSD.toFixed(4),
-        },
-        total: {
-          costUSD: totalCostUSD.toFixed(4),
-          costMYR: totalCostMYR.toFixed(2),
-        },
-      },
-      fullTranscript: conversation.map((item) => {
-        const speaker = item.role === "user" ? shortName : "Laive Interviewer";
-        const text =
-          item.formatted?.text || item.formatted?.transcript || "...";
-        return { speaker, text };
-      }),
-    };
+    try {
+      const transcriptText = conversation
+        .map((item) => {
+          const speaker =
+            item.role === "user" ? shortName : "Laive Interviewer";
+          const text =
+            item.formatted?.text || item.formatted?.transcript || "...";
+          return `${speaker}: ${text}`;
+        })
+        .join("\n");
 
-    await Clipboard.setStringAsync(JSON.stringify(summaryJson, null, 2));
-    Alert.alert(
-      "Copied!",
-      "Full interview summary copied to clipboard as JSON."
-    );
+      const payload = {
+        short_name: shortName || "",
+        position_title: roleApply || "",
+        email: candidateData.candidateEmail || null,
+        phone: candidateData.candidatePhone || null,
+        language_pref: languagePref || "English",
+        status: "COMPLETED",
+
+        ra_full_name: candidateData.fullName || null,
+        ra_candidate_email: candidateData.candidateEmail || null,
+        ra_candidate_phone: candidateData.candidatePhone || null,
+        ra_highest_education: candidateData.highestEducation || null,
+        ra_current_role: candidateData.currentRole || null,
+        ra_years_experience: candidateData.yearExperience ?? null,
+        ra_professional_summary: candidateData.professionalSummary || null,
+
+        ra_related_links: candidateData.relatedLink ?? [],
+        ra_certs_relate: candidateData.certsRelate ?? [],
+        ra_skill_match: candidateData.skillMatch ?? [],
+        ra_experience_match: candidateData.experienceMatch ?? [],
+        ra_concern_areas: candidateData.concernArea ?? [],
+        ra_strengths: candidateData.strengths ?? [],
+        ra_rolefit_score: candidateData.roleFit?.roleScore ?? null,
+        ra_rolefit_reason: candidateData.roleFit?.justification ?? null,
+
+        int_started_at: null,
+        int_ended_at: null,
+        int_average_score: scores.averageScore ?? null,
+
+        int_spoken_score: scores.scoreBreakdown?.spokenAbility?.score ?? null,
+        int_spoken_reason:
+          scores.scoreBreakdown?.spokenAbility?.reasoning || null,
+        int_behavior_score: scores.scoreBreakdown?.behavior?.score ?? null,
+        int_behavior_reason: scores.scoreBreakdown?.behavior?.reasoning || null,
+        int_communication_score:
+          scores.scoreBreakdown?.communicationStyle?.score ?? null,
+        int_communication_reason:
+          scores.scoreBreakdown?.communicationStyle?.reasoning || null,
+
+        int_knockouts: scores.knockoutBreakdown
+          ? {
+              earliestAvailability:
+                scores.knockoutBreakdown.earliestAvailability,
+              expectedSalary: scores.knockoutBreakdown.expectedSalary,
+              rotationalShift: scores.knockoutBreakdown.rotationalShift,
+              ableCommute: scores.knockoutBreakdown.ableCommute,
+              workFlex: scores.knockoutBreakdown.workFlex,
+            }
+          : null,
+        int_summary: scores.summary || null,
+        int_full_transcript: transcriptText,
+
+        ra_input_tokens: analysisUsage?.inputTokens ?? null,
+        ra_output_tokens: analysisUsage?.outputTokens ?? null,
+        int_input_tokens: interviewUsage?.inputTokens ?? null,
+        int_output_tokens: interviewUsage?.outputTokens ?? null,
+        int_audio_sec:
+          interviewUsage?.audioInputDuration != null
+            ? Math.round(interviewUsage.audioInputDuration)
+            : null,
+        total_cost_usd:
+          (analysisCost?.totalCost || 0) +
+            (interviewCostResult?.totalCostUSD || 0) || null,
+
+        ra_json_payload: candidateData,
+        int_scores_json: scores,
+      };
+
+      const res = await fetch(CANDIDATE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${AUTH_TOKEN}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`HTTP ${res.status}: ${errText}`);
+      }
+
+      const saved = await res.json();
+      Alert.alert("Saved", "Candidate record submitted.");
+    } catch (e: any) {
+      console.error(e);
+      Alert.alert("Error", e?.message || "Failed to submit candidate record.");
+    }
   };
 
   return (
@@ -984,8 +1026,8 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
         <Button mode="text" onPress={onRestart}>
           Restart
         </Button>
-        <Button mode="contained" onPress={handleCopy} icon="content-copy">
-          Copy Summary
+        <Button mode="contained" onPress={handleSubmit} icon="content-copy">
+          Submit
         </Button>
       </View>
     </View>
