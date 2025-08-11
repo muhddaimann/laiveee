@@ -20,98 +20,101 @@
     "certificationsRelated": [
       {
         "name": "Effective Communication in Customer Service",
-        "issuer": "LinkedIn Learning",
+        "issuingBody": "LinkedIn Learning",
         "year": null
       },
       {
         "name": "Customer Support Fundamentals",
-        "issuer": "Coursera",
+        "issuingBody": "Coursera",
         "year": null
       },
       {
         "name": "Conflict Resolution and Empathy Skills Training",
-        "issuer": null,
+        "issuingBody": null,
         "year": null
       }
     ],
     "currentRole": "Student",
     "totalExperienceYears": 0,
-    "professionalSummary": "Muhammad Aiman, currently studying computer engineering with a commendable CGPA, has shown aptitude in customer service through award-winning role plays and rigorous coursework. With certifications including 'Effective Communication in Customer Service' and 'Customer Support Fundamentals,' Aiman is adept at resolving conflicts, understanding customer needs, and delivering top-tier service.",
+    "professionalSummary": "Muhammad Aiman is a proactive customer service professional currently pursuing a Bachelor of Computer Engineering. He has acquired key customer service skills such as effective communication, conflict resolution, and troubleshooting. Aiman has demonstrated a capability in managing high volumes of customer interactions and enhancing service processes through simulation exercises and academic projects.",
     "skillMatch": [
       {
         "name": "Communication",
-        "justification": "Courses and certifications in communication and customer service noted on the resume."
+        "justification": "Certifications in customer service communications and simulation awards highlight strong communication skills."
       },
       {
-        "name": "Problem-solving",
-        "justification": "Recognized for service excellence and proactive problem-solving skills."
+        "name": "Customer Support",
+        "justification": "Completed relevant coursework and certifications related to customer support fundamentals."
       },
       {
         "name": "Technical Support",
-        "justification": "Educational background and coursework relevant to technical support."
+        "justification": "Studies in Computer Engineering provide a strong technical background useful in technical support roles."
       }
     ],
     "experienceMatch": [
       {
         "area": "Dealing with customers",
-        "justification": "Participated in service excellence simulations and customer engagement labs."
-      },
-      {
-        "area": "Using support systems",
-        "justification": "Educational courses detailed knowledge in digital tools and support procedures."
+        "justification": "Engaged in service excellence simulations and related coursework."
       }
     ],
     "concernAreas": [
-      "Limited professional work experience in a dedicated customer service role"
+      "Lack of formal work experience in a professional setting"
     ],
-    "roleFitTraits": [
-      {
-        "trait": "Empathy",
-        "justification": "Completed a training session on 'Conflict Resolution and Empathy Skills'."
-      },
+    "strengths": [
       {
         "trait": "Problem-solving",
-        "justification": "Recognized in academic settings for proactive approach to problem-solving."
+        "justification": "Recognized for a proactive approach to problem-solving and excellence in service simulations."
       },
       {
-        "trait": "Communication",
-        "justification": "Certifications and educational achievements highlight strong communication skills."
+        "trait": "Team collaboration",
+        "justification": "Educational projects and simulations have required effective team collaboration."
       }
-    ]
+    ],
+    "roleFit": {
+      "roleScore": 7,
+      "justification": "Muhammad Aiman demonstrates strong potential for a customer service role through academic achievements and relevant certifications. However, his lack of professional work experience could be a limitation."
+    }
   },
   "interviewPerformance": {
-    "averageScore": "1.0/5",
-    "summary": "Muhammad Aiman did not effectively participate in the interview, providing minimal interaction. Therefore, it was difficult to assess his suitability for the Customer Service Agent role.",
+    "averageScore": "2.0/5",
+    "summary": "Aiman demonstrated a basic level of English proficiency, with limited detail in responses. His behavior was polite but somewhat disengaged, and his communication lacked depth and clarity. Aiman is available to start immediately but has high salary expectations and is not open to rotational shifts, commuting, or working on weekends or public holidays. Overall, there is a need for improvement in communication skills and flexibility for this role.",
     "scoreBreakdown": {
-      "language Proficiency": {
-        "score": "1.0/5",
-        "reasoning": "The candidate did not demonstrate their English proficiency during this interaction."
+      "spokenAbility": {
+        "score": 2,
+        "reasoning": "Aiman's English was understandable but limited in expression and detail."
       },
-      "role Knowledge": {
-        "score": "1.0/5",
-        "reasoning": "The candidate did not provide any responses related to the Customer Service Agent role."
+      "behavior": {
+        "score": 2,
+        "reasoning": "Aiman was polite but seemed a bit unengaged and hesitant to provide detailed responses."
       },
-      "clarity And Confidence": {
-        "score": "1.0/5",
-        "reasoning": "The candidate's participation was limited, and they did not demonstrate clarity or confidence in their communication."
+      "communicationStyle": {
+        "score": 2,
+        "reasoning": "The communication lacked clarity and depth, with short answers and a lack of elaboration."
       }
+    },
+    "knockoutBreakdown": {
+      "earliestAvailability": "As soon as possible",
+      "expectedSalary": "4000-5000 MYR",
+      "rotationalShift": "No",
+      "ableCommute": "No",
+      "workFlex": "No"
     }
   },
   "costEstimation": {
     "resumeAnalysis": {
-      "inputTokens": 771,
-      "outputTokens": 588,
-      "costUSD": "0.0127"
+      "inputTokens": 821,
+      "outputTokens": 587,
+      "costUSD": "0.0129"
     },
     "interview": {
-      "inputTokens": 146,
-      "outputTokens": 46.5,
-      "audioDurationSeconds": 55.411,
-      "costUSD": "0.0070"
+      "inputTokens": 544,
+      "outputTokens": 112,
+      "audioDurationSeconds": 167.345,
+      "costUSD": "0.0211"
     },
     "total": {
-      "costUSD": "0.0197",
-      "costMYR": "0.09"
+      "costUSD": "0.0340",
+      "costMYR": "0.16"
     }
   },
   "fullTranscript": [
@@ -121,47 +124,91 @@
     },
     {
       "speaker": "Laive Interviewer",
-      "text": "..."
+      "text": "Hi Aiman, I'm Laive. Great to meet you, and thank you for joining the interview today. Let's begin with you sharing a bit about your background and what attracted you to the Customer Service Agent role."
     },
     {
       "speaker": "Aiman",
-      "text": " "
-    },
-    {
-      "speaker": "Aiman",
-      "text": "Hello."
-    },
-    {
-      "speaker": "Aiman",
-      "text": "Yeah."
+      "text": "Hi Life, I have 3 years experience in customer service and that's because I love this role so much."
     },
     {
       "speaker": "Laive Interviewer",
-      "text": "Hi Aiman, I'm Laive. Thanks for joining today. This will be a short interview for the Customer Service Agent role. Shall we begin? \n\nFirst, can you tell me about a time when you had to resolve a conflict or problem? How did you approach it, and what was the outcome?"
+      "text": "That's great to hear, Aiman. Can you tell me about a challenging situation you faced in customer service and how you handled it? I’d love to understand more about your problem-solving approach."
     },
     {
       "speaker": "Aiman",
-      "text": "It's convenient to end the session, thank you."
+      "text": "Hmm"
     },
     {
       "speaker": "Laive Interviewer",
-      "text": "Sure, take your time. Let me know when you're ready to continue."
+      "text": "No worries, take your"
     },
     {
       "speaker": "Aiman",
-      "text": "Yes, yes, that's the best thing. Thank you."
+      "text": "Not much, I just answered it."
     },
     {
       "speaker": "Laive Interviewer",
-      "text": "..."
+      "text": "Alright, thank you for sharing. Let's move on to another question. How do you prioritize tasks when you're dealing with multiple customer inquiries at the same time?"
     },
     {
       "speaker": "Aiman",
-      "text": " "
+      "text": "I don't know, how about you?"
+    },
+    {
+      "speaker": "Laive Interviewer",
+      "text": "I understand that this can be a tough question. In customer service, prioritizing tasks often involves assessing the urgency and impact of each inquiry. But let's move to another topic. Can you tell me about a time when you worked closely with a team to achieve a common goal?"
     },
     {
       "speaker": "Aiman",
-      "text": "Let's end this session. Thank you"
+      "text": "No, I don't really work as a team."
+    },
+    {
+      "speaker": "Aiman",
+      "text": "at the bus"
+    },
+    {
+      "speaker": "Aiman",
+      "text": "Job, so I have no experience in this question"
+    },
+    {
+      "speaker": "Laive Interviewer",
+      "text": "Thanks for letting me know. It's perfectly fine if you don't have past job experience. Now, let's talk about your availability. When would you be able to start if you were offered this role? And do you have any expectations regarding salary?"
+    },
+    {
+      "speaker": "Aiman",
+      "text": "Hmm"
+    },
+    {
+      "speaker": "Laive Interviewer",
+      "text": "Take your time. Just"
+    },
+    {
+      "speaker": "Aiman",
+      "text": "And about availability, I think I'm going to start as soon as possible."
+    },
+    {
+      "speaker": "Laive Interviewer",
+      "text": "Great, that sounds good. And what about your expected salary? Do you have a range in mind?"
+    },
+    {
+      "speaker": "Aiman",
+      "text": "4,000 to 5,000 because I speak English."
+    },
+    {
+      "speaker": "Laive Interviewer",
+      "text": "Got it, thank you for sharing that. Just a few more quick questions. Are you open to working rotational shifts, and are you able to commute to our office location? Also, are you flexible with working on weekends or public holidays?"
+    },
+    {
+      "speaker": "Aiman",
+      "text": "You asking too much ah for a candidate. I just say no for all your question"
+    },
+    {
+      "speaker": "Laive Interviewer",
+      "text": "I appreciate your honesty, Aiman, and thank you for answering. That wraps up our interview. Our team will be in touch with you soon. Have a great day ahead!"
+    },
+    {
+      "speaker": "Aiman",
+      "text": "All right, thank you"
     },
     {
       "speaker": "Laive Interviewer",

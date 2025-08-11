@@ -874,6 +874,7 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
     interviewUsage,
     analysisUsage,
   } = useHContext();
+  const [submissionState, setSubmissionState] = useState<"idle" | "submitting" | "success">("idle");
 
   const analysisCost = analysisUsage
     ? calculateGptCost(
@@ -894,6 +895,8 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
       Alert.alert("Error", "No data available to submit.");
       return;
     }
+
+    setSubmissionState("submitting");
 
     try {
       const transcriptText = conversation
@@ -989,10 +992,12 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
       }
 
       const saved = await res.json();
-      Alert.alert("Saved", "Candidate record submitted.");
+      setSubmissionState("success");
+      Alert.alert("Saved", "Candidate record submitted successfully.");
     } catch (e: any) {
       console.error(e);
       Alert.alert("Error", e?.message || "Failed to submit candidate record.");
+      setSubmissionState("idle");
     }
   };
 
@@ -1023,11 +1028,21 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
           gap: 16,
         }}
       >
-        <Button mode="text" onPress={onRestart}>
+        <Button
+          mode="text"
+          onPress={onRestart}
+          disabled={submissionState === "submitting"}
+        >
           Restart
         </Button>
-        <Button mode="contained" onPress={handleSubmit} icon="content-copy">
-          Submit
+        <Button
+          mode="contained"
+          onPress={handleSubmit}
+          disabled={submissionState !== "idle"}
+          loading={submissionState === "submitting"}
+          icon={submissionState === "success" ? "check" : "content-copy"}
+        >
+          {submissionState === "success" ? "Submitted" : "Submit"}
         </Button>
       </View>
     </View>

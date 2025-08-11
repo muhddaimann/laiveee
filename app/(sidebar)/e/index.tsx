@@ -275,6 +275,8 @@ function CandidateTable({
   onSelect: (id: string) => void;
 }) {
   const theme = useTheme();
+  const firstFive = candidates.slice(0, 5);
+
   return (
     <>
       <SectionHeader title="All Candidates" />
@@ -287,7 +289,8 @@ function CandidateTable({
             <Text style={styles.tableHeaderText}>Role</Text>
             <Text style={styles.tableHeaderText}>Action</Text>
           </View>
-          {candidates.map((candidate) => (
+
+          {firstFive.map((candidate) => (
             <View key={candidate.id} style={styles.tableRow}>
               <Text style={styles.tableCell}>
                 {candidate.resumeAnalysis.fullName}
@@ -433,7 +436,6 @@ function ReportView({
           </Card>
         </View>
 
-        {/* Third Row */}
         <View style={styles.row}>
           <Card
             style={[
