@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Image,
@@ -17,20 +17,71 @@ import {
   Divider,
   List,
 } from "react-native-paper";
-import { useCandidates, Candidate } from "../../../hooks/useCandidate";
 import { useRouter } from "expo-router";
 import Header from "../../../components/e/header";
+import {
+  getAllCandidates,
+  getCandidateById,
+  mapRowToUI,
+  type CandidateUI,
+} from "../../../contexts/api/candidate";
 
+// Main component
 export default function LaiveRecruit() {
   const theme = useTheme();
-  const {
-    candidates,
-    selectedCandidateData,
-    loading,
-    handleSearch,
-    handleSelectCandidate,
-    handleBackToDashboard,
-  } = useCandidates();
+  const [loading, setLoading] = useState(true);
+  const [candidates, setCandidates] = useState<CandidateUI[]>([]);
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(
+    null
+  );
+
+  useEffect(() => {
+    const abort = new AbortController();
+    (async () => {
+      try {
+        setLoading(true);
+        const rows = await getAllCandidates(abort.signal);
+        const mapped = (rows ?? []).map(mapRowToUI);
+        setCandidates(mapped);
+      } finally {
+        setLoading(false);
+      }
+    })();
+    return () => abort.abort();
+  }, []);
+
+  const handleSearch = async (id: string) => {
+    if (!id.trim()) return;
+    setLoading(true);
+    const abort = new AbortController();
+    try {
+      const row = await getCandidateById(id.trim(), abort.signal);
+      if (!row) {
+        alert("Candidate ID not found.");
+        return;
+      }
+      const ui = mapRowToUI(row);
+      setCandidates((prev) => {
+        const asId = String(row.id);
+        const exists = prev.some((c) => c.id === asId);
+        return exists ? prev : [...prev, ui];
+      });
+      setSelectedCandidateId(String(row.id));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const selectedCandidateData = useMemo(() => {
+    if (!selectedCandidateId) return null;
+    return candidates.find((c) => c.id === selectedCandidateId) ?? null;
+  }, [selectedCandidateId, candidates]);
+
+  const recentCandidates = useMemo(
+    () =>
+      [...candidates].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 4),
+    [candidates]
+  );
 
   return (
     <View style={{ flex: 1 }}>
@@ -39,30 +90,35 @@ export default function LaiveRecruit() {
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
         <View style={styles.left}>
-          {loading ? (
+          {loading && !candidates.length ? (
             <LoadingScreen />
           ) : selectedCandidateData ? (
             <ReportView
               candidateData={selectedCandidateData}
-              onBack={handleBackToDashboard}
+              onBack={() => setSelectedCandidateId(null)}
             />
           ) : (
             <DashboardView
               candidates={candidates}
-              onSelect={handleSelectCandidate}
+              onSelect={setSelectedCandidateId}
             />
           )}
         </View>
         <View style={styles.right}>
           <ProfileCard />
           <LookupCard onSearch={handleSearch} />
-          {candidates.length > 0 ? (
+          {recentCandidates.length > 0 ? (
             <RecentCard
-              candidate={candidates[0]}
-              onSelect={() => handleSelectCandidate(candidates[0].id)}
+              candidates={recentCandidates}
+              onSelect={setSelectedCandidateId}
             />
           ) : (
-            <EmptyRecentCard />
+            <EmptyStateCard
+              title="Recently Completed"
+              icon="clock-alert-outline"
+              message="No recent completions"
+              suggestion="Try refreshing or check back later."
+            />
           )}
         </View>
       </View>
@@ -70,11 +126,12 @@ export default function LaiveRecruit() {
   );
 }
 
+// Dashboard view
 function DashboardView({
   candidates,
   onSelect,
 }: {
-  candidates: (Candidate & { id: string })[];
+  candidates: CandidateUI[];
   onSelect: (id: string) => void;
 }) {
   const theme = useTheme();
@@ -231,6 +288,7 @@ function DashboardView({
   );
 }
 
+// Section header
 function SectionHeader({ title }: { title: string }) {
   const router = useRouter();
   const theme = useTheme();
@@ -267,53 +325,64 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
+// Candidate table
 function CandidateTable({
   candidates,
   onSelect,
 }: {
-  candidates: (Candidate & { id: string })[];
+  candidates: CandidateUI[];
   onSelect: (id: string) => void;
 }) {
   const theme = useTheme();
-  const firstFive = candidates.slice(0, 5);
+  const firstFive = candidates.slice(0, 6);
 
   return (
     <>
       <SectionHeader title="All Candidates" />
-      <Card
-        style={[styles.largeCard, { backgroundColor: theme.colors.surface }]}
-      >
-        <Card.Content>
-          <View style={styles.tableHeader}>
-            <Text style={styles.tableHeaderText}>Candidate</Text>
-            <Text style={styles.tableHeaderText}>Role</Text>
-            <Text style={styles.tableHeaderText}>Action</Text>
-          </View>
-
-          {firstFive.map((candidate) => (
-            <View key={candidate.id} style={styles.tableRow}>
-              <Text style={styles.tableCell}>
-                {candidate.resumeAnalysis.fullName}
-              </Text>
-              <Text style={styles.tableCell}>
-                {candidate.candidateDetails.roleAppliedFor}
-              </Text>
-              <Button mode="contained" onPress={() => onSelect(candidate.id)}>
-                View
-              </Button>
+      {firstFive.length === 0 ? (
+        <EmptyStateCard
+          title=""
+          icon="account-search-outline"
+          message="No candidates found"
+          suggestion="Try a different search or add new candidates."
+        />
+      ) : (
+        <Card
+          style={[styles.largeCard, { backgroundColor: theme.colors.surface }]}
+        >
+          <Card.Content>
+            <View style={styles.tableHeader}>
+              <Text style={styles.tableHeaderText}>Candidate</Text>
+              <Text style={styles.tableHeaderText}>Role</Text>
+              <Text style={styles.tableHeaderText}>Action</Text>
             </View>
-          ))}
-        </Card.Content>
-      </Card>
+
+            {firstFive.map((candidate) => (
+              <View key={candidate.id} style={styles.tableRow}>
+                <Text style={styles.tableCell}>
+                  {candidate.resumeAnalysis.fullName}
+                </Text>
+                <Text style={styles.tableCell}>
+                  {candidate.candidateDetails.roleAppliedFor}
+                </Text>
+                <Button mode="contained" onPress={() => onSelect(candidate.id)}>
+                  View
+                </Button>
+              </View>
+            ))}
+          </Card.Content>
+        </Card>
+      )}
     </>
   );
 }
 
+// Report view
 function ReportView({
   candidateData,
   onBack,
 }: {
-  candidateData: Candidate & { id: string };
+  candidateData: CandidateUI;
   onBack: () => void;
 }) {
   const theme = useTheme();
@@ -387,7 +456,8 @@ function ReportView({
             <Card.Content>
               <Text style={styles.cardTitle}>Interview Score</Text>
               <Text style={[styles.score, { color: theme.colors.primary }]}>
-                {interviewPerformance.averageScore.toFixed(1)} / 5.0
+                {Number(interviewPerformance?.averageScore ?? 0).toFixed(1)} /
+                5.0
               </Text>
               <Text style={styles.justification}>
                 {interviewPerformance.summary}
@@ -526,6 +596,7 @@ function ReportView({
   );
 }
 
+// Lookup card
 function LookupCard({ onSearch }: { onSearch: (id: string) => void }) {
   const theme = useTheme();
   const [id, setId] = React.useState("");
@@ -548,51 +619,66 @@ function LookupCard({ onSearch }: { onSearch: (id: string) => void }) {
   );
 }
 
+// Recent card
 function RecentCard({
-  candidate,
+  candidates,
   onSelect,
 }: {
-  candidate: Candidate & { id: string };
-  onSelect: () => void;
+  candidates: CandidateUI[];
+  onSelect: (id: string) => void;
 }) {
   const theme = useTheme();
   return (
     <>
       <Text style={styles.sectionTitle}>Recently Completed</Text>
-      <Card
-        style={[styles.rightCard, { backgroundColor: theme.colors.surface }]}
-      >
-        <TouchableOpacity onPress={onSelect}>
-          <Card.Content style={styles.recentContent}>
-            <Avatar.Icon
-              icon="account-check"
-              size={48}
-              style={[
-                styles.recentAvatar,
-                { backgroundColor: theme.colors.primaryContainer },
-              ]}
-              color={theme.colors.primary}
-            />
-            <View style={styles.recentTextContainer}>
-              <Text style={styles.candidateName}>
-                {candidate.resumeAnalysis.fullName}
-              </Text>
-              <Text style={{ color: theme.colors.onSurfaceVariant }}>
-                {candidate.candidateDetails.roleAppliedFor}
-              </Text>
-            </View>
-          </Card.Content>
-        </TouchableOpacity>
-      </Card>
+      {candidates.map((candidate) => (
+        <Card
+          key={candidate.id}
+          style={[styles.rightCard, { backgroundColor: theme.colors.surface }]}
+        >
+          <TouchableOpacity onPress={() => onSelect(candidate.id)}>
+            <Card.Content style={styles.recentContent}>
+              <Avatar.Icon
+                icon="account-check"
+                size={48}
+                style={[
+                  styles.recentAvatar,
+                  { backgroundColor: theme.colors.primaryContainer },
+                ]}
+                color={theme.colors.primary}
+              />
+              <View style={styles.recentTextContainer}>
+                <Text style={styles.candidateName}>
+                  {candidate.resumeAnalysis.fullName}
+                </Text>
+                <Text style={{ color: theme.colors.onSurfaceVariant }}>
+                  {candidate.candidateDetails.roleAppliedFor}
+                </Text>
+              </View>
+            </Card.Content>
+          </TouchableOpacity>
+        </Card>
+      ))}
     </>
   );
 }
 
-function EmptyRecentCard() {
+// Empty state card
+function EmptyStateCard({
+  title,
+  icon,
+  message,
+  suggestion,
+}: {
+  title: string;
+  icon: string;
+  message: string;
+  suggestion: string;
+}) {
   const theme = useTheme();
 
   return (
-    <View style={{ marginTop: 16 }}>
+    <View>
       <Text
         style={{
           fontSize: 16,
@@ -601,17 +687,18 @@ function EmptyRecentCard() {
           color: theme.colors.onBackground,
         }}
       >
-        Recently Completed
+        {title}
       </Text>
 
       <View
         style={{
           alignItems: "center",
           paddingVertical: 100,
+          borderRadius: 12,
         }}
       >
         <Avatar.Icon
-          icon="clock-alert-outline"
+          icon={icon}
           size={56}
           style={{
             backgroundColor: theme.colors.surface,
@@ -627,7 +714,7 @@ function EmptyRecentCard() {
             marginBottom: 4,
           }}
         >
-          No recent completions
+          {message}
         </Text>
         <Text
           style={{
@@ -636,13 +723,14 @@ function EmptyRecentCard() {
             textAlign: "center",
           }}
         >
-          Try refreshing or check back later.
+          {suggestion}
         </Text>
       </View>
     </View>
   );
 }
 
+// Profile card
 function ProfileCard() {
   const theme = useTheme();
   return (
@@ -653,12 +741,13 @@ function ProfileCard() {
       />
       <Text style={styles.candidateName}>Laive Recruiter</Text>
       <Text style={{ color: theme.colors.onSurfaceVariant }}>
-        August 7th 2025
+        August 11th 2025
       </Text>
     </View>
   );
 }
 
+// Loading screen
 function LoadingScreen() {
   const theme = useTheme();
   return (
@@ -671,6 +760,7 @@ function LoadingScreen() {
   );
 }
 
+// Percentage circle
 const PercentageCircle = ({ percentage }: { percentage: string }) => {
   const theme = useTheme();
   const p = parseInt(percentage.replace("%", ""));

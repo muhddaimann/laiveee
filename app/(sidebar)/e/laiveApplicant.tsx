@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -16,17 +16,48 @@ import {
   DataTable,
 } from "react-native-paper";
 import Header from "../../../components/e/header";
-import { useCandidates, Candidate } from "../../../hooks/useCandidate";
+import {
+  getAllCandidates,
+  getCandidateById,
+  mapRowToUI,
+  type CandidateUI,
+} from "../../../contexts/api/candidate";
 
 export default function LaiveApplicant() {
   const theme = useTheme();
-  const {
-    candidates,
-    selectedCandidateData,
-    loading,
-    handleSelectCandidate,
-    handleBackToDashboard,
-  } = useCandidates();
+  const [loading, setLoading] = useState(true);
+  const [candidates, setCandidates] = useState<CandidateUI[]>([]);
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(
+    null
+  );
+
+  useEffect(() => {
+    const abort = new AbortController();
+    (async () => {
+      try {
+        setLoading(true);
+        const rows = await getAllCandidates(abort.signal);
+        const mapped = (rows ?? []).map(mapRowToUI);
+        setCandidates(mapped);
+      } finally {
+        setLoading(false);
+      }
+    })();
+    return () => abort.abort();
+  }, []);
+
+  const selectedCandidateData = useMemo(() => {
+    if (!selectedCandidateId) return null;
+    return candidates.find((c) => c.id === selectedCandidateId) ?? null;
+  }, [selectedCandidateId, candidates]);
+
+  const handleSelectCandidate = (id: string) => {
+    setSelectedCandidateId(id);
+  };
+
+  const handleBackToDashboard = () => {
+    setSelectedCandidateId(null);
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -161,7 +192,7 @@ function ReportView({
   candidateData,
   onBack,
 }: {
-  candidateData: Candidate;
+  candidateData: CandidateUI;
   onBack: () => void;
 }) {
   const theme = useTheme();
