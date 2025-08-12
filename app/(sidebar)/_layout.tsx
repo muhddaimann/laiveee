@@ -1,6 +1,6 @@
 import { View, StyleSheet } from "react-native";
 import { Slot } from "expo-router";
-import Sidebar from "../../components/sidebar";
+import Sidebar from "../../components/layout/sidebar";
 
 export default function SidebarLayout() {
   return (

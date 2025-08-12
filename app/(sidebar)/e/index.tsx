@@ -26,7 +26,6 @@ import {
   type CandidateUI,
 } from "../../../contexts/api/candidate";
 
-// Main component
 export default function LaiveRecruit() {
   const theme = useTheme();
   const [loading, setLoading] = useState(true);
@@ -126,7 +125,6 @@ export default function LaiveRecruit() {
   );
 }
 
-// Dashboard view
 function DashboardView({
   candidates,
   onSelect,
@@ -288,7 +286,6 @@ function DashboardView({
   );
 }
 
-// Section header
 function SectionHeader({ title }: { title: string }) {
   const router = useRouter();
   const theme = useTheme();
@@ -325,7 +322,6 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
-// Candidate table
 function CandidateTable({
   candidates,
   onSelect,
@@ -377,7 +373,6 @@ function CandidateTable({
   );
 }
 
-// Report view
 function ReportView({
   candidateData,
   onBack,
@@ -619,7 +614,6 @@ function LookupCard({ onSearch }: { onSearch: (id: string) => void }) {
   );
 }
 
-// Recent card
 function RecentCard({
   candidates,
   onSelect,
@@ -663,7 +657,6 @@ function RecentCard({
   );
 }
 
-// Empty state card
 function EmptyStateCard({
   title,
   icon,
@@ -730,7 +723,6 @@ function EmptyStateCard({
   );
 }
 
-// Profile card
 function ProfileCard() {
   const theme = useTheme();
   return (
@@ -747,7 +739,6 @@ function ProfileCard() {
   );
 }
 
-// Loading screen
 function LoadingScreen() {
   const theme = useTheme();
   return (
@@ -760,7 +751,6 @@ function LoadingScreen() {
   );
 }
 
-// Percentage circle
 const PercentageCircle = ({ percentage }: { percentage: string }) => {
   const theme = useTheme();
   const p = parseInt(percentage.replace("%", ""));

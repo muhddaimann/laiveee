@@ -4,13 +4,22 @@ import { PaperProvider } from "react-native-paper";
 import { ThemeProvider, useToggle } from "../contexts/themeContext";
 import { SidebarProvider } from "../contexts/sidebarContext";
 import { DemoProvider } from "../contexts/demoContext";
+import { NotificationProvider } from "../contexts/notificationContext";
 
-function InnerLayout() {
+// This new component ensures that providers requiring the theme
+// are wrapped correctly.
+function AppWithTheme() {
   const { theme } = useToggle();
 
   return (
     <PaperProvider theme={theme}>
-      <Stack screenOptions={{ headerShown: false }} />
+      <NotificationProvider>
+        <SidebarProvider>
+          <DemoProvider>
+            <Stack screenOptions={{ headerShown: false }} />
+          </DemoProvider>
+        </SidebarProvider>
+      </NotificationProvider>
     </PaperProvider>
   );
 }
@@ -18,11 +27,7 @@ function InnerLayout() {
 export default function Layout() {
   return (
     <ThemeProvider>
-      <SidebarProvider>
-        <DemoProvider>
-          <InnerLayout />
-        </DemoProvider>
-      </SidebarProvider>
+      <AppWithTheme />
     </ThemeProvider>
   );
 }

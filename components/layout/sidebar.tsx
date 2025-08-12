@@ -9,8 +9,9 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter, usePathname } from "expo-router";
 import { useTheme } from "react-native-paper";
-import { useSidebar } from "../contexts/sidebarContext";
-import { useToggle } from "../contexts/themeContext";
+import { useSidebar } from "../../contexts/sidebarContext";
+import { useToggle } from "../../contexts/themeContext";
+import { useNotification } from "../../contexts/notificationContext";
 
 const navItems = [
   { icon: "home-outline", label: "Home", route: "/a" },
@@ -23,12 +24,34 @@ export default function Sidebar() {
   const theme = useTheme();
   const router = useRouter();
   const pathname = usePathname();
+  const notification = useNotification();
   const { isVisible, isExpanded, disableNavigation, toggleExpand } =
     useSidebar();
   const { isDarkMode, toggleTheme } = useToggle();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   if (!isVisible) return null;
+
+  const handlePress = (route: string) => {
+    if (disableNavigation || pathname === route) return;
+
+    if (route === "/e") {
+      notification.showPasswordPrompt({
+        title: "Enter Password",
+        message: "Please enter the password to proceed.",
+        onSubmit: (password) => {
+          if (password === "1234") {
+            router.push(route);
+            notification.showToast("Login successful!", { type: "success" });
+          } else {
+            notification.showToast("Incorrect password", { type: "error" });
+          }
+        },
+      });
+    } else {
+      router.push(route);
+    }
+  };
 
   return (
     <View
@@ -74,9 +97,7 @@ export default function Sidebar() {
           return (
             <Pressable
               key={index}
-              onPress={() => {
-                if (!disableNavigation) router.push(item.route);
-              }}
+              onPress={() => handlePress(item.route)}
               onHoverIn={() => setHoveredIndex(index)}
               onHoverOut={() => setHoveredIndex(null)}
               disabled={disableNavigation}
