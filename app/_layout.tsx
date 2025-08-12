@@ -6,8 +6,6 @@ import { SidebarProvider } from "../contexts/sidebarContext";
 import { DemoProvider } from "../contexts/demoContext";
 import { NotificationProvider } from "../contexts/notificationContext";
 
-// This new component ensures that providers requiring the theme
-// are wrapped correctly.
 function AppWithTheme() {
   const { theme } = useToggle();
 
