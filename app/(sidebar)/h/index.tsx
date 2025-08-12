@@ -1067,7 +1067,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   welcomeForm: { flex: 1, minWidth: 400, padding: 24 },
-  welcomeImage: { width: 200, height: 200, borderRadius: 75, marginBottom: 24 },
+  welcomeImage: { width: 200, height: 200, marginBottom: 24 },
   welcomeTitle: {
     fontSize: 32,
     fontWeight: "bold",

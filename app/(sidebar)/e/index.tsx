@@ -733,7 +733,7 @@ function ProfileCard() {
       />
       <Text style={styles.candidateName}>Laive Recruiter</Text>
       <Text style={{ color: theme.colors.onSurfaceVariant }}>
-        August 11th 2025
+        August 12th 2025
       </Text>
     </View>
   );
@@ -877,7 +877,6 @@ const styles = StyleSheet.create({
   profileImage: {
     width: 150,
     height: 150,
-    borderRadius: 100,
     marginBottom: 8,
   },
   lookupInput: { marginBottom: 12 },

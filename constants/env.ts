@@ -7,5 +7,5 @@ export const GENERAL_BOT_REALTIME_URL =
   process.env.EXPO_PUBLIC_GENERAL_BOT_REALTIME_URL || "";
 export const CANDIDATE_URL = process.env.EXPO_PUBLIC_CANDIDATE_URL || "";
 export const AUTH_TOKEN = process.env.EXPO_PUBLIC_AUTH_TOKEN || "";
-export const COMPLETION_URL =
-  process.env.EXPO_PUBLIC_COMPLETION_URL || "";
+export const COMPLETION_URL = process.env.EXPO_PUBLIC_COMPLETION_URL || "";
+export const RECRUITER_PASS = (process.env.EXPO_PUBLIC_RECRUITER_PASS ?? '').trim();

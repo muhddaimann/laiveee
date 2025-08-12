@@ -12,6 +12,7 @@ import { useTheme } from "react-native-paper";
 import { useSidebar } from "../../contexts/sidebarContext";
 import { useToggle } from "../../contexts/themeContext";
 import { useNotification } from "../../contexts/notificationContext";
+import { RECRUITER_PASS } from "../../constants/env";
 
 const navItems = [
   { icon: "home-outline", label: "Home", route: "/a" },
@@ -40,7 +41,7 @@ export default function Sidebar() {
         title: "Enter Password",
         message: "Please enter the password to proceed.",
         onSubmit: (password) => {
-          if (password === "1234") {
+          if (password === RECRUITER_PASS) {
             router.push(route);
             notification.showToast("Login successful!", { type: "success" });
           } else {
