@@ -577,7 +577,7 @@ function InterviewScreen({
     await client.updateSession({
       turn_detection: {
         type: "server_vad",
-        silence_duration_ms: 1000,
+        silence_duration_ms: 3000,
       },
     });
     client.sendUserMessageContent([
@@ -744,28 +744,11 @@ function InterviewScreen({
           ref={scrollViewRef}
           contentContainerStyle={styles.scrollContent}
         >
-          {isEnding ? (
-            <View
-              style={{
-                flex: 1,
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <ActivityIndicator style={{ marginBottom: 16 }} />
-              <Text>Finalizing analysis...</Text>
-            </View>
-          ) : (
-            items
-              .filter((item) => (item.formatted?.text || "") !== "...")
-              .map((item) => (
-                <MessageBubble
-                  key={item.id}
-                  item={item}
-                  userName={shortName!}
-                />
-              ))
-          )}
+          {items
+            .filter((item) => (item.formatted?.text || "") !== "...")
+            .map((item) => (
+              <MessageBubble key={item.id} item={item} userName={shortName!} />
+            ))}
         </ScrollView>
       </View>
       <View
