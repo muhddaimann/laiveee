@@ -547,7 +547,10 @@ function InterviewScreen({
   );
   const clientCanvasRef = useRef<HTMLCanvasElement>(null);
   const [items, setItems] = useState<ItemType[]>([]);
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(true);
+  const [isEndButtonActive, setIsEndButtonActive] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
+
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -571,14 +574,18 @@ function InterviewScreen({
     await wavRecorder.begin();
     await wavStreamPlayer.connect();
     await client.connect();
-    await client.updateSession({ turn_detection: { type: "server_vad" } });
+    await client.updateSession({
+      turn_detection: {
+        type: "server_vad",
+        silence_duration_ms: 1000,
+      },
+    });
     client.sendUserMessageContent([
       {
         type: `input_text`,
         text: `Hello! My name is ${shortName}, and I am ready for my interview for the ${roleApply} role, speaking in ${languagePref}.`,
       },
     ]);
-    await wavRecorder.record((data) => client.appendInputAudio(data.mono));
   }, [shortName, roleApply, languagePref]);
 
   const toggleMute = useCallback(async () => {
@@ -593,20 +600,12 @@ function InterviewScreen({
     setMuted(!muted);
   }, [muted]);
 
-  const requestDisconnect = () => {
-    Alert.alert("End Interview", "Are you sure you want to end the session?", [
-      { text: "Cancel", style: "cancel" },
+  const handleFinishInterview = () => {
+    setIsEnding(true);
+    clientRef.current.sendUserMessageContent([
       {
-        text: "End Interview",
-        style: "destructive",
-        onPress: () => {
-          clientRef.current.sendUserMessageContent([
-            {
-              type: "input_text",
-              text: "That is all for today, thank you for your time. Please provide the scores now.",
-            },
-          ]);
-        },
+        type: "input_text",
+        text: "...",
       },
     ]);
   };
@@ -698,8 +697,13 @@ function InterviewScreen({
         language: transcriptionLanguage,
       },
     });
-    client.addTool(config.tool, async (scores: any) => {
+    client.addTool(config.scoringTool, async (scores: any) => {
       setScores(scores);
+      return { success: true };
+    });
+
+    client.addTool(config.signalEndTool, () => {
+      setIsEndButtonActive(true);
       return { success: true };
     });
 
@@ -740,9 +744,28 @@ function InterviewScreen({
           ref={scrollViewRef}
           contentContainerStyle={styles.scrollContent}
         >
-          {items.map((item) => (
-            <MessageBubble key={item.id} item={item} userName={shortName!} />
-          ))}
+          {isEnding ? (
+            <View
+              style={{
+                flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <ActivityIndicator style={{ marginBottom: 16 }} />
+              <Text>Finalizing analysis...</Text>
+            </View>
+          ) : (
+            items
+              .filter((item) => (item.formatted?.text || "") !== "...")
+              .map((item) => (
+                <MessageBubble
+                  key={item.id}
+                  item={item}
+                  userName={shortName!}
+                />
+              ))
+          )}
         </ScrollView>
       </View>
       <View
@@ -772,13 +795,15 @@ function InterviewScreen({
         </View>
         <Button
           mode="contained"
-          onPress={requestDisconnect}
+          onPress={handleFinishInterview}
           style={styles.endButton}
           buttonColor={theme.colors.error}
           textColor={theme.colors.onError}
           icon="stop-circle-outline"
+          disabled={!isEndButtonActive || isEnding}
+          loading={isEnding}
         >
-          End
+          {isEnding ? "Analyzing..." : "Finish interview"}
         </Button>
       </View>
     </View>
@@ -874,7 +899,9 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
     interviewUsage,
     analysisUsage,
   } = useHContext();
-  const [submissionState, setSubmissionState] = useState<"idle" | "submitting" | "success">("idle");
+  const [submissionState, setSubmissionState] = useState<
+    "idle" | "submitting" | "success"
+  >("idle");
 
   const analysisCost = analysisUsage
     ? calculateGptCost(
