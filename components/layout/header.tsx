@@ -1,30 +1,57 @@
 import React from "react";
-import { StyleSheet } from "react-native";
-import { Appbar, useTheme } from "react-native-paper";
+import { StyleSheet, View } from "react-native";
+import { Button, Text, useTheme } from "react-native-paper";
+import { useRouter } from "expo-router";
 
 interface HeaderProps {
   title: string;
-  actions?: React.ReactNode;
+  showBack?: boolean;
 }
 
-export default function Header({ title, actions }: HeaderProps) {
+export default function Header({ title, showBack = true }: HeaderProps) {
   const theme = useTheme();
+  const router = useRouter();
 
   return (
-    <Appbar.Header
-      style={[styles.header, { backgroundColor: theme.colors.surface }]}
-      elevated
+    <View
+      style={[
+        styles.header,
+        {
+          backgroundColor: theme.colors.surface,
+          borderBottomColor: theme.colors.outlineVariant,
+        },
+      ]}
     >
-      <Appbar.Content title={title} titleStyle={{ fontWeight: "bold" }} />
-      {actions}
-    </Appbar.Header>
+      <Text style={[styles.title, { color: theme.colors.onSurface }]}>
+        {title}
+      </Text>
+      {showBack && (
+        <Button
+          mode="contained"
+          icon="chevron-left"
+          onPress={router.back}
+          contentStyle={{ flexDirection: "row-reverse" }}
+          labelStyle={{ fontWeight: "500" }}
+        >
+          Back
+        </Button>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   header: {
     height: 60,
-    justifyContent: "space-between",
+    width: "100%",
+    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "600",
   },
 });

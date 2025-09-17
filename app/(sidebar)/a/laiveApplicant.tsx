@@ -15,7 +15,7 @@ import {
   Searchbar,
   DataTable,
 } from "react-native-paper";
-import Header from "../../../components/e/header";
+import Header from "../../../components/layout/header";
 import {
   getAllCandidates,
   getCandidateById,

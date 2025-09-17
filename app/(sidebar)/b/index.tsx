@@ -1,98 +1,536 @@
-import React, {
-  useEffect,
-  useRef,
-  useCallback,
-  useState,
-  RefObject,
-} from "react";
-import { RealtimeClient } from "@openai/realtime-api-beta";
-import { ItemType } from "@openai/realtime-api-beta/dist/lib/client.js";
-import { WavRecorder, WavStreamPlayer } from "../../../lib/wavtools/index.js";
-import { instructions } from "../../../utils/conversationConfig";
-import { WavRenderer } from "../../../utils/wavRenderer";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { v4 as uuidv4 } from "uuid";
-import { useTheme, Button } from "react-native-paper";
-import { useDemoContext } from "../../../contexts/demoContext";
+import React, { useState, useCallback, useEffect, useRef } from "react";
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Image,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
+import {
+  Button,
+  Card,
+  Text,
+  useTheme,
+  TextInput,
+  RadioButton,
+  Avatar,
+} from "react-native-paper";
+import * as DocumentPicker from "expo-document-picker";
+import mammoth from "mammoth";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
+import pdfjsWorker from "pdfjs-dist/legacy/build/pdf.worker.entry";
+import { HProvider, useHContext } from "../../../contexts/bContext";
+import {
+  createCandidateAnalyzerConfig,
+  createInterviewConfig,
+} from "../../../utils/hConfig";
 import {
   OPENAI_API_KEY,
+  COMPLETION_URL,
+  AUTH_TOKEN,
+  CANDIDATE_URL,
   LOCAL_RELAY_SERVER_URL,
-  QUERY_MESSAGES_URL,
-  GENERAL_BOT_REALTIME_URL,
 } from "../../../constants/env";
+import { RealtimeClient } from "@openai/realtime-api-beta";
+import { ItemType } from "@openai/realtime-api-beta/dist/lib/client.js";
+import { WavRecorder, WavStreamPlayer } from "../../../lib/wavtools/index";
+import { WavRenderer } from "../../../utils/wavRenderer";
 import {
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
-  TouchableOpacity,
-} from "react-native";
+  calculateInterviewCost,
+  calculateGptCost,
+  UsageData,
+} from "../../../utils/costEstimator";
 
-async function saveChatHistory(msgRole: string, assistantMessage: string) {
-  try {
-    const response = await fetch(QUERY_MESSAGES_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+
+type PagePhase =
+  | "welcome"
+  | "analyzing"
+  | "preparation"
+  | "interview"
+  | "ending";
+
+export default function Candidate() {
+  return (
+    <HProvider>
+      <ResumeAnalysisFlow />
+    </HProvider>
+  );
+}
+
+function ResumeAnalysisFlow() {
+  const [phase, setPhase] = useState<PagePhase>("welcome");
+  const {
+    setCandidateData,
+    roleApply,
+    setConversation,
+    setScores,
+    setAnalysisUsage,
+    setInterviewUsage,
+  } = useHContext();
+
+  const handleStartAnalysis = async (file: File) => {
+    setPhase("analyzing");
+    try {
+      const text = await extractText(file);
+      const config = createCandidateAnalyzerConfig(roleApply || "");
+      const response = await fetch(COMPLETION_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
         body: JSON.stringify({
-          role: msgRole,
-          content: assistantMessage,
+          model: "gpt-4-turbo",
+          messages: [
+            { role: "system", content: config.instructions },
+            { role: "user", content: text },
+          ],
+          response_format: { type: "json_object" },
         }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`API Error: ${response.status} - ${errorBody}`);
       }
-    );
-    const data = await response.json();
-    console.log("Chat history saved:", data);
-  } catch (error) {
-    console.error("Error saving chat history:", error);
+
+      const result = await response.json();
+      const parsedData = JSON.parse(result.choices[0].message.content);
+      setCandidateData(parsedData);
+
+      const usage = result.usage;
+      if (usage) {
+        setAnalysisUsage({
+          inputTokens: usage.prompt_tokens,
+          outputTokens: usage.completion_tokens,
+        });
+      }
+
+      setPhase("preparation");
+    } catch (err) {
+      console.error("Error during file upload and analysis: ", err);
+      Alert.alert(
+        "Error",
+        "An error occurred during the analysis. Please try again."
+      );
+      setPhase("welcome");
+    }
+  };
+
+  const handleProceed = () => {
+    setPhase("interview");
+  };
+
+  const handleEndInterview = useCallback(() => {
+    setPhase("analyzing");
+    setTimeout(() => {
+      setPhase("ending");
+    }, 4000);
+  }, []);
+
+  const handleRestart = () => {
+    setPhase("welcome");
+    setCandidateData(null);
+    setScores(null);
+    setConversation([]);
+    setAnalysisUsage(null);
+    setInterviewUsage(null);
+  };
+
+  switch (phase) {
+    case "welcome":
+      return <WelcomeScreen onStart={handleStartAnalysis} />;
+    case "analyzing":
+      return (
+        <AnalyzingScreen
+          title="Analyzing Your Profile"
+          subtitle="Please wait while we process your information..."
+        />
+      );
+    case "preparation":
+      return (
+        <PreparationScreen onProceed={handleProceed} onBack={handleRestart} />
+      );
+    case "interview":
+      return (
+        <InterviewScreen
+          onEndRequest={handleEndInterview}
+          setConversation={setConversation}
+        />
+      );
+    case "ending":
+      return <EndingScreen onRestart={handleRestart} />;
+    default:
+      return <WelcomeScreen onStart={handleStartAnalysis} />;
   }
 }
 
-interface RealtimeEvent {
-  time: string;
-  source: "client" | "server";
-  count?: number;
-  event: { [key: string]: any };
+async function extractText(file: File): Promise<string> {
+  if (file.type === "application/pdf") {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let text = "";
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map((item: any) => item.str).join(" ") + "\n";
+    }
+    return text;
+  } else if (
+    file.type ===
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ) {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return result.value;
+  } else {
+    throw new Error("Unsupported file type");
+  }
 }
 
-interface QueryResults {
-  retrieved_documents: string[];
-  chat_history: { role: string; content: string }[];
-}
-
-interface ChatCardProps {
-  items: any[];
-  deleteConversationItem: (id: string) => void;
-}
-
-interface ActionCardProps {
-  isConnected: boolean;
-  connectConversation: () => void;
-  disconnectConversation: () => void;
-  toggleMute: () => void;
-  muted: boolean;
-}
-
-interface IconCardProps {
-  clientCanvasRef: RefObject<HTMLCanvasElement | null>;
-  serverCanvasRef: RefObject<HTMLCanvasElement | null>;
-}
-
-interface DocumentCardProps {
-  queryResults: {
-    retrieved_documents?: string[];
-  } | null;
-}
-
-export default function Demo() {
-
+function WelcomeScreen({ onStart }: { onStart: (file: File) => void }) {
   const theme = useTheme();
-  const { selectedProject } = useDemoContext();
-  const selectedProjectRef = useRef(selectedProject);
-  useEffect(() => {
-    selectedProjectRef.current = selectedProject;
-  }, [selectedProject]);
-  const [queryResults, setQueryResults] = useState<QueryResults | null>(null);
+  const { shortName, setShortName, roleApply, setRoleApply, setFileName } =
+    useHContext();
+
+  const handleUpload = async () => {
+    if (!shortName?.trim() || !roleApply?.trim()) {
+      Alert.alert(
+        "Missing Information",
+        "Please enter your name and the role you are applying for."
+      );
+      return;
+    }
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          "application/pdf",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ],
+      });
+
+      if (result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        setFileName(asset.name);
+        const response = await fetch(asset.uri);
+        const blob = await response.blob();
+        const file = new File([blob], asset.name, { type: asset.mimeType });
+        onStart(file);
+      } else {
+      }
+    } catch (err) {
+      console.error("Unknown error: ", err);
+    }
+  };
+
+  return (
+    <View
+      style={[
+        styles.fullPage,
+        styles.centered,
+        { backgroundColor: theme.colors.background },
+      ]}
+    >
+      <View style={styles.welcomeLayout}>
+        <View style={styles.welcomeBranding}>
+          <Image
+            source={require("../../../assets/ta1.png")}
+            style={styles.welcomeImage}
+          />
+          <Text
+            style={[styles.welcomeTitle, { color: theme.colors.onBackground }]}
+          >
+            Welcome to LaiveApply
+          </Text>
+          <Text
+            style={[
+              styles.welcomeSubtitle,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
+          >
+            Powered by AI | Built for you
+          </Text>
+        </View>
+        <ScrollView style={styles.welcomeForm}>
+          <Card
+            style={[
+              styles.welcomeCard,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <Text style={styles.cardTitle}>What should we call you?</Text>
+              <TextInput
+                label="Your short name"
+                value={shortName || ""}
+                onChangeText={setShortName}
+                mode="outlined"
+              />
+            </Card.Content>
+          </Card>
+
+          <Card
+            style={[
+              styles.welcomeCard,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <Text style={styles.cardTitle}>
+                What role are you looking for?
+              </Text>
+              <RadioButton.Group
+                onValueChange={(newValue) => setRoleApply(newValue as string)}
+                value={roleApply || ""}
+              >
+                <RadioButton.Item
+                  label="Customer Service Agent"
+                  value="Customer Service Agent"
+                />
+              </RadioButton.Group>
+            </Card.Content>
+          </Card>
+
+          <Card
+            style={[
+              styles.welcomeCard,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <Text style={styles.cardTitle}>Upload Your Resume</Text>
+              <Text style={{ marginBottom: 16, textAlign: "center" }}>
+                PDF or DOCX format
+              </Text>
+              <Button
+                mode="contained"
+                icon="upload"
+                onPress={handleUpload}
+                disabled={!shortName?.trim()}
+              >
+                Choose File
+              </Button>
+            </Card.Content>
+          </Card>
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+function AnalyzingScreen({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle: string;
+}) {
+  const theme = useTheme();
+  return (
+    <View
+      style={[
+        styles.fullPage,
+        styles.centered,
+        { backgroundColor: theme.colors.background },
+      ]}
+    >
+      <ActivityIndicator size="large" color={theme.colors.primary} />
+      <Text style={[styles.analyzingTitle, { marginTop: 20 }]}>{title}</Text>
+      <Text style={{ color: theme.colors.onSurfaceVariant }}>{subtitle}</Text>
+    </View>
+  );
+}
+
+function PreparationScreen({
+  onProceed,
+  onBack,
+}: {
+  onProceed: () => void;
+  onBack: () => void;
+}) {
+  const theme = useTheme();
+  const { shortName, fileName, languagePref, setLanguagePref, candidateData } =
+    useHContext();
+
+  const tips = [
+    {
+      icon: "map-marker-radius",
+      text: "Find a quiet and comfortable space where you won't be disturbed.",
+    },
+    {
+      icon: "microphone-outline",
+      text: "Ensure your microphone is working clearly. Speak at a natural pace.",
+    },
+    {
+      icon: "lightbulb-on-outline",
+      text: "Think about your past experiences and be ready to share specific examples.",
+    },
+    {
+      icon: "account-heart-outline",
+      text: "Be yourself and let your personality shine through. Good luck!",
+    },
+  ];
+
+  if (!candidateData) {
+    return <AnalyzingScreen title="Loading..." subtitle="" />;
+  }
+
+  return (
+    <View
+      style={[
+        styles.fullPage,
+        styles.centered,
+        { backgroundColor: theme.colors.background },
+      ]}
+    >
+      <View style={styles.preparationLayout}>
+        <View style={styles.preparationColumn}>
+          <Card
+            style={{ marginBottom: 16, backgroundColor: theme.colors.surface }}
+          >
+            <Card.Content>
+              <Text style={styles.cardTitle}>Resume</Text>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Avatar.Icon icon="file-document" size={40} />
+                <Text style={{ marginLeft: 16 }}>{fileName}</Text>
+              </View>
+            </Card.Content>
+          </Card>
+          <Card
+            style={{ marginBottom: 16, backgroundColor: theme.colors.surface }}
+          >
+            <Card.Content>
+              <Text style={styles.cardTitle}>Your Details</Text>
+              <TextInput
+                label="Full Name"
+                value={candidateData.fullName}
+                disabled
+                style={{ marginBottom: 16 }}
+              />
+              <TextInput
+                label="Email Address"
+                value={candidateData.candidateEmail}
+                disabled
+                style={{ marginBottom: 16 }}
+              />
+              <TextInput
+                label="Phone Number"
+                value={candidateData.candidatePhone}
+                disabled
+              />
+            </Card.Content>
+          </Card>
+          <Card style={{ backgroundColor: theme.colors.surface }}>
+            <Card.Content>
+              <Text style={styles.cardTitle}>Interview Language</Text>
+              <RadioButton.Group
+                onValueChange={(newValue) => setLanguagePref(newValue as any)}
+                value={languagePref || ""}
+              >
+                <RadioButton.Item label="English" value="English" />
+                <RadioButton.Item
+                  label="Bahasa Malaysia"
+                  value="Bahasa Malaysia"
+                />
+                <RadioButton.Item label="Mandarin" value="Mandarin" />
+                <RadioButton.Item label="Tamil" value="Tamil" />
+              </RadioButton.Group>
+            </Card.Content>
+          </Card>
+        </View>
+        <View style={styles.preparationColumn}>
+          <View style={{ alignItems: "center", paddingHorizontal: 16 }}>
+            <Image
+              source={require("../../../assets/ta1.png")}
+              style={styles.welcomeImage}
+            />
+            <Text style={[styles.welcomeTitle, { fontSize: 24 }]}>
+              Hi, {shortName}!
+            </Text>
+            <Text
+              style={[
+                styles.welcomeSubtitle,
+                { fontSize: 16, textAlign: "center" },
+              ]}
+            >
+              Here are some quick tips before you begin
+            </Text>
+          </View>
+
+          <View
+            style={{
+              marginTop: 24,
+              paddingHorizontal: 16,
+              alignContent: "center",
+            }}
+          >
+            {tips.map((tip, index) => (
+              <View key={index} style={styles.tipItem}>
+                <Avatar.Icon
+                  icon={tip.icon}
+                  size={32}
+                  style={{ backgroundColor: "transparent", marginRight: 12 }}
+                  color={theme.colors.onSurfaceVariant}
+                />
+                <Text
+                  style={[
+                    styles.tipText,
+                    { color: theme.colors.onSurfaceVariant, fontSize: 16 },
+                  ]}
+                >
+                  {tip.text}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "center",
+              marginTop: 32,
+            }}
+          >
+            <Button mode="text" onPress={onBack} style={{ marginRight: 12 }}>
+              Back
+            </Button>
+            <Button mode="contained" onPress={onProceed}>
+              Proceed
+            </Button>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const languageCodeMapping: { [key in string]: string } = {
+  English: "en",
+  "Bahasa Malaysia": "ms",
+  Mandarin: "zh",
+  Tamil: "ta",
+};
+
+function InterviewScreen({
+  onEndRequest,
+  setConversation,
+}: {
+  onEndRequest: () => void;
+  setConversation: React.Dispatch<React.SetStateAction<ItemType[]>>;
+}) {
+  const theme = useTheme();
+  const {
+    scores,
+    setScores,
+    setInterviewUsage,
+    shortName,
+    roleApply,
+    languagePref,
+    candidateData,
+  } = useHContext();
+  const startTimeRef = useRef<number | null>(null);
 
   const wavRecorderRef = useRef<WavRecorder>(
     new WavRecorder({ sampleRate: 24000 })
@@ -104,85 +542,56 @@ export default function Demo() {
     new RealtimeClient(
       LOCAL_RELAY_SERVER_URL
         ? { url: LOCAL_RELAY_SERVER_URL }
-        : {
-            apiKey: OPENAI_API_KEY,
-            dangerouslyAllowAPIKeyInBrowser: true,
-          }
+        : { apiKey: OPENAI_API_KEY, dangerouslyAllowAPIKeyInBrowser: true }
     )
   );
-
   const clientCanvasRef = useRef<HTMLCanvasElement>(null);
-  const serverCanvasRef = useRef<HTMLCanvasElement>(null);
-  const eventsScrollHeightRef = useRef(0);
-  const eventsScrollRef = useRef<ScrollView>(null);
-  const startTimeRef = useRef<string>(new Date().toISOString());
   const [items, setItems] = useState<ItemType[]>([]);
-  const [realtimeEvents, setRealtimeEvents] = useState<RealtimeEvent[]>([]);
-  const [expandedEvents, setExpandedEvents] = useState<{
-    [key: string]: boolean;
-  }>({});
-  const [isConnected, setIsConnected] = useState(false);
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(true);
+  const [isEndButtonActive, setIsEndButtonActive] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
 
-  const formatTime = useCallback((timestamp: string) => {
-    const startTime = startTimeRef.current;
-    const t0 = new Date(startTime).valueOf();
-    const t1 = new Date(timestamp).valueOf();
-    const delta = t1 - t0;
-    const hs = Math.floor(delta / 10) % 100;
-    const s = Math.floor(delta / 1000) % 60;
-    const m = Math.floor(delta / 60_000) % 60;
-    const pad = (n: number) => {
-      let s = n + "";
-      while (s.length < 2) {
-        s = "0" + s;
-      }
-      return s;
-    };
-    return `${pad(m)}:${pad(s)}.${pad(hs)}`;
-  }, []);
+  const scrollViewRef = useRef<ScrollView>(null);
 
-  
+  useEffect(() => {
+    setConversation(items);
+  }, [items, setConversation]);
 
   const connectConversation = useCallback(async () => {
     if (!LOCAL_RELAY_SERVER_URL && !OPENAI_API_KEY) {
-      const errorMessage =
-        'No API key or relay server URL provided. Please set EXPO_PUBLIC_OPENAI_API_KEY or EXPO_PUBLIC_LOCAL_RELAY_SERVER_URL in your .env file.';
-      console.error(errorMessage);
-      alert(errorMessage);
+      Alert.alert(
+        "Configuration Error",
+        "No API key or relay server URL provided."
+      );
       return;
     }
+    startTimeRef.current = Date.now();
     const client = clientRef.current;
     const wavRecorder = wavRecorderRef.current;
     const wavStreamPlayer = wavStreamPlayerRef.current;
 
-    startTimeRef.current = new Date().toISOString();
-    setIsConnected(true);
-    setRealtimeEvents([]);
     setItems(client.conversation.getItems());
-
     await wavRecorder.begin();
     await wavStreamPlayer.connect();
     await client.connect();
     await client.updateSession({
-      turn_detection: { type: "server_vad" },
+      turn_detection: {
+        type: "server_vad",
+        silence_duration_ms: 3000,
+      },
     });
-
     client.sendUserMessageContent([
       {
         type: `input_text`,
-        text: `Hello!`,
+        text: `Hello! My name is ${shortName}, and I am ready for my interview for the ${roleApply} role, speaking in ${languagePref}.`,
       },
     ]);
-
-    await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-  }, []);
+  }, [shortName, roleApply, languagePref]);
 
   const toggleMute = useCallback(async () => {
     const wavRecorder = wavRecorderRef.current;
     const client = clientRef.current;
     if (!wavRecorder) return;
-
     if (muted) {
       await wavRecorder.record((data) => client.appendInputAudio(data.mono));
     } else {
@@ -191,62 +600,52 @@ export default function Demo() {
     setMuted(!muted);
   }, [muted]);
 
-  const disconnectConversation = useCallback(async () => {
-    setIsConnected(false);
-    setRealtimeEvents([]);
-    setItems([]);
-
-    const client = clientRef.current;
-    client.disconnect();
-
-    const wavRecorder = wavRecorderRef.current;
-    await wavRecorder.end();
-
-    const wavStreamPlayer = wavStreamPlayerRef.current;
-    await wavStreamPlayer.interrupt();
-  }, []);
-
-  const deleteConversationItem = useCallback(async (id: string) => {
-    const client = clientRef.current;
-    client.deleteItem(id);
-  }, []);
+  const handleFinishInterview = () => {
+    setIsEnding(true);
+    clientRef.current.sendUserMessageContent([
+      {
+        type: "input_text",
+        text: "...",
+      },
+    ]);
+  };
 
   useEffect(() => {
-    if (eventsScrollRef.current) {
-      const eventsEl = eventsScrollRef.current as unknown as HTMLDivElement;
-      const scrollHeight = eventsEl.scrollHeight;
-      if (scrollHeight !== eventsScrollHeightRef.current) {
-        eventsEl.scrollTop = scrollHeight;
-        eventsScrollHeightRef.current = scrollHeight;
-      }
+    if (scores) {
+      const endTime = Date.now();
+      const durationInSeconds = startTimeRef.current
+        ? (endTime - startTimeRef.current) / 1000
+        : 0;
+
+      const usage: UsageData = {
+        inputTokens: items.reduce((acc, item) => {
+          const text = item.formatted?.text || item.formatted?.transcript || "";
+          return acc + Math.round(text.length / 4);
+        }, 0),
+        outputTokens: scores.summary.length / 4,
+        audioInputDuration: durationInSeconds,
+      };
+      setInterviewUsage(usage);
+
+      const client = clientRef.current;
+      client.disconnect();
+      const wavRecorder = wavRecorderRef.current;
+      wavRecorder.end();
+      const wavStreamPlayer = wavStreamPlayerRef.current;
+      wavStreamPlayer.interrupt();
+      onEndRequest();
     }
-  }, [realtimeEvents]);
+  }, [scores, onEndRequest, items, setInterviewUsage]);
 
   useEffect(() => {
-    const conversationEls = [].slice.call(
-      document.body.querySelectorAll("[data-conversation-content]")
-    );
-    for (const el of conversationEls) {
-      const conversationEl = el as HTMLDivElement;
-      conversationEl.scrollTop = conversationEl.scrollHeight;
-    }
-  }, [items]);
-
-  useEffect(() => {
-    console.log("Query results updated:", queryResults);
-  }, [queryResults]);
+    connectConversation();
+  }, [connectConversation]);
 
   useEffect(() => {
     let isLoaded = true;
-
     const wavRecorder = wavRecorderRef.current;
     const clientCanvas = clientCanvasRef.current;
     let clientCtx: CanvasRenderingContext2D | null = null;
-
-    const wavStreamPlayer = wavStreamPlayerRef.current;
-    const serverCanvas = serverCanvasRef.current;
-    let serverCtx: CanvasRenderingContext2D | null = null;
-
     const render = () => {
       if (isLoaded) {
         if (clientCanvas) {
@@ -271,298 +670,64 @@ export default function Demo() {
             );
           }
         }
-        if (serverCanvas) {
-          if (!serverCanvas.width || !serverCanvas.height) {
-            serverCanvas.width = serverCanvas.offsetWidth;
-            serverCanvas.height = serverCanvas.offsetHeight;
-          }
-          serverCtx = serverCtx || serverCanvas.getContext("2d");
-          if (serverCtx) {
-            serverCtx.clearRect(0, 0, serverCanvas.width, serverCanvas.height);
-            const result = wavStreamPlayer.analyser
-              ? wavStreamPlayer.getFrequencies("voice")
-              : { values: new Float32Array([0]) };
-            WavRenderer.drawBars(
-              serverCanvas,
-              serverCtx,
-              result.values,
-              theme.colors.secondary,
-              10,
-              0,
-              8
-            );
-          }
-        }
         window.requestAnimationFrame(render);
       }
     };
     render();
-
     return () => {
       isLoaded = false;
     };
-  }, []);
+  }, [theme.colors.primary]);
 
   useEffect(() => {
     const wavStreamPlayer = wavStreamPlayerRef.current;
     const client = clientRef.current;
-    client.updateSession({ instructions: instructions });
-    client.updateSession({ voice: "echo" });
-    client.updateSession({ input_audio_transcription: { model: "whisper-1" } });
-    client.addTool(
-      {
-        name: "query_db",
-        description:
-          "Queries the knowledgebase stored in the vector DB to retrieve relevant and specific context.",
-        parameters: {
-          type: "object",
-          properties: {
-            query: {
-              type: "string",
-              description: "The query string to search the knowledgebase",
-            },
-            project: {
-              type: "string",
-              description: 'The project name (e.g., "BYD")',
-            },
-          },
-          required: ["query", "project"],
-        },
-      },
-      async ({ query }: { query: string; project: string }) => {
-        const project = selectedProjectRef.current;
-
-        try {
-          const response = await fetch(GENERAL_BOT_REALTIME_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-              body: JSON.stringify({ query, project }),
-            }
-          );
-
-          if (!response.ok) {
-            const text = await response.text();
-            throw new Error(`HTTP ${response.status}: ${text}`);
-          }
-
-          const data = await response.json();
-
-          let retrievedDocs: string[] = [];
-          if (data.results?.retrieved_context) {
-            retrievedDocs = [data.results.retrieved_context];
-          } else if (data.payload?.assistantResponse) {
-            retrievedDocs = [data.payload.assistantResponse];
-          } else {
-            retrievedDocs = ["No assistant response"];
-          }
-
-          const results: QueryResults = {
-            retrieved_documents: retrievedDocs,
-            chat_history: [],
-          };
-
-          setQueryResults(results);
-          return results;
-        } catch (error) {
-          setQueryResults({
-            retrieved_documents: ["Failed to query database."],
-            chat_history: [],
-          });
-          return { error: "Failed to query database." };
-        }
-      }
+    const config = createInterviewConfig(
+      roleApply!,
+      languagePref!,
+      candidateData!
     );
+    const transcriptionLanguage = languageCodeMapping[languagePref!] || "ms";
 
-    client.on("realtime.event", (realtimeEvent: RealtimeEvent) => {
-      setRealtimeEvents((realtimeEvents) => {
-        const lastEvent = realtimeEvents[realtimeEvents.length - 1];
-        if (lastEvent?.event.type === realtimeEvent.event.type) {
-          lastEvent.count = (lastEvent.count || 0) + 1;
-          return realtimeEvents.slice(0, -1).concat(lastEvent);
-        } else {
-          return realtimeEvents.concat(realtimeEvent);
-        }
-      });
+    client.updateSession({
+      instructions: config.instructions,
+      voice: "echo",
+      input_audio_transcription: {
+        model: "whisper-1",
+        language: transcriptionLanguage,
+      },
     });
+    client.addTool(config.scoringTool, async (scores: any) => {
+      setScores(scores);
+      return { success: true };
+    });
+
+    client.addTool(config.signalEndTool, () => {
+      setIsEndButtonActive(true);
+      return { success: true };
+    });
+
     client.on("error", (event: any) => console.error(event));
     client.on("conversation.interrupted", async () => {
       const trackSampleOffset = await wavStreamPlayer.interrupt();
       if (trackSampleOffset?.trackId) {
-        const { trackId, offset } = trackSampleOffset;
-        await client.cancelResponse(trackId, offset);
+        await client.cancelResponse(
+          trackSampleOffset.trackId,
+          trackSampleOffset.offset
+        );
       }
     });
-
     client.on("conversation.updated", async ({ item, delta }: any) => {
-      const updatedItems = client.conversation.getItems();
-
       if (delta?.audio) {
         wavStreamPlayer.add16BitPCM(delta.audio, item.id);
       }
-
-      if (item.status === "completed" && item.formatted.audio?.length) {
-        try {
-          const wavFile = await WavRecorder.decode(
-            item.formatted.audio,
-            24000,
-            24000
-          );
-          item.formatted.file = wavFile;
-          console.log("Decoded WAV file:", wavFile);
-        } catch (err) {
-          console.error("Error decoding audio:", err);
-        }
-      }
-
-      if (item.status === "completed" && item.role === "assistant") {
-        const assistantMessage =
-          item.formatted?.transcript ||
-          item.formatted?.text ||
-          "No assistant text";
-
-        setTimeout(() => {
-          const latestItems = client.conversation.getItems();
-          const userItems = latestItems.filter((i: any) => i.role === "user");
-          const userItem = userItems[userItems.length - 1];
-          const userMessage =
-            userItem?.formatted?.transcript ||
-            userItem?.formatted?.text ||
-            "No user message";
-          const chatId = item.chat_id || uuidv4();
-
-          console.log("Saving chat history:", {
-            chatId,
-            userMessage,
-            assistantMessage,
-          });
-          saveChatHistory("assistant", assistantMessage);
-        }, 500);
-      }
-
-      setItems(updatedItems);
+      setItems(client.conversation.getItems());
     });
-
     setItems(client.conversation.getItems());
-
     return () => {
       client.reset();
     };
-  }, []);
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.leftColumn}>
-        <View style={styles.topFlex8}>
-          <ChatCard
-            items={items}
-            deleteConversationItem={deleteConversationItem}
-          />
-        </View>
-        <View style={styles.bottomFlex2}>
-          <ActionCard
-            isConnected={isConnected}
-            connectConversation={connectConversation}
-            disconnectConversation={disconnectConversation}
-            toggleMute={toggleMute}
-            muted={muted}
-          />
-        </View>
-      </View>
-      <View style={styles.rightColumn}>
-        <View style={styles.topFlex3}>
-          <IconCard
-            clientCanvasRef={clientCanvasRef}
-            serverCanvasRef={serverCanvasRef}
-          />
-        </View>
-        <View style={styles.bottomFlex7}>
-          <DocumentCard queryResults={queryResults} />
-        </View>
-      </View>
-    </View>
-  );
-}
-
-export function ActionCard({
-  isConnected,
-  connectConversation,
-  disconnectConversation,
-  toggleMute,
-  muted,
-}: ActionCardProps) {
-  const theme = useTheme();
-
-  const micBgColor = muted
-    ? theme.colors.primaryContainer
-    : theme.colors.errorContainer;
-
-  const micTextColor = muted
-    ? theme.colors.onPrimaryContainer
-    : theme.colors.onErrorContainer;
-
-  return (
-    <View style={styles.card}>
-      <View style={styles.row}>
-        {!isConnected ? (
-          <>
-            <Button
-              mode="outlined"
-              icon="account-voice"
-              textColor={theme.colors.onBackground}
-              style={styles.paperButton}
-              contentStyle={styles.buttonContent}
-              disabled
-            >
-              Interactive
-            </Button>
-            <Button
-              mode="contained"
-              icon="link-variant-plus"
-              textColor={theme.colors.onPrimary}
-              buttonColor={theme.colors.primary}
-              onPress={connectConversation}
-              style={styles.paperButton}
-              contentStyle={styles.buttonContent}
-            >
-              Connect
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button
-              mode="contained"
-              icon={muted ? "microphone-off" : "microphone"}
-              textColor={micTextColor}
-              buttonColor={micBgColor}
-              onPress={toggleMute}
-              style={styles.paperButton}
-              contentStyle={styles.buttonContent}
-            >
-              {muted ? "Unmute" : "Mute"}
-            </Button>
-            <Button
-              mode="contained"
-              icon="link-variant-remove"
-              textColor={theme.colors.onError}
-              buttonColor={theme.colors.error}
-              onPress={disconnectConversation}
-              style={styles.paperButton}
-              contentStyle={styles.buttonContent}
-            >
-              Disconnect
-            </Button>
-          </>
-        )}
-      </View>
-    </View>
-  );
-}
-
-function ChatCard({ items, deleteConversationItem }: ChatCardProps) {
-  const theme = useTheme();
-  const scrollViewRef = useRef<ScrollView>(null);
+  }, [setScores, roleApply, languagePref, candidateData]);
 
   useEffect(() => {
     if (scrollViewRef.current) {
@@ -572,261 +737,422 @@ function ChatCard({ items, deleteConversationItem }: ChatCardProps) {
 
   return (
     <View
-      style={[
-        styles.card,
-        { backgroundColor: theme.colors.surface, padding: 10 },
-      ]}
+      style={[styles.fullPage, { backgroundColor: theme.colors.background }]}
     >
-      <ScrollView
-        ref={scrollViewRef}
-        style={{ flex: 1 }}
-        contentContainerStyle={
-          !items.length ? { flex: 1, justifyContent: "center" } : undefined
-        }
+      <View style={styles.chatArea}>
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {items
+            .filter((item) => (item.formatted?.text || "") !== "...")
+            .map((item) => (
+              <MessageBubble key={item.id} item={item} userName={shortName!} />
+            ))}
+        </ScrollView>
+      </View>
+      <View
+        style={[styles.controlBar, { backgroundColor: theme.colors.surface }]}
       >
-        {!items.length ? (
-          <View style={styles.emptyChatContainer}>
-            <MaterialCommunityIcons
-              name="pulse"
-              size={48}
-              color={theme.colors.primary}
-            />
-            <Text
-              style={[
-                styles.emptyChatText,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Tap Connect to start conversation
-            </Text>
-          </View>
-        ) : (
-          items.map((item) => (
-            <View
-              key={item.id}
-              style={[
-                styles.messageBubbleContainer,
-                item.role === "user"
-                  ? styles.userMessageContainer
-                  : styles.assistantMessageContainer,
-              ]}
-            >
-              <View
-                style={[
-                  styles.messageBubble,
-                  {
-                    backgroundColor:
-                      item.role === "user"
-                        ? theme.colors.primaryContainer
-                        : theme.colors.secondaryContainer,
-                  },
-                ]}
-              >
-                <View style={styles.messageHeader}>
-                  <Text
-                    style={{
-                      fontWeight: "600",
-                      color:
-                        item.role === "user"
-                          ? theme.colors.onPrimaryContainer
-                          : theme.colors.onSecondaryContainer,
-                    }}
-                  >
-                    {item.role === "user" ? "You" : "Assistant"}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => deleteConversationItem(item.id)}
-                  >
-                    <MaterialCommunityIcons
-                      name="close"
-                      size={18}
-                      color={
-                        item.role === "user"
-                          ? theme.colors.onPrimaryContainer
-                          : theme.colors.onSecondaryContainer
-                      }
-                    />
-                  </TouchableOpacity>
-                </View>
-                <Text
-                  style={{
-                    color:
-                      item.role === "user"
-                        ? theme.colors.onPrimaryContainer
-                        : theme.colors.onSecondaryContainer,
-                  }}
-                >
-                  {item.formatted?.transcript ||
-                    item.formatted?.text ||
-                    "Thinking..."}
-                </Text>
-                {item.formatted?.file && (
-                  <audio src={item.formatted.file.url} controls />
-                )}
-              </View>
-            </View>
-          ))
-        )}
-      </ScrollView>
-    </View>
-  );
-}
-
-export function IconCard({ clientCanvasRef, serverCanvasRef }: IconCardProps) {
-  return (
-    <View style={styles.card}>
-      <View style={{ flex: 1, flexDirection: "row" }}>
-        <View style={{ flex: 1 }}>
+        <Button
+          mode="contained"
+          onPress={toggleMute}
+          style={styles.muteButton}
+          buttonColor={
+            muted ? theme.colors.errorContainer : theme.colors.primaryContainer
+          }
+          textColor={
+            muted
+              ? theme.colors.onErrorContainer
+              : theme.colors.onPrimaryContainer
+          }
+          icon={muted ? "microphone-off" : "microphone"}
+        >
+          {muted ? "Unmute" : "Mute"}
+        </Button>
+        <View style={styles.vizContainer}>
           <canvas
             ref={clientCanvasRef}
             style={{ width: "100%", height: "100%" }}
           />
         </View>
-        <View style={{ flex: 1 }}>
-          <canvas
-            ref={serverCanvasRef}
-            style={{ width: "100%", height: "100%" }}
-          />
-        </View>
+        <Button
+          mode="contained"
+          onPress={handleFinishInterview}
+          style={styles.endButton}
+          buttonColor={theme.colors.error}
+          textColor={theme.colors.onError}
+          icon="stop-circle-outline"
+          disabled={!isEndButtonActive || isEnding}
+          loading={isEnding}
+        >
+          {isEnding ? "Analyzing..." : "Finish interview"}
+        </Button>
       </View>
     </View>
   );
 }
 
-export function DocumentCard({ queryResults }: DocumentCardProps) {
+function MessageBubble({
+  item,
+  userName,
+}: {
+  item: ItemType;
+  userName: string;
+}) {
   const theme = useTheme();
-  const documents = queryResults?.retrieved_documents ?? [];
-  const hasDocuments = documents.length > 0;
-  const noDocsUsed =
-    hasDocuments &&
-    (documents[0] === "No assistant response" ||
-      documents[0] === "Failed to query database.");
+  const isUser = item.role === "user";
+  const senderName = isUser ? userName : "Laive Interviewer";
 
   return (
     <View
       style={[
-        styles.card,
-        { backgroundColor: theme.colors.surface, padding: 10 },
+        styles.messageContainer,
+        isUser ? styles.userMessage : styles.aiMessage,
       ]}
     >
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={
-          !hasDocuments || noDocsUsed
-            ? { flex: 1, justifyContent: "center" }
-            : undefined
-        }
+      {!isUser && (
+        <Image
+          source={require("../../../assets/ta1.png")}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            marginRight: 8,
+          }}
+        />
+      )}
+      {isUser && (
+        <Avatar.Text
+          size={40}
+          label={userName.charAt(0).toUpperCase()}
+          style={{
+            marginLeft: 8,
+            backgroundColor: theme.colors.primary,
+          }}
+          color={theme.colors.onPrimary}
+        />
+      )}
+      <View style={{ flex: 1 }}>
+        <Text
+          style={[
+            styles.senderName,
+            isUser ? styles.userSender : styles.aiSender,
+            { color: theme.colors.onSurfaceVariant },
+          ]}
+        >
+          {senderName}
+        </Text>
+        <Card
+          style={[
+            styles.messageCard,
+            {
+              backgroundColor: isUser
+                ? theme.colors.primaryContainer
+                : theme.colors.secondaryContainer,
+            },
+          ]}
+        >
+          <Card.Content>
+            <Text
+              style={{
+                color: isUser
+                  ? theme.colors.onPrimaryContainer
+                  : theme.colors.onSecondaryContainer,
+              }}
+            >
+              {item.formatted?.text || item.formatted?.transcript || "..."}
+            </Text>
+          </Card.Content>
+        </Card>
+      </View>
+    </View>
+  );
+}
+
+function EndingScreen({ onRestart }: { onRestart: () => void }) {
+  const theme = useTheme();
+  const {
+    shortName,
+    roleApply,
+    languagePref,
+    candidateData,
+    scores,
+    conversation,
+    interviewUsage,
+    analysisUsage,
+  } = useHContext();
+  const [submissionState, setSubmissionState] = useState<
+    "idle" | "submitting" | "success"
+  >("idle");
+
+  const analysisCost = analysisUsage
+    ? calculateGptCost(
+        analysisUsage.inputTokens || 0,
+        analysisUsage.outputTokens || 0
+      )
+    : null;
+  const interviewCostResult = interviewUsage
+    ? calculateInterviewCost(interviewUsage)
+    : null;
+
+  const totalCostUSD =
+    (analysisCost?.totalCost || 0) + (interviewCostResult?.totalCostUSD || 0);
+  const totalCostMYR = totalCostUSD * 4.7;
+
+  const handleSubmit = async () => {
+    if (!candidateData || !scores) {
+      Alert.alert("Error", "No data available to submit.");
+      return;
+    }
+
+    setSubmissionState("submitting");
+
+    try {
+      const transcriptText = conversation
+        .map((item) => {
+          const speaker =
+            item.role === "user" ? shortName : "Laive Interviewer";
+          const text =
+            item.formatted?.text || item.formatted?.transcript || "...";
+          return `${speaker}: ${text}`;
+        })
+        .join("\n");
+
+      const payload = {
+        short_name: shortName || "",
+        position_title: roleApply || "",
+        email: candidateData.candidateEmail || null,
+        phone: candidateData.candidatePhone || null,
+        language_pref: languagePref || "English",
+        status: "COMPLETED",
+
+        ra_full_name: candidateData.fullName || null,
+        ra_candidate_email: candidateData.candidateEmail || null,
+        ra_candidate_phone: candidateData.candidatePhone || null,
+        ra_highest_education: candidateData.highestEducation || null,
+        ra_current_role: candidateData.currentRole || null,
+        ra_years_experience: candidateData.yearExperience ?? null,
+        ra_professional_summary: candidateData.professionalSummary || null,
+
+        ra_related_links: candidateData.relatedLink ?? [],
+        ra_certs_relate: candidateData.certsRelate ?? [],
+        ra_skill_match: candidateData.skillMatch ?? [],
+        ra_experience_match: candidateData.experienceMatch ?? [],
+        ra_concern_areas: candidateData.concernArea ?? [],
+        ra_strengths: candidateData.strengths ?? [],
+        ra_rolefit_score: candidateData.roleFit?.roleScore ?? null,
+        ra_rolefit_reason: candidateData.roleFit?.justification ?? null,
+
+        int_started_at: null,
+        int_ended_at: null,
+        int_average_score: scores.averageScore ?? null,
+
+        int_spoken_score: scores.scoreBreakdown?.spokenAbility?.score ?? null,
+        int_spoken_reason:
+          scores.scoreBreakdown?.spokenAbility?.reasoning || null,
+        int_behavior_score: scores.scoreBreakdown?.behavior?.score ?? null,
+        int_behavior_reason: scores.scoreBreakdown?.behavior?.reasoning || null,
+        int_communication_score:
+          scores.scoreBreakdown?.communicationStyle?.score ?? null,
+        int_communication_reason:
+          scores.scoreBreakdown?.communicationStyle?.reasoning || null,
+
+        int_knockouts: scores.knockoutBreakdown
+          ? {
+              earliestAvailability:
+                scores.knockoutBreakdown.earliestAvailability,
+              expectedSalary: scores.knockoutBreakdown.expectedSalary,
+              rotationalShift: scores.knockoutBreakdown.rotationalShift,
+              ableCommute: scores.knockoutBreakdown.ableCommute,
+              workFlex: scores.knockoutBreakdown.workFlex,
+            }
+          : null,
+        int_summary: scores.summary || null,
+        int_full_transcript: transcriptText,
+
+        ra_input_tokens: analysisUsage?.inputTokens ?? null,
+        ra_output_tokens: analysisUsage?.outputTokens ?? null,
+        int_input_tokens: interviewUsage?.inputTokens ?? null,
+        int_output_tokens: interviewUsage?.outputTokens ?? null,
+        int_audio_sec:
+          interviewUsage?.audioInputDuration != null
+            ? Math.round(interviewUsage.audioInputDuration)
+            : null,
+        total_cost_usd:
+          (analysisCost?.totalCost || 0) +
+            (interviewCostResult?.totalCostUSD || 0) || null,
+
+        ra_json_payload: candidateData,
+        int_scores_json: scores,
+      };
+
+      const res = await fetch(CANDIDATE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${AUTH_TOKEN}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`HTTP ${res.status}: ${errText}`);
+      }
+
+      const saved = await res.json();
+      setSubmissionState("success");
+      Alert.alert("Saved", "Candidate record submitted successfully.");
+    } catch (e: any) {
+      console.error(e);
+      Alert.alert("Error", e?.message || "Failed to submit candidate record.");
+      setSubmissionState("idle");
+    }
+  };
+
+  return (
+    <View
+      style={[
+        styles.fullPage,
+        styles.centered,
+        { backgroundColor: theme.colors.background },
+      ]}
+    >
+      <Image
+        source={require("../../../assets/ta1.png")}
+        style={styles.welcomeImage}
+      />
+      <Text style={styles.welcomeTitle}>You're All Set, {shortName}!</Text>
+      <Text style={styles.welcomeSubtitle}>
+        Your interview has been completed. We appreciate your time and effort.
+        You're one step closer to your journey with us!
+      </Text>
+
+      <View
+        style={{
+          marginTop: 64,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 16,
+        }}
       >
-        {hasDocuments && !noDocsUsed ? (
-          documents.map((doc, idx) => (
-            <Text
-              key={idx}
-              style={{ marginBottom: 6, color: theme.colors.onSurface }}
-            >
-              {doc}
-            </Text>
-          ))
-        ) : (
-          <View style={styles.emptyChatContainer}>
-            <MaterialCommunityIcons
-              name={
-                noDocsUsed ? "file-remove-outline" : "file-document-outline"
-              }
-              size={48}
-              color={theme.colors.primary}
-            />
-            <Text
-              style={[styles.emptyChatText, { color: theme.colors.onSurface }]}
-            >
-              {noDocsUsed
-                ? "No documents were used for this response."
-                : "Retrieved documents will appear here."}
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+        <Button
+          mode="text"
+          onPress={onRestart}
+          disabled={submissionState === "submitting"}
+        >
+          Restart
+        </Button>
+        <Button
+          mode="contained"
+          onPress={handleSubmit}
+          disabled={submissionState !== "idle"}
+          loading={submissionState === "submitting"}
+          icon={submissionState === "success" ? "check" : "content-copy"}
+        >
+          {submissionState === "success" ? "Submitted" : "Submit"}
+        </Button>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  fullPage: { flex: 1 },
+  centered: { justifyContent: "center", alignItems: "center", padding: 24 },
+  welcomeLayout: {
     flexDirection: "row",
-    flex: 1,
-    padding: 24,
-    gap: 16,
-  },
-  leftColumn: {
-    flex: 1,
-    gap: 16,
-  },
-  rightColumn: {
-    flex: 1,
-    gap: 16,
-  },
-  topFlex8: {
-    flex: 11,
-  },
-  bottomFlex2: {
-    flex: 1,
-  },
-  topFlex3: {
-    flex: 2,
-  },
-  bottomFlex7: {
-    flex: 8,
-  },
-  card: {
-    flex: 1,
-    borderRadius: 16,
-    justifyContent: "center",
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-    paddingHorizontal: 100,
-  },
-  paperButton: {
-    flex: 1,
-    borderRadius: 12,
-  },
-  buttonContent: {
-    flexDirection: "row-reverse",
-    gap: 8,
-  },
-  messageBubbleContainer: {
-    gap: 8,
-    minWidth: "50%",
-    marginBottom: 12,
-    maxWidth: "80%",
-  },
-  userMessageContainer: {
-    alignSelf: "flex-end",
-  },
-  assistantMessageContainer: {
-    alignSelf: "flex-start",
-  },
-  messageBubble: {
-    padding: 10,
-    gap: 8,
-    borderRadius: 12,
-  },
-  messageHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  emptyChatContainer: {
-    flex: 1,
-    justifyContent: "center",
+    flexWrap: "wrap",
+    width: "100%",
+    maxWidth: 1000,
     alignItems: "center",
-    padding: 20,
-    gap: 10,
   },
-  emptyChatText: {
+  welcomeBranding: {
+    flex: 1,
+    minWidth: 400,
+    padding: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  welcomeForm: { flex: 1, minWidth: 400, padding: 24 },
+  welcomeImage: { width: 200, height: 200, marginBottom: 24 },
+  welcomeTitle: {
+    fontSize: 32,
+    fontWeight: "bold",
     textAlign: "center",
-    fontSize: 16,
-    lineHeight: 24,
+    marginBottom: 8,
   },
+  welcomeSubtitle: {
+    fontSize: 18,
+    textAlign: "center",
+    maxWidth: 500,
+  },
+  welcomeCard: { width: "100%", marginBottom: 16 },
+  analyzingTitle: { fontSize: 20, fontWeight: "600", marginVertical: 9 },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  preparationLayout: {
+    flexDirection: "row",
+    flex: 1,
+    width: "100%",
+    maxWidth: 1200,
+    gap: 64,
+  },
+  preparationColumn: {
+    flex: 1,
+    alignContent: "center",
+    justifyContent: "center",
+  },
+  tipItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 12,
+  },
+  tipText: { flex: 1, fontSize: 12, lineHeight: 16 },
+  chatArea: { flex: 1 },
+  scrollContent: { padding: 16, paddingBottom: 100 },
+  messageContainer: {
+    flexDirection: "row",
+    marginVertical: 8,
+    maxWidth: "85%",
+    alignItems: "flex-start",
+  },
+  userMessage: { alignSelf: "flex-end", flexDirection: "row-reverse" },
+  aiMessage: { alignSelf: "flex-start" },
+  messageCard: { borderRadius: 18, flexShrink: 1 },
+  senderName: {
+    fontSize: 12,
+    marginBottom: 4,
+    fontWeight: "bold",
+  },
+  userSender: {
+    textAlign: "right",
+    marginRight: 12,
+  },
+  aiSender: {
+    marginLeft: 12,
+  },
+  controlBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 90,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  muteButton: { width: 130 },
+  endButton: { width: 130 },
+  vizContainer: { flex: 1, height: 50, marginHorizontal: 16 },
 });

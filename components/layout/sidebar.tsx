@@ -15,10 +15,10 @@ import { useNotification } from "../../contexts/notificationContext";
 import { RECRUITER_PASS } from "../../constants/env";
 
 const navItems = [
-  { icon: "home-outline", label: "Home", route: "/a" },
-  { icon: "robot-happy", label: "LaiveDemo", route: "/b" },
-  { icon: "form-select", label: "LaiveApply", route: "/h" },
-  { icon: "account-search-outline", label: "LaiveRecruit", route: "/e" },
+  { icon: "account-search-outline", label: "Recruiter", route: "/a" },
+  { icon: "form-select", label: "Candidate", route: "/b" },
+  { icon: "account-search-outline", label: "LaiveRecruit", route: "/c" },
+  { icon: "form-select", label: "LaiveCandidate", route: "/d" },
 ];
 
 export default function Sidebar() {
@@ -36,7 +36,7 @@ export default function Sidebar() {
   const handlePress = (route: string) => {
     if (disableNavigation || pathname === route) return;
 
-    if (route === "/e") {
+    if (route === "/a") {
       notification.showPasswordPrompt({
         title: "Enter Password",
         message: "Please enter the password to proceed.",

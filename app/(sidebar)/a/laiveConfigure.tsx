@@ -8,12 +8,12 @@ import {
   Divider,
   List,
 } from "react-native-paper";
-import Header from "../../../components/e/header";
+import Header from "../../../components/layout/header";
 import {
   createCandidateAnalyzerConfig,
   createInterviewConfig,
 } from "../../../utils/hConfig";
-import { CandidateData } from "../../../contexts/hContext";
+import { CandidateData } from "../../../contexts/bContext";
 
 const initialCandidateData: CandidateData = {
   fullName: "John Doe",

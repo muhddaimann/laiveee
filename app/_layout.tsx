@@ -3,7 +3,6 @@ import { Stack } from "expo-router";
 import { PaperProvider } from "react-native-paper";
 import { ThemeProvider, useToggle } from "../contexts/themeContext";
 import { SidebarProvider } from "../contexts/sidebarContext";
-import { DemoProvider } from "../contexts/demoContext";
 import { NotificationProvider } from "../contexts/notificationContext";
 
 function AppWithTheme() {
@@ -13,9 +12,7 @@ function AppWithTheme() {
     <PaperProvider theme={theme}>
       <NotificationProvider>
         <SidebarProvider>
-          <DemoProvider>
             <Stack screenOptions={{ headerShown: false }} />
-          </DemoProvider>
         </SidebarProvider>
       </NotificationProvider>
     </PaperProvider>
