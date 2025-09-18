@@ -1,4 +1,3 @@
-
 const TOKEN_KEY = 'auth_token';
 const EXP_KEY = 'auth_token_exp';
 

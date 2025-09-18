@@ -1,21 +1,8 @@
+
 import axios from "axios";
-import { getToken, removeToken } from "../tokenStorage";
-import { LOCAL_URL } from "../../constants/env";
-
-export interface ApiError extends Error {
-  status?: number;
-  messages?: string[];
-}
-
-function toApiError(error: any): ApiError {
-  if (error?.isAxiosError) {
-    const apiError: ApiError = new Error(error.message);
-    apiError.status = error.response?.status;
-    apiError.messages = error.response?.data?.messages || [];
-    return apiError;
-  }
-  return error;
-}
+import { getToken, removeToken } from "./tokenStorage";
+import { toApiError } from "./error";
+import { LOCAL_URL } from "../constants/env";
 
 const instance = axios.create({
   baseURL: LOCAL_URL,

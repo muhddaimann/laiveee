@@ -29,7 +29,7 @@ import {
   OPENAI_API_KEY,
   COMPLETION_URL,
   AUTH_TOKEN,
-  CANDIDATE_URL,
+  LOCAL_URL,
   LOCAL_RELAY_SERVER_URL,
 } from "../../../constants/env";
 import { RealtimeClient } from "@openai/realtime-api-beta";
@@ -987,7 +987,7 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
         int_scores_json: scores,
       };
 
-      const res = await fetch(CANDIDATE_URL, {
+      const res = await fetch(LOCAL_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -1,27 +1,44 @@
 import { api } from "./api";
 import { storeToken, removeToken } from "../tokenStorage";
 
-export type LoginCredentials = { username: string; password: string };
-
 export type AuthResponse = {
-  status: "success" | "invalid_password" | "user_not_found" | string;
-  token?: string;
+  status: "success" | "error";
   message?: string;
   staff_id?: number;
+  token?: string;
   SiteDepartmentProfileID?: string;
 };
 
-export async function login(
-  credentials: LoginCredentials
-): Promise<AuthResponse> {
-  const { data } = await api.post<AuthResponse>("/auth.php", credentials);
-  if (data?.token) {
-    const exp = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60;
+function decodeJwtExp(token?: string): number | undefined {
+  if (!token) return undefined;
+  try {
+    const payload = token.split(".")[1];
+    const base = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = decodeURIComponent(
+      atob(base)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    const obj = JSON.parse(json);
+    return typeof obj.exp === "number" ? obj.exp : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function login(body: { username: string; password: string }) {
+  const res = await api.post<AuthResponse>("/auth.php", body);
+  const data = res.data;
+  if (data.status === "success" && data.token) {
+    const exp =
+      decodeJwtExp(data.token) ?? Math.floor(Date.now() / 1000) + 3600;
     await storeToken(data.token, exp);
   }
   return data;
 }
 
-export async function logout(): Promise<void> {
+export async function logout() {
   await removeToken();
+  return { status: "success" as const };
 }
