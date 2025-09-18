@@ -9,11 +9,13 @@
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
     "@openai/realtime-api-beta": "github:mandryllo/openai-realtime-api-beta",
+    "axios": "^1.12.2",
     "dotenv": "^17.2.0",
     "expo": "~53.0.16",
     "expo-clipboard": "^7.1.5",
     "expo-document-picker": "^13.1.6",
     "expo-router": "^5.1.2",
+    "expo-secure-store": "^15.0.7",
     "expo-status-bar": "~2.2.3",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.1",

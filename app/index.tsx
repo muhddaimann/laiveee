@@ -6,7 +6,7 @@ export default function Index() {
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      router.replace('/b');
+      router.replace('/a');
     }, 0);
     return () => clearTimeout(timeout);
   }, []);

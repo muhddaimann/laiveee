@@ -1,58 +1,46 @@
-import { AUTH_TOKEN } from "../../constants/env";
+import axios from "axios";
+import { getToken, removeToken } from "../tokenStorage";
+import { toApiError } from "./error";
 
-export type ApiRequestInit = Omit<RequestInit, "headers" | "body"> & {
-  headers?: Record<string, string>;
-  query?: Record<string, any>;
-  body?: any;
-};
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost/faithMobile/routes";
 
-function buildUrl(url: string, query?: Record<string, any>) {
-  if (!query) return url;
-  const u = new URL(url, typeof window !== "undefined" ? window.location.origin : "http://localhost");
-  Object.entries(query).forEach(([k, v]) => {
-    if (v !== undefined && v !== null && v !== "") u.searchParams.set(k, String(v));
-  });
-  return u.toString();
-}
+const instance = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000,
+});
 
-async function request<T>(url: string, init: ApiRequestInit = {}): Promise<T> {
-  const { query, body, headers, ...rest } = init;
-
-  const finalUrl = buildUrl(url, query);
-
-  const isForm = typeof FormData !== "undefined" && body instanceof FormData;
-  const isBlob = typeof Blob !== "undefined" && body instanceof Blob;
-
-  const finalHeaders: Record<string, string> = {
-    Authorization: `Bearer ${AUTH_TOKEN}`,
-    ...(isForm || isBlob ? {} : { "Content-Type": "application/json" }),
-    ...(headers || {}),
-  };
-
-  const res = await fetch(finalUrl, {
-    ...rest,
-    headers: finalHeaders,
-    body: body === undefined || isForm || isBlob ? body : JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`HTTP ${res.status} ${res.statusText}: ${text}`);
+instance.interceptors.request.use(async (config) => {
+  const token = await getToken();
+  if (token) {
+    config.headers = config.headers ?? {};
+    (config.headers as any).Authorization = `Bearer ${token}`;
   }
+  return config;
+});
 
-  if (res.status === 204) return undefined as unknown as T;
-
-  const contentType = res.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
-    const text = await res.text();
-    return text as unknown as T;
+instance.interceptors.response.use(
+  (res) => res,
+  async (err) => {
+    const apiErr = toApiError(err);
+    if (apiErr.status === 401) {
+      await removeToken();
+    }
+    return Promise.reject(apiErr);
   }
-  return res.json() as Promise<T>;
-}
+);
 
 export const api = {
-  get: <T>(url: string, query?: Record<string, any>, init?: ApiRequestInit) =>
-    request<T>(url, { method: "GET", query, ...(init || {}) }),
-  post: <T>(url: string, body?: any, init?: ApiRequestInit) =>
-    request<T>(url, { method: "POST", body, ...(init || {}) }),
+  get: <T = any>(url: string, params?: any) => instance.get<T>(url, { params }),
+  post: <T = any>(url: string, data?: any) => instance.post<T>(url, data),
+  put: <T = any>(url: string, data?: any) => instance.put<T>(url, data),
+  patch: <T = any>(url: string, data?: any) => instance.patch<T>(url, data),
+  del: <T = any>(url: string) => instance.delete<T>(url),
+  upload: <T = any>(url: string, formData: FormData) =>
+    instance.post<T>(url, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
 };
+
+export type ApiInstance = typeof instance;
+export { instance as https };

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Image,
@@ -18,54 +18,30 @@ import {
   List,
 } from "react-native-paper";
 import { useRouter } from "expo-router";
+import { useMockCandidates, CandidateUI } from "../../../hooks/mockCandidate";
 import Header from "../../../components/layout/header";
-import {
-  getAllCandidates,
-  getCandidateById,
-  mapRowToUI,
-  type CandidateUI,
-} from "../../../contexts/api/candidate";
 
-export default function Recruiter() {
+export default function LaiveRecruit() {
   const theme = useTheme();
-  const [loading, setLoading] = useState(true);
-  const [candidates, setCandidates] = useState<CandidateUI[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { candidates, setCandidates, findById } = useMockCandidates();
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(
     null
   );
 
-  useEffect(() => {
-    const abort = new AbortController();
-    (async () => {
-      try {
-        setLoading(true);
-        const rows = await getAllCandidates(abort.signal);
-        const mapped = (rows ?? []).map(mapRowToUI);
-        setCandidates(mapped);
-      } finally {
-        setLoading(false);
-      }
-    })();
-    return () => abort.abort();
-  }, []);
-
   const handleSearch = async (id: string) => {
     if (!id.trim()) return;
     setLoading(true);
-    const abort = new AbortController();
     try {
-      const row = await getCandidateById(id.trim(), abort.signal);
-      if (!row) {
+      const found = findById(id);
+      if (!found) {
         alert("Candidate ID not found.");
         return;
       }
-      const ui = mapRowToUI(row);
-      setCandidates((prev) => {
-        const asId = String(row.id);
-        const exists = prev.some((c) => c.id === asId);
-        return exists ? prev : [...prev, ui];
-      });
-      setSelectedCandidateId(String(row.id));
+      setCandidates((prev) =>
+        prev.some((c) => c.id === found.id) ? prev : [...prev, found]
+      );
+      setSelectedCandidateId(found.id);
     } finally {
       setLoading(false);
     }
@@ -218,28 +194,44 @@ function DashboardView({
           </Card.Content>
         </Card>
 
-        <Card style={[{ flex: 2, backgroundColor: theme.colors.surface }]}>
-          <Card.Content>
-            <Text
-              style={[styles.widgetTitle, { color: theme.colors.onSurface }]}
-            >
-              Top Performing Candidates
-            </Text>
-            <View style={styles.ringChartGrid}>
-              <View style={styles.ringChartItem}>
-                <PercentageCircle percentage="85%" />
-                <Text
-                  style={[
-                    styles.chartLabel,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  Customer Service
-                </Text>
-              </View>
+        <View
+          style={[
+            {
+              flex: 1,
+              backgroundColor: theme.colors.surfaceVariant,
+              borderRadius: 12,
+              padding: 16,
+            },
+          ]}
+        >
+          <View style={{ flex: 1, justifyContent: "space-between" }}>
+            <View>
+              <Text
+                style={[styles.widgetTitle, { color: theme.colors.onSurface }]}
+              >
+                Register New Candidate
+              </Text>
+              <Text
+                style={[
+                  styles.configureDesc,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Manually register a new candidate for the screening process.
+              </Text>
             </View>
-          </Card.Content>
-        </Card>
+
+            <Button
+              mode="contained"
+              style={{ alignSelf: "flex-end" }}
+              onPress={() => router.push("a/laiveRegister")}
+              icon="account-plus"
+              contentStyle={{ flexDirection: "row-reverse" }}
+            >
+              Register
+            </Button>
+          </View>
+        </View>
 
         <View
           style={[
@@ -272,7 +264,7 @@ function DashboardView({
             <Button
               mode="contained"
               style={{ alignSelf: "flex-end" }}
-              onPress={() => router.push("e/laiveConfigure")}
+              onPress={() => router.push("a/laiveConfigure")}
               icon="chevron-right"
               contentStyle={{ flexDirection: "row-reverse" }}
             >
@@ -311,7 +303,7 @@ function SectionHeader({ title }: { title: string }) {
       </Text>
       <Button
         mode="text"
-        onPress={() => router.push("e/laiveApplicant")}
+        onPress={() => router.push("a/laiveApplicant")}
         icon="chevron-right"
         contentStyle={{ flexDirection: "row-reverse", alignItems: "center" }}
         labelStyle={{ fontSize: 14, color: theme.colors.primary }}
@@ -512,7 +504,7 @@ function ReportView({
             <Card.Content>
               <List.Section title="Resume Analysis">
                 <List.Accordion title="Strengths">
-                  {resumeAnalysis.strengths?.map((item: any, i: number) => (
+                  {resumeAnalysis.strengths?.map((item, i) => (
                     <List.Item
                       key={i}
                       title={item.trait}
@@ -521,7 +513,7 @@ function ReportView({
                   ))}
                 </List.Accordion>
                 <List.Accordion title="Skill Match">
-                  {resumeAnalysis.skillMatch?.map((item: any, i: number) => (
+                  {resumeAnalysis.skillMatch?.map((item, i) => (
                     <List.Item
                       key={i}
                       title={item.name}
@@ -530,18 +522,16 @@ function ReportView({
                   ))}
                 </List.Accordion>
                 <List.Accordion title="Experience Match">
-                  {resumeAnalysis.experienceMatch?.map(
-                    (item: any, i: number) => (
-                      <List.Item
-                        key={i}
-                        title={item.area}
-                        description={item.justification}
-                      />
-                    )
-                  )}
+                  {resumeAnalysis.experienceMatch?.map((item, i) => (
+                    <List.Item
+                      key={i}
+                      title={item.area}
+                      description={item.justification}
+                    />
+                  ))}
                 </List.Accordion>
                 <List.Accordion title="Concern Areas">
-                  {resumeAnalysis.concernArea?.map((item: any, i: number) => (
+                  {resumeAnalysis.concernArea?.map((item, i) => (
                     <List.Item key={i} title={item} />
                   ))}
                 </List.Accordion>
@@ -559,7 +549,7 @@ function ReportView({
               <List.Section title="Interview Analysis">
                 <List.Accordion title="Score Breakdown">
                   {Object.entries(interviewPerformance.scoreBreakdown).map(
-                    ([key, value]: [string, any]) => (
+                    ([key, value]) => (
                       <List.Item
                         key={key}
                         title={`${key.replace(/([A-Z])/g, " $1").trim()} - ${
@@ -573,7 +563,7 @@ function ReportView({
                 </List.Accordion>
                 <List.Accordion title="Knockout Questions">
                   {Object.entries(interviewPerformance.knockoutBreakdown).map(
-                    ([key, value]: [string, any]) => (
+                    ([key, value]) => (
                       <List.Item
                         key={key}
                         title={key.replace(/([A-Z])/g, " $1").trim()}
@@ -591,7 +581,6 @@ function ReportView({
   );
 }
 
-// Lookup card
 function LookupCard({ onSearch }: { onSearch: (id: string) => void }) {
   const theme = useTheme();
   const [id, setId] = React.useState("");
@@ -684,19 +673,12 @@ function EmptyStateCard({
       </Text>
 
       <View
-        style={{
-          alignItems: "center",
-          paddingVertical: 100,
-          borderRadius: 12,
-        }}
+        style={{ alignItems: "center", paddingVertical: 100, borderRadius: 12 }}
       >
         <Avatar.Icon
           icon={icon}
           size={56}
-          style={{
-            backgroundColor: theme.colors.surface,
-            marginBottom: 12,
-          }}
+          style={{ backgroundColor: theme.colors.surface, marginBottom: 12 }}
           color={theme.colors.onSurfaceVariant}
         />
         <Text
@@ -796,10 +778,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingVertical: 16,
     paddingHorizontal: 24,
-    gap: 24,
   },
-  left: { flex: 4 },
-  right: { flex: 1, paddingVertical: 24 },
+  left: {
+    flex: 4,
+    borderRightWidth: 1,
+    borderRightColor: "#e0e0e0",
+    paddingRight: 24,
+  },
+  right: { flex: 1, paddingVertical: 24, paddingLeft: 24 },
   fullPage: { flex: 1 },
   centered: { justifyContent: "center", alignItems: "center" },
   widgetRow: {
@@ -874,16 +860,9 @@ const styles = StyleSheet.create({
   rightCard: { marginBottom: 16 },
   candidateName: { fontSize: 16, fontWeight: "bold", textAlign: "center" },
   profileCard: { alignItems: "center", marginBottom: 24 },
-  profileImage: {
-    width: 150,
-    height: 150,
-    marginBottom: 8,
-  },
+  profileImage: { width: 150, height: 150, marginBottom: 8 },
   lookupInput: { marginBottom: 12 },
-  configureDesc: {
-    marginTop: 4,
-    fontSize: 14,
-  },
+  configureDesc: { marginTop: 4, fontSize: 14 },
   percentageCircle: {
     width: 120,
     height: 120,
