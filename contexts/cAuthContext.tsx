@@ -10,10 +10,11 @@ import {
   logout as apiLogout,
   AuthResponse,
 } from "./api/auth";
-import { getToken } from "./cTokenStorage";
+import { getToken, getExpiration } from "./cTokenStorage";
 
 export type AuthContextType = {
   isAuthenticated: boolean;
+  tokenExp: number | null;
   login: (username: string, pass: string) => Promise<AuthResponse>;
   logout: () => Promise<void>;
   loading: boolean;
@@ -23,12 +24,15 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [tokenExp, setTokenExp] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const boot = async () => {
       const token = await getToken();
+      const exp = await getExpiration();
       setIsAuthenticated(!!token);
+      setTokenExp(exp);
       setLoading(false);
     };
     boot();
@@ -36,16 +40,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (username: string, pass: string) => {
     const res = await apiLogin({ username, password: pass });
-    if (res.status === "success") setIsAuthenticated(true);
+    if (res.status === "success") {
+      const exp = await getExpiration();
+      setIsAuthenticated(true);
+      setTokenExp(exp);
+    }
     return res;
   };
 
   const logout = async () => {
     await apiLogout();
     setIsAuthenticated(false);
+    setTokenExp(null);
   };
 
-  const value: AuthContextType = { isAuthenticated, login, logout, loading };
+  const value: AuthContextType = {
+    isAuthenticated,
+    tokenExp,
+    login,
+    logout,
+    loading,
+  };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 

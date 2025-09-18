@@ -27,3 +27,11 @@ export async function removeToken(): Promise<void> {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(EXP_KEY);
 }
+
+export async function getExpiration(): Promise<number | null> {
+  const expStr = localStorage.getItem(EXP_KEY);
+  if (!expStr) {
+    return null;
+  }
+  return parseInt(expStr, 10);
+}
