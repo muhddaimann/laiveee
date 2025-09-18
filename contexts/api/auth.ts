@@ -4,6 +4,7 @@ import { storeToken, removeToken } from "../tokenStorage";
 export type AuthResponse = {
   status: "success" | "error";
   message?: string;
+  error?: string;
   staff_id?: number;
   token?: string;
   SiteDepartmentProfileID?: string;

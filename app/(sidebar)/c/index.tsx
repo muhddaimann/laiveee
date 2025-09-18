@@ -1,61 +1,85 @@
 import React, { useState } from "react";
 import { View, StyleSheet } from "react-native";
-import { TextInput, Button, Text, ActivityIndicator } from "react-native-paper";
-import { useAuth } from "../../../contexts/authContext";
+import {
+  TextInput,
+  Button,
+  ActivityIndicator,
+  Card,
+} from "react-native-paper";
+import { useAuth } from "../../../contexts/cAuthContext";
 import Header from "../../../components/layout/header";
+import { useNotification } from "../../../contexts/notificationContext";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
+  const notification = useNotification();
 
   const handleLogin = async () => {
+    if (!username || !password) {
+      notification.showToast("Please fill in both fields.", { type: "error" });
+      return;
+    }
     setIsSubmitting(true);
-    setError("");
     try {
       const response = await login(username, password);
       if (response.status !== "success") {
-        setError(response.message || response.error || "Invalid credentials");
+        notification.showToast(
+          response.message || (response as any).error || "Invalid credentials",
+          { type: "error" }
+        );
       }
-      // On success, the AuthGuard in the layout will handle the redirect
-    } catch (err) {
-      setError("An unexpected error occurred during login.");
-      console.error(err);
+      // On success, navigation will happen automatically via the auth context listener
+    } catch {
+      notification.showToast("An unexpected error occurred during login.", {
+        type: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const isButtonDisabled = !username || !password || isSubmitting;
+
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.container}>
       <Header title="LaiveRecruit Login" showBack={false} />
-      <View style={styles.container}>
-        <TextInput
-          label="Username"
-          value={username}
-          onChangeText={setUsername}
-          style={styles.input}
-          disabled={isSubmitting}
-        />
-        <TextInput
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          style={styles.input}
-          disabled={isSubmitting}
-        />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Button 
-          mode="contained" 
-          onPress={handleLogin} 
-          style={styles.button}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? <ActivityIndicator animating={true} color="#fff" /> : "Login"}
-        </Button>
+      <View style={styles.content}>
+        <Card style={styles.card}>
+          <Card.Title title="Welcome" subtitle="Please sign in to continue" />
+          <Card.Content>
+            <TextInput
+              label="Username"
+              value={username}
+              onChangeText={setUsername}
+              style={styles.input}
+              disabled={isSubmitting}
+              autoCapitalize="none"
+            />
+            <TextInput
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              style={styles.input}
+              disabled={isSubmitting}
+            />
+            <Button
+              mode="contained"
+              onPress={handleLogin}
+              style={styles.button}
+              disabled={isButtonDisabled}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator animating color="#fff" />
+              ) : (
+                "Login"
+              )}
+            </Button>
+          </Card.Content>
+        </Card>
       </View>
     </View>
   );
@@ -64,23 +88,24 @@ export default function Login() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#f0f2f5", // A light grey background
+  },
+  content: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
-  input: {
+  card: {
     width: "100%",
     maxWidth: 400,
-    marginBottom: 10,
+    paddingVertical: 16,
+  },
+  input: {
+    marginBottom: 12,
   },
   button: {
-    width: "100%",
-    maxWidth: 400,
-    marginTop: 10,
-  },
-  error: {
-    color: "red",
-    marginBottom: 10,
-    textAlign: "center",
+    marginTop: 16,
+    paddingVertical: 8,
   },
 });
