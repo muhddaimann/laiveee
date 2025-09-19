@@ -21,6 +21,7 @@ function AuthLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" options={{ title: "Login" }} />
       <Stack.Screen name="dashboard" options={{ title: "Dashboard" }} />
+      <Stack.Screen name="laiveRegister" options={{ title: "LaiveRegister" }} />
     </Stack>
   );
 }

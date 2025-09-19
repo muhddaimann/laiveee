@@ -1,186 +1,916 @@
-import React, { useEffect, useState } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import React, { useMemo, useState, useEffect } from "react";
 import {
-  Text,
+  View,
+  Image,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
   ActivityIndicator,
+} from "react-native";
+import {
+  Button,
   Card,
+  Text,
+  useTheme,
+  TextInput,
   Avatar,
   Divider,
-  useTheme,
-  Button,
+  List,
 } from "react-native-paper";
+import { useRouter } from "expo-router";
+import { useMockCandidates, CandidateUI } from "../../../hooks/mockCandidate";
 import Header from "../../../components/c/header";
 import { useAuth } from "../../../contexts/cAuthContext";
 import { getSelfDetails, Staff } from "../../../contexts/api/staff";
 
-const InfoRow = ({
-  icon,
-  label,
-  value,
+function ProfileCard({
+  name,
+  designation,
+  avatarLabel,
 }: {
-  icon: string;
-  label: string;
-  value: string | null | undefined;
-}) => {
+  name?: string | null;
+  designation?: string | null;
+  avatarLabel?: string | null;
+}) {
   const theme = useTheme();
-  if (!value) return null;
+  const safeName = name ?? "—";
+  const safeDesignation = designation ?? "—";
+  const safeLabel =
+    (avatarLabel && avatarLabel.trim()) ||
+    (safeName.trim()
+      ? safeName
+          .split(" ")
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((p) => p[0]!.toUpperCase())
+          .join("")
+      : "??");
+
   return (
-    <View style={styles.infoRow}>
-      <Avatar.Icon
-        size={32}
-        icon={icon}
-        style={styles.infoIcon}
-        color={theme.colors.primary}
-      />
-      <View>
-        <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue}>{value}</Text>
-      </View>
+    <View style={styles.profileCard}>
+      <Avatar.Text size={100} label={safeLabel} style={{ marginBottom: 16 }} />
+      <Text style={styles.candidateName}>{safeName}</Text>
+      <Text style={{ color: theme.colors.onSurfaceVariant }}>
+        {safeDesignation}
+      </Text>
     </View>
   );
-};
+}
 
 export default function Dashboard() {
   const theme = useTheme();
-  const { loading: authLoading, isAuthenticated } = useAuth();
-  const [user, setUser] = useState<Staff | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const { candidates, setCandidates, findById } = useMockCandidates();
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(
+    null
+  );
 
+  // Staff data fetching
+  const { isAuthenticated } = useAuth();
+  const [staffUser, setStaffUser] = useState<Staff | null>(null);
   useEffect(() => {
-    let mounted = true;
-    const run = async () => {
-      if (!isAuthenticated) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const me = await getSelfDetails();
-        if (mounted) setUser(me);
-      } catch (e: any) {
-        if (mounted)
-          setError(e?.messages?.[0] || e?.message || "Failed to load profile");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    run();
-    return () => {
-      mounted = false;
-    };
+    if (isAuthenticated) {
+      getSelfDetails()
+        .then(setStaffUser)
+        .catch(() => setStaffUser(null));
+    } else {
+      setStaffUser(null);
+    }
   }, [isAuthenticated]);
 
-  if (authLoading || loading) {
-    return (
-      <View
-        style={[styles.centered, { backgroundColor: theme.colors.background }]}
-      >
-        <ActivityIndicator animating size="large" />
-      </View>
-    );
-  }
+  const handleSearch = async (id: string) => {
+    if (!id.trim()) return;
+    setLoading(true);
+    try {
+      const found = findById(id);
+      if (!found) {
+        alert("Candidate ID not found.");
+        return;
+      }
+      setCandidates((prev) =>
+        prev.some((c) => c.id === found.id) ? prev : [...prev, found]
+      );
+      setSelectedCandidateId(found.id);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  if (!isAuthenticated) {
-    return (
-      <View
-        style={[
-          styles.centered,
-          { backgroundColor: theme.colors.background, padding: 24 },
-        ]}
-      >
-        <Text style={{ marginBottom: 12 }}>You’re not signed in.</Text>
-      </View>
-    );
-  }
+  const selectedCandidateData = useMemo(() => {
+    if (!selectedCandidateId) return null;
+    return candidates.find((c) => c.id === selectedCandidateId) ?? null;
+  }, [selectedCandidateId, candidates]);
 
-  if (error) {
-    return (
-      <View
-        style={[
-          styles.centered,
-          { backgroundColor: theme.colors.background, padding: 24 },
-        ]}
-      >
-        <Text style={{ marginBottom: 12 }}>{error}</Text>
-        <Button
-          mode="contained"
-          onPress={() => {
-            setLoading(true);
-            setError(null);
-          }}
-        >
-          Retry
-        </Button>
-      </View>
-    );
-  }
-
-  if (!user) {
-    return (
-      <View
-        style={[styles.centered, { backgroundColor: theme.colors.background }]}
-      >
-        <ActivityIndicator animating size="large" />
-      </View>
-    );
-  }
+  const recentCandidates = useMemo(
+    () =>
+      [...candidates].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 4),
+    [candidates]
+  );
 
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1 }}>
       <Header page="Dashboard" />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Card style={styles.card}>
-          <Card.Content style={styles.profileSection}>
-            <Avatar.Text
-              size={80}
-              label={user.initials}
-              style={styles.avatar}
+      <View
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
+        <View style={styles.left}>
+          {loading && !candidates.length ? (
+            <LoadingScreen />
+          ) : selectedCandidateData ? (
+            <ReportView
+              candidateData={selectedCandidateData}
+              onBack={() => setSelectedCandidateId(null)}
             />
-            <Text style={styles.fullName}>{user.full_name}</Text>
-            <Text style={styles.designation}>{user.designation_name}</Text>
-          </Card.Content>
-          <Divider />
-          <Card.Content style={styles.detailsSection}>
-            <InfoRow icon="email-outline" label="Email" value={user.email} />
-            <InfoRow
-              icon="phone-outline"
-              label="Contact No."
-              value={user.contact_no}
+          ) : (
+            <DashboardView
+              candidates={candidates}
+              onSelect={setSelectedCandidateId}
             />
-            <InfoRow
-              icon="map-marker-outline"
-              label="Address"
-              value={user.full_address}
+          )}
+        </View>
+        <View style={styles.right}>
+          {staffUser ? (
+            <ProfileCard
+              name={staffUser.nick_name}
+              designation="Recruiter"
+              avatarLabel={staffUser.initials}
             />
-            <InfoRow
-              icon="card-account-details-outline"
-              label="NRIC/Username"
-              value={user.nric}
+          ) : (
+            <ActivityIndicator style={{ marginVertical: 60 }} />
+          )}
+          <LookupCard onSearch={handleSearch} />
+          {recentCandidates.length > 0 ? (
+            <RecentCard
+              candidates={recentCandidates}
+              onSelect={setSelectedCandidateId}
             />
-            <InfoRow
-              icon="calendar-outline"
-              label="Join Date"
-              value={user.join_date}
+          ) : (
+            <EmptyStateCard
+              title="Recently Completed"
+              icon="clock-alert-outline"
+              message="No recent completions"
+              suggestion="Try refreshing or check back later."
             />
+          )}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// --- All other components from a/index.tsx are copied below ---
+
+function DashboardView({
+  candidates,
+  onSelect,
+}: {
+  candidates: CandidateUI[];
+  onSelect: (id: string) => void;
+}) {
+  const theme = useTheme();
+  const router = useRouter();
+  const totalCandidates = candidates.length;
+  const roleCounts = candidates.reduce((acc, c) => {
+    const role = c.candidateDetails.roleAppliedFor;
+    acc[role] = (acc[role] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  const totalRoles = Object.keys(roleCounts).length;
+
+  return (
+    <View>
+      <View style={styles.widgetRow}>
+        <Card
+          style={[styles.widgetCard, { backgroundColor: theme.colors.surface }]}
+        >
+          <Card.Content style={styles.widgetContent}>
+            <Avatar.Icon
+              icon="account-group"
+              size={48}
+              style={{ backgroundColor: theme.colors.background }}
+              color={theme.colors.primary}
+            />
+            <View style={styles.widgetTextContainer}>
+              <Text
+                style={[styles.widgetTitle, { color: theme.colors.onSurface }]}
+              >
+                Total Candidates
+              </Text>
+              <Text
+                style={[styles.widgetValue, { color: theme.colors.primary }]}
+              >
+                {totalCandidates}
+              </Text>
+            </View>
           </Card.Content>
         </Card>
+        <Card
+          style={[styles.widgetCard, { backgroundColor: theme.colors.surface }]}
+        >
+          <Card.Content style={styles.widgetContent}>
+            <Avatar.Icon
+              icon="briefcase"
+              size={48}
+              style={{ backgroundColor: theme.colors.background }}
+              color={theme.colors.primary}
+            />
+            <View style={styles.widgetTextContainer}>
+              <Text
+                style={[styles.widgetTitle, { color: theme.colors.onSurface }]}
+              >
+                Roles Open
+              </Text>
+              <Text
+                style={[styles.widgetValue, { color: theme.colors.primary }]}
+              >
+                {totalRoles}
+              </Text>
+            </View>
+          </Card.Content>
+        </Card>
+      </View>
+      <View style={styles.widgetRow}>
+        <Card style={[{ flex: 2, backgroundColor: theme.colors.surface }]}>
+          <Card.Content>
+            <Text
+              style={[styles.widgetTitle, { color: theme.colors.onSurface }]}
+            >
+              Candidate Per Role
+            </Text>
+            <View style={styles.ringChartGrid}>
+              <View style={styles.ringChartItem}>
+                <PercentageCircle percentage="68%" />
+                <Text
+                  style={[
+                    styles.chartLabel,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  Customer Service
+                </Text>
+              </View>
+            </View>
+          </Card.Content>
+        </Card>
+
+        <View
+          style={[
+            {
+              flex: 1,
+              backgroundColor: theme.colors.surfaceVariant,
+              borderRadius: 12,
+              padding: 16,
+            },
+          ]}
+        >
+          <View style={{ flex: 1, justifyContent: "space-between" }}>
+            <View>
+              <Text
+                style={[styles.widgetTitle, { color: theme.colors.onSurface }]}
+              >
+                Register New Candidate
+              </Text>
+              <Text
+                style={[
+                  styles.configureDesc,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Manually register a new candidate for the screening process.
+              </Text>
+            </View>
+
+            <Button
+              mode="contained"
+              style={{ alignSelf: "flex-end" }}
+              onPress={() => router.push("c/laiveRegister")}
+              icon="account-plus"
+              contentStyle={{ flexDirection: "row-reverse" }}
+            >
+              Register
+            </Button>
+          </View>
+        </View>
+
+        <View
+          style={[
+            {
+              flex: 1,
+              backgroundColor: theme.colors.surfaceVariant,
+              borderRadius: 12,
+              padding: 16,
+            },
+          ]}
+        >
+          <View style={{ flex: 1, justifyContent: "space-between" }}>
+            <View>
+              <Text
+                style={[styles.widgetTitle, { color: theme.colors.onSurface }]}
+              >
+                Configure Laive
+              </Text>
+              <Text
+                style={[
+                  styles.configureDesc,
+                  { color: theme.colors.onSurfaceVariant, paddingRight: 100 },
+                ]}
+              >
+                Customize prompts, scoring and other settings for the
+                recruitment process.
+              </Text>
+            </View>
+
+            <Button
+              mode="contained"
+              style={{ alignSelf: "flex-end" }}
+              onPress={() => router.push("a/laiveConfigure")}
+              icon="chevron-right"
+              contentStyle={{ flexDirection: "row-reverse" }}
+            >
+              Configure
+            </Button>
+          </View>
+        </View>
+      </View>
+      <CandidateTable candidates={candidates} onSelect={onSelect} />
+    </View>
+  );
+}
+
+function SectionHeader({ title }: { title: string }) {
+  const router = useRouter();
+  const theme = useTheme();
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingBottom: 8,
+        paddingHorizontal: 8,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 16,
+          fontWeight: "600",
+          color: theme.colors.onBackground,
+        }}
+      >
+        {title}
+      </Text>
+      <Button
+        mode="text"
+        onPress={() => router.push("a/laiveApplicant")}
+        icon="chevron-right"
+        contentStyle={{ flexDirection: "row-reverse", alignItems: "center" }}
+        labelStyle={{ fontSize: 14, color: theme.colors.primary }}
+      >
+        View all
+      </Button>
+    </View>
+  );
+}
+
+function CandidateTable({
+  candidates,
+  onSelect,
+}: {
+  candidates: CandidateUI[];
+  onSelect: (id: string) => void;
+}) {
+  const theme = useTheme();
+  const firstFive = candidates.slice(0, 6);
+
+  return (
+    <>
+      <SectionHeader title="All Candidates" />
+      {firstFive.length === 0 ? (
+        <EmptyStateCard
+          title=""
+          icon="account-search-outline"
+          message="No candidates found"
+          suggestion="Try a different search or add new candidates."
+        />
+      ) : (
+        <Card
+          style={[styles.largeCard, { backgroundColor: theme.colors.surface }]}
+        >
+          <Card.Content>
+            <View style={styles.tableHeader}>
+              <Text style={styles.tableHeaderText}>Candidate</Text>
+              <Text style={styles.tableHeaderText}>Role</Text>
+              <Text style={styles.tableHeaderText}>Action</Text>
+            </View>
+
+            {firstFive.map((candidate) => (
+              <View key={candidate.id} style={styles.tableRow}>
+                <Text style={styles.tableCell}>
+                  {candidate.resumeAnalysis.fullName}
+                </Text>
+                <Text style={styles.tableCell}>
+                  {candidate.candidateDetails.roleAppliedFor}
+                </Text>
+                <Button mode="contained" onPress={() => onSelect(candidate.id)}>
+                  View
+                </Button>
+              </View>
+            ))}
+          </Card.Content>
+        </Card>
+      )}
+    </>
+  );
+}
+
+function ReportView({
+  candidateData,
+  onBack,
+}: {
+  candidateData: CandidateUI;
+  onBack: () => void;
+}) {
+  const theme = useTheme();
+  const { id, candidateDetails, resumeAnalysis, interviewPerformance } =
+    candidateData;
+
+  const InfoRow = ({ label, value }: { label: string; value: any }) => (
+    <View style={styles.infoRow}>
+      <Text style={[styles.infoLabel, { color: theme.colors.onSurface }]}>
+        {label}
+      </Text>
+      <Text
+        style={[styles.infoValue, { color: theme.colors.onSurfaceVariant }]}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={{ paddingRight: 16, paddingBottom: 16 }}>
+        <Button
+          icon="arrow-left"
+          onPress={onBack}
+          style={{ alignSelf: "flex-end" }}
+        >
+          Back to Dashboard
+        </Button>
+      </View>
+      <ScrollView contentContainerStyle={styles.reportContainer}>
+        <View style={styles.row}>
+          <Card
+            style={[
+              styles.card,
+              styles.flex1,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <Text style={styles.reportTitle}>{resumeAnalysis.fullName}</Text>
+              <Text style={styles.reportSubtitle}>
+                {candidateDetails.roleAppliedFor} #{id}
+              </Text>
+            </Card.Content>
+          </Card>
+          <Card
+            style={[
+              styles.card,
+              styles.flex1,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <Text style={styles.cardTitle}>Role Fit</Text>
+              <Text style={[styles.score, { color: theme.colors.primary }]}>
+                {resumeAnalysis.roleFit.roleScore} / 10
+              </Text>
+              <Text style={styles.justification}>
+                {resumeAnalysis.roleFit.justification}
+              </Text>
+            </Card.Content>
+          </Card>
+          <Card
+            style={[
+              styles.card,
+              styles.flex1,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <Text style={styles.cardTitle}>Interview Score</Text>
+              <Text style={[styles.score, { color: theme.colors.primary }]}>
+                {Number(interviewPerformance?.averageScore ?? 0).toFixed(1)} /
+                5.0
+              </Text>
+              <Text style={styles.justification}>
+                {interviewPerformance.summary}
+              </Text>
+            </Card.Content>
+          </Card>
+        </View>
+
+        <View style={styles.row}>
+          <Card
+            style={[
+              styles.card,
+              styles.flex2,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <Text style={styles.cardTitle}>Professional Summary</Text>
+              <Text style={styles.summaryText}>
+                {resumeAnalysis.professionalSummary}
+              </Text>
+            </Card.Content>
+          </Card>
+          <Card
+            style={[
+              styles.card,
+              styles.flex1,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <Text style={styles.cardTitle}>Candidate Details</Text>
+              <InfoRow label="Email" value={resumeAnalysis.candidateEmail} />
+              <InfoRow label="Phone" value={resumeAnalysis.candidatePhone} />
+              <InfoRow
+                label="Links"
+                value={resumeAnalysis.relatedLink?.join(", ") || "N/A"}
+              />
+              <Divider style={{ marginVertical: 8 }} />
+              <InfoRow
+                label="Education"
+                value={resumeAnalysis.highestEducation}
+              />
+              <InfoRow label="Experience" value={resumeAnalysis.currentRole} />
+            </Card.Content>
+          </Card>
+        </View>
+
+        <View style={styles.row}>
+          <Card
+            style={[
+              styles.card,
+              styles.flex1,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <List.Section title="Resume Analysis">
+                <List.Accordion title="Strengths">
+                  {resumeAnalysis.strengths?.map((item, i) => (
+                    <List.Item
+                      key={i}
+                      title={item.trait}
+                      description={item.justification}
+                    />
+                  ))}
+                </List.Accordion>
+                <List.Accordion title="Skill Match">
+                  {resumeAnalysis.skillMatch?.map((item, i) => (
+                    <List.Item
+                      key={i}
+                      title={item.name}
+                      description={item.justification}
+                    />
+                  ))}
+                </List.Accordion>
+                <List.Accordion title="Experience Match">
+                  {resumeAnalysis.experienceMatch?.map((item, i) => (
+                    <List.Item
+                      key={i}
+                      title={item.area}
+                      description={item.justification}
+                    />
+                  ))}
+                </List.Accordion>
+                <List.Accordion title="Concern Areas">
+                  {resumeAnalysis.concernArea?.map((item, i) => (
+                    <List.Item key={i} title={item} />
+                  ))}
+                </List.Accordion>
+              </List.Section>
+            </Card.Content>
+          </Card>
+          <Card
+            style={[
+              styles.card,
+              styles.flex1,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <List.Section title="Interview Analysis">
+                <List.Accordion title="Score Breakdown">
+                  {Object.entries(interviewPerformance.scoreBreakdown).map(
+                    ([key, value]) => (
+                      <List.Item
+                        key={key}
+                        title={`${key.replace(/([A-Z])/g, " $1").trim()} - ${
+                          value.score
+                        }/5`}
+                        description={value.reasoning}
+                        descriptionNumberOfLines={5}
+                      />
+                    )
+                  )}
+                </List.Accordion>
+                <List.Accordion title="Knockout Questions">
+                  {Object.entries(interviewPerformance.knockoutBreakdown).map(
+                    ([key, value]) => (
+                      <List.Item
+                        key={key}
+                        title={key.replace(/([A-Z])/g, " $1").trim()}
+                        description={value}
+                      />
+                    )
+                  )}
+                </List.Accordion>
+              </List.Section>
+            </Card.Content>
+          </Card>
+        </View>
       </ScrollView>
     </View>
   );
 }
 
+function LookupCard({ onSearch }: { onSearch: (id: string) => void }) {
+  const theme = useTheme();
+  const [id, setId] = React.useState("");
+  return (
+    <Card style={[styles.rightCard, { backgroundColor: theme.colors.surface }]}>
+      <Card.Content>
+        <Text style={styles.cardTitle}>Candidate Lookup</Text>
+        <TextInput
+          mode="outlined"
+          label="Enter Candidate ID"
+          value={id}
+          onChangeText={setId}
+          style={styles.lookupInput}
+        />
+        <Button mode="contained" onPress={() => onSearch(id)} disabled={!id}>
+          Search
+        </Button>
+      </Card.Content>
+    </Card>
+  );
+}
+
+function RecentCard({
+  candidates,
+  onSelect,
+}: {
+  candidates: CandidateUI[];
+  onSelect: (id: string) => void;
+}) {
+  const theme = useTheme();
+  return (
+    <>
+      <Text style={styles.sectionTitle}>Recently Completed</Text>
+      {candidates.map((candidate) => (
+        <Card
+          key={candidate.id}
+          style={[styles.rightCard, { backgroundColor: theme.colors.surface }]}
+        >
+          <TouchableOpacity onPress={() => onSelect(candidate.id)}>
+            <Card.Content style={styles.recentContent}>
+              <Avatar.Icon
+                icon="account-check"
+                size={48}
+                style={[
+                  styles.recentAvatar,
+                  { backgroundColor: theme.colors.primaryContainer },
+                ]}
+                color={theme.colors.primary}
+              />
+              <View style={styles.recentTextContainer}>
+                <Text style={styles.candidateName}>
+                  {candidate.resumeAnalysis.fullName}
+                </Text>
+                <Text style={{ color: theme.colors.onSurfaceVariant }}>
+                  {candidate.candidateDetails.roleAppliedFor}
+                </Text>
+              </View>
+            </Card.Content>
+          </TouchableOpacity>
+        </Card>
+      ))}
+    </>
+  );
+}
+
+function EmptyStateCard({
+  title,
+  icon,
+  message,
+  suggestion,
+}: {
+  title: string;
+  icon: string;
+  message: string;
+  suggestion: string;
+}) {
+  const theme = useTheme();
+
+  return (
+    <View>
+      <Text
+        style={{
+          fontSize: 16,
+          fontWeight: "600",
+          marginBottom: 12,
+          color: theme.colors.onBackground,
+        }}
+      >
+        {title}
+      </Text>
+
+      <View
+        style={{ alignItems: "center", paddingVertical: 100, borderRadius: 12 }}
+      >
+        <Avatar.Icon
+          icon={icon}
+          size={56}
+          style={{ backgroundColor: theme.colors.surface, marginBottom: 12 }}
+          color={theme.colors.onSurfaceVariant}
+        />
+        <Text
+          style={{
+            fontSize: 15,
+            fontWeight: "500",
+            color: theme.colors.onSurfaceVariant,
+            marginBottom: 4,
+          }}
+        >
+          {message}
+        </Text>
+        <Text
+          style={{
+            fontSize: 13,
+            color: theme.colors.onSurfaceDisabled,
+            textAlign: "center",
+          }}
+        >
+          {suggestion}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function LoadingScreen() {
+  const theme = useTheme();
+  return (
+    <View style={[styles.fullPage, styles.centered]}>
+      <ActivityIndicator size="large" color={theme.colors.primary} />
+      <Text style={{ marginTop: 16, color: theme.colors.onSurface }}>
+        Loading...
+      </Text>
+    </View>
+  );
+}
+
+const PercentageCircle = ({ percentage }: { percentage: string }) => {
+  const theme = useTheme();
+  const p = parseInt(percentage.replace("%", ""));
+  const size = 120;
+  const strokeWidth = 10;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const progress = p / 100;
+  const strokeDashoffset = circumference * (1 - progress);
+
+  return (
+    <View style={styles.percentageCircle}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle
+          stroke={theme.colors.background}
+          fill="transparent"
+          strokeWidth={strokeWidth}
+          r={radius}
+          cx={size / 2}
+          cy={size / 2}
+        />
+        <circle
+          stroke={theme.colors.primary}
+          fill="transparent"
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          r={radius}
+          cx={size / 2}
+          cy={size / 2}
+        />
+      </svg>
+      <Text style={styles.percentageText}>{percentage}</Text>
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  scrollContent: { padding: 20, alignItems: "center" },
-  card: { width: "100%", maxWidth: 800 },
-  profileSection: { alignItems: "center", paddingVertical: 24 },
-  avatar: { marginBottom: 16 },
-  fullName: { fontSize: 24, fontWeight: "bold" },
-  designation: { fontSize: 16, color: "gray", marginTop: 4 },
-  detailsSection: { paddingVertical: 16 },
-  infoRow: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
-  infoIcon: { marginRight: 16, backgroundColor: "transparent" },
-  infoLabel: { fontSize: 12, color: "gray" },
-  infoValue: { fontSize: 16 },
+  container: {
+    flex: 1,
+    flexDirection: "row",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  left: {
+    flex: 4,
+    borderRightWidth: 1,
+    borderRightColor: "#e0e0e0",
+    paddingRight: 24,
+  },
+  right: { flex: 1, paddingVertical: 24, paddingLeft: 24 },
+  fullPage: { flex: 1 },
+  centered: { justifyContent: "center", alignItems: "center" },
+  widgetRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 12,
+    paddingBottom: 16,
+  },
+  widgetCard: { flex: 1, paddingVertical: 16, paddingHorizontal: 12 },
+  widgetContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  widgetTextContainer: { flex: 1, marginLeft: 16, alignItems: "flex-end" },
+  widgetTitle: { fontSize: 16, fontWeight: "500" },
+  widgetValue: { fontSize: 24, fontWeight: "bold", marginTop: 4 },
+  sectionTitle: { fontSize: 18, fontWeight: "600", marginBottom: 8 },
+  ringChartGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 24,
+    marginTop: 16,
+  },
+  ringChartItem: { alignItems: "center", width: 120 },
+  chartLabel: { textAlign: "center", marginTop: 8, fontSize: 14 },
+  largeCard: { paddingHorizontal: 16 },
+  tableHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  tableHeaderText: { fontWeight: "bold" },
+  tableRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  tableCell: { flex: 1 },
+  reportContainer: { paddingHorizontal: 16 },
+  row: { flexDirection: "row", gap: 16, marginBottom: 16 },
+  card: { borderRadius: 12 },
+  flex1: { flex: 1 },
+  flex2: { flex: 2 },
+  reportTitle: { fontSize: 24, fontWeight: "bold" },
+  reportSubtitle: { fontSize: 16, color: "gray" },
+  cardTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 12 },
+  score: { fontSize: 28, fontWeight: "bold", color: "#6200ee" },
+  justification: { fontSize: 14, color: "gray", marginTop: 8 },
+  summaryText: { fontSize: 14, lineHeight: 20 },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginVertical: 4,
+  },
+  infoLabel: { fontWeight: "bold" },
+  infoValue: { color: "gray" },
+  recentContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+  },
+  recentTextContainer: { flex: 1, alignItems: "flex-end" },
+  recentAvatar: { marginRight: 12 },
+  rightCard: { marginBottom: 16 },
+  candidateName: { fontSize: 16, fontWeight: "bold", textAlign: "center" },
+  profileCard: { alignItems: "center", marginBottom: 24 },
+  profileImage: { width: 150, height: 150, marginBottom: 8 },
+  lookupInput: { marginBottom: 12 },
+  configureDesc: { marginTop: 4, fontSize: 14 },
+  percentageCircle: {
+    width: 120,
+    height: 120,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  percentageText: { position: "absolute", fontSize: 24, fontWeight: "bold" },
 });
