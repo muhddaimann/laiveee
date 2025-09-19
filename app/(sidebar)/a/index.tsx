@@ -224,7 +224,7 @@ function DashboardView({
             <Button
               mode="contained"
               style={{ alignSelf: "flex-end" }}
-              onPress={() => router.push("a/laiveRegister")}
+              onPress={() => router.push("a/laiveApplicant")}
               icon="account-plus"
               contentStyle={{ flexDirection: "row-reverse" }}
             >

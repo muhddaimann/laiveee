@@ -18,7 +18,6 @@ const navItems = [
   { icon: "account-search-outline", label: "Recruiter", route: "/a" },
   { icon: "form-select", label: "Candidate", route: "/b" },
   { icon: "account-search-outline", label: "LaiveRecruit", route: "/c" },
-  { icon: "form-select", label: "LaiveCandidate", route: "/d" },
 ];
 
 export default function Sidebar() {

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, StyleSheet, ScrollView, Clipboard } from "react-native";
 import {
   TextInput,
   Button,
@@ -8,12 +8,14 @@ import {
   Text,
   Avatar,
   Divider,
+  Chip,
 } from "react-native-paper";
 import { useRouter } from "expo-router";
 import Header from "../../../components/c/header";
 import { useNotification } from "../../../contexts/notificationContext";
 import {
   registerCandidate,
+  inviteCandidate,
   Candidate,
   RegisterCandidateInput,
 } from "../../../contexts/api/candidate";
@@ -61,7 +63,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
     onRegister(input);
   };
 
-  const isButtonDisabled = !fullName || !email || !role || isSubmitting; // shortName is optional server-side
+  const isButtonDisabled = !fullName || !email || !role || isSubmitting;
 
   return (
     <>
@@ -122,37 +124,123 @@ const SuccessView: React.FC<SuccessViewProps> = ({
   onDone,
 }) => {
   const theme = useTheme();
+  const notification = useNotification();
+  const [isInviting, setIsInviting] = useState(false);
+  const [localCandidate, setLocalCandidate] = useState(candidate);
+  const publicLink = `http://localhost:8081/d/${localCandidate.PublicToken}`;
+
+  const handleInvite = () => {
+    notification.showAlert({
+      title: "Confirm Invitation",
+      message: `This will send an invitation to ${localCandidate.FullName}. They will have 2 days to complete the interview. Do you want to proceed?`,
+      buttons: [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Confirm & Invite",
+          onPress: async () => {
+            setIsInviting(true);
+            try {
+              const res = await inviteCandidate(localCandidate.PublicToken, 2);
+              if (res.success) {
+                notification.showToast("Invitation sent successfully!", {
+                  type: "success",
+                });
+                setLocalCandidate((prev) => ({ ...prev, Status: "invited" }));
+              } else {
+                throw new Error(res.message || "Failed to send invitation.");
+              }
+            } catch (e: any) {
+              notification.showToast(e.message || "An error occurred.", {
+                type: "error",
+              });
+            }
+            setIsInviting(false);
+          },
+        },
+      ],
+    });
+  };
+
+  const isInvited = localCandidate.Status === "invited";
+
   return (
     <>
+      <Card.Title
+        title="Candidate Registered"
+        subtitle={`ID: ${localCandidate.ID}`}
+      />
       <Card.Content style={styles.successContainer}>
-        <Avatar.Icon
-          icon="check-decagram"
-          size={80}
-          style={{
-            backgroundColor: theme.colors.primaryContainer,
-            marginBottom: 16,
-          }}
-          color={theme.colors.primary}
-        />
-        <Text style={styles.successTitle}>Candidate Registered</Text>
-        <Text style={styles.successSubtitle}>Saved to database</Text>
-        <View style={{ width: "100%", gap: 8, marginTop: 16 }}>
-          <Text>ID: {candidate.ID}</Text>
-          <Text>Full Name: {candidate.FullName}</Text>
-          <Text>By Name: {candidate.ByName ?? "-"}</Text>
-          <Text>Email: {candidate.Email}</Text>
-          <Text>Role: {candidate.Role}</Text>
-          <Text>Status: {candidate.Status}</Text>
-          <Text>Public Token: {candidate.PublicToken}</Text>
-          <Text>Created: {candidate.CreatedDateTime}</Text>
+        <View style={styles.profileHeader}>
+          <Avatar.Text
+            size={64}
+            label={
+              localCandidate.ByName?.charAt(0) ||
+              localCandidate.FullName.charAt(0)
+            }
+          />
+          <View style={{ marginLeft: 16, flex: 1 }}>
+            <Text style={styles.profileName}>{localCandidate.FullName}</Text>
+            <Text style={styles.profileRole}>{localCandidate.Role}</Text>
+          </View>
+          <Chip
+            icon={isInvited ? "check" : "clock-outline"}
+            selected={isInvited}
+          >
+            {localCandidate.Status}
+          </Chip>
         </View>
+
+        <Divider style={{ width: "100%", marginVertical: 16 }} />
+
+        {isInvited ? (
+          <View style={styles.linkContainer}>
+            <LabeledInput
+              label="Public Interview Link"
+              value={publicLink}
+              editable={false}
+              right={
+                <TextInput.Icon
+                  icon="content-copy"
+                  onPress={() => {
+                    Clipboard.setString(publicLink);
+                    notification.showToast("Link copied!", { type: "success" });
+                  }}
+                />
+              }
+            />
+          </View>
+        ) : (
+          <View style={{ alignItems: "center" }}>
+            <Text style={styles.actionTitle}>Next Step: Send Invitation</Text>
+            <Text style={styles.actionSubtitle}>
+              The candidate needs to be invited to receive their unique
+              interview link via email.
+            </Text>
+            <Button
+              mode="contained"
+              icon="email-fast-outline"
+              style={{ marginTop: 20 }}
+              onPress={handleInvite}
+              loading={isInviting}
+              disabled={isInviting}
+              contentStyle={{ paddingVertical: 8 }}
+              labelStyle={{ fontSize: 16 }}
+            >
+              Invite Candidate
+            </Button>
+          </View>
+        )}
       </Card.Content>
-      <Divider />
       <Card.Actions style={styles.actions}>
-        <Button onPress={onReset} icon="plus">
+        <Button onPress={onReset} icon="plus" disabled={isInviting}>
           Register Another
         </Button>
-        <Button mode="contained" onPress={onDone} icon="check-all">
+        <Button
+          mode="contained-tonal"
+          onPress={onDone}
+          icon="check-all"
+          disabled={isInviting}
+        >
           Done
         </Button>
       </Card.Actions>
@@ -185,7 +273,7 @@ export default function LaiveRegister() {
 
   return (
     <View style={[styles.page, { backgroundColor: theme.colors.background }]}>
-      <Header page="Register Candidate" />
+      <Header page="Register Candidate" showBack />
       <ScrollView contentContainerStyle={styles.container}>
         <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           {registeredCandidate ? (
@@ -215,7 +303,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 24,
   },
-  card: { width: "100%", maxWidth: 600 },
+  card: { width: "100%", maxWidth: 700 },
   inputContainer: { marginBottom: 16 },
   inputLabel: {
     fontSize: 14,
@@ -224,7 +312,34 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   actions: { padding: 16, justifyContent: "flex-end" },
-  successContainer: { alignItems: "flex-start", paddingVertical: 24 },
-  successTitle: { fontSize: 22, fontWeight: "bold", marginBottom: 4 },
-  successSubtitle: { fontSize: 14, color: "gray" },
+  successContainer: { alignItems: "center", padding: 16 },
+  profileHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  profileRole: {
+    fontSize: 16,
+    color: "gray",
+  },
+  linkContainer: {
+    width: "100%",
+    paddingHorizontal: 8,
+    marginTop: 16,
+  },
+  actionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  actionSubtitle: {
+    fontSize: 14,
+    color: "gray",
+    textAlign: "center",
+    marginTop: 4,
+  },
 });
