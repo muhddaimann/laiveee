@@ -357,7 +357,7 @@ const CandidateActionsCard = ({
           disabled={candidate.Status !== "registered" || loading}
           onPress={() =>
             handleAction(
-              () => inviteCandidate(candidate.PublicToken, 2),
+              () => inviteCandidate(candidate.PublicToken),
               "Invitation sent!"
             )
           }

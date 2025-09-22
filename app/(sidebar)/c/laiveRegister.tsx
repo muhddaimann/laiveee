@@ -140,7 +140,7 @@ const SuccessView: React.FC<SuccessViewProps> = ({
           onPress: async () => {
             setIsInviting(true);
             try {
-              const res = await inviteCandidate(localCandidate.PublicToken, 2);
+              const res = await inviteCandidate(localCandidate.PublicToken);
               if (res.success) {
                 notification.showToast("Invitation sent successfully!", {
                   type: "success",
