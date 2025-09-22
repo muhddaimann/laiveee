@@ -323,7 +323,7 @@ function DashboardView({
             <Button
               mode="contained"
               style={{ alignSelf: "flex-end" }}
-              onPress={() => router.push("a/laiveConfigure")}
+              onPress={() => router.push("c/laiveConfigure")}
               icon="chevron-right"
               contentStyle={{ flexDirection: "row-reverse" }}
             >
@@ -362,7 +362,7 @@ function SectionHeader({ title }: { title: string }) {
       </Text>
       <Button
         mode="text"
-        onPress={() => router.push("a/laiveApplicant")}
+        onPress={() => router.push("c/laiveApplicant")}
         icon="chevron-right"
         contentStyle={{ flexDirection: "row-reverse", alignItems: "center" }}
         labelStyle={{ fontSize: 14, color: theme.colors.primary }}
