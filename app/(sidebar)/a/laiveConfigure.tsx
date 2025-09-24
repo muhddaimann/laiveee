@@ -12,7 +12,7 @@ import Header from "../../../components/layout/header";
 import {
   createCandidateAnalyzerConfig,
   createInterviewConfig,
-} from "../../../utils/hConfig";
+} from "../../../utils/bConfig";
 import { CandidateData } from "../../../contexts/bContext";
 
 const initialCandidateData: CandidateData = {

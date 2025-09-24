@@ -47,12 +47,8 @@ export type RegisterCandidateInput = {
 
 export type CandidateRecord = {
     id: number;
-    short_name: string;
-    position_title: string;
-    email?: string | null;
-    phone?: string | null;
+    candidate_id: number;
     language_pref: string;
-    status: string;
     ra_full_name?: string | null;
     ra_candidate_email?: string | null;
     ra_candidate_phone?: string | null;

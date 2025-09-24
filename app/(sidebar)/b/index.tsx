@@ -24,7 +24,7 @@ import { HProvider, useHContext } from "../../../contexts/bContext";
 import {
   createCandidateAnalyzerConfig,
   createInterviewConfig,
-} from "../../../utils/hConfig";
+} from "../../../utils/bConfig";
 import {
   OPENAI_API_KEY,
   COMPLETION_URL,
