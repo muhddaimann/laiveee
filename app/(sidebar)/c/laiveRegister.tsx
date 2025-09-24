@@ -17,11 +17,11 @@ import {
   registerCandidate,
   inviteCandidate,
   Candidate,
-  RegisterCandidateInput,
+  RegisterCandidatePayload,
 } from "../../../contexts/api/candidate";
 
 type RegisterFormProps = {
-  onRegister: (input: RegisterCandidateInput) => void | Promise<void>;
+  onRegister: (input: RegisterCandidatePayload) => void | Promise<void>;
   onCancel: () => void;
   isSubmitting: boolean;
 };
@@ -54,9 +54,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
   const [role, setRole] = useState("");
 
   const handlePress = () => {
-    const input: RegisterCandidateInput = {
+    const input: RegisterCandidatePayload = {
       full_name: fullName,
-      by_name: shortName || null,
+      by_name: shortName || undefined,
       email,
       role,
     };
@@ -141,18 +141,25 @@ const SuccessView: React.FC<SuccessViewProps> = ({
             setIsInviting(true);
             try {
               const res = await inviteCandidate(localCandidate.PublicToken);
-              if (res.success) {
+              if (res.data.success) {
                 notification.showToast("Invitation sent successfully!", {
                   type: "success",
                 });
                 setLocalCandidate((prev) => ({ ...prev, Status: "invited" }));
               } else {
-                throw new Error(res.message || "Failed to send invitation.");
+                throw new Error(
+                  res.data.message || "Failed to send invitation."
+                );
               }
             } catch (e: any) {
-              notification.showToast(e.message || "An error occurred.", {
-                type: "error",
-              });
+              notification.showToast(
+                e.response?.data?.error ||
+                  e.message ||
+                  "An error occurred.",
+                {
+                  type: "error",
+                }
+              );
             }
             setIsInviting(false);
           },
@@ -256,16 +263,19 @@ export default function LaiveRegister() {
   const [registeredCandidate, setRegisteredCandidate] =
     useState<Candidate | null>(null);
 
-  const handleRegister = async (input: RegisterCandidateInput) => {
+  const handleRegister = async (input: RegisterCandidatePayload) => {
     setIsSubmitting(true);
     try {
-      const newCandidate = await registerCandidate(input);
-      setRegisteredCandidate(newCandidate);
+      const res = await registerCandidate(input);
+      setRegisteredCandidate(res.data);
       notification.showToast("Candidate registered.", { type: "success" });
     } catch (e: any) {
-      notification.showToast(e?.message || "Failed to register candidate.", {
-        type: "error",
-      });
+      notification.showToast(
+        e.response?.data?.error || "Failed to register candidate.",
+        {
+          type: "error",
+        }
+      );
     } finally {
       setIsSubmitting(false);
     }

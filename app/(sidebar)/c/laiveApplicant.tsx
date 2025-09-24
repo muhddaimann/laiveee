@@ -15,10 +15,9 @@ import {
 import { useRouter } from "expo-router";
 import Header from "../../../components/c/header";
 import {
-  listCandidates,
+  getCandidates,
   inviteCandidate,
-  decideCandidate,
-  withdrawCandidate,
+  updateCandidateStatus,
   Candidate,
   CandidateStatus,
 } from "../../../contexts/api/candidate";
@@ -50,12 +49,16 @@ export default function LaiveApplicant() {
     null
   );
 
-  const fetchCandidates = () => {
+  const fetchCandidates = async () => {
     setLoading(true);
-    listCandidates()
-      .then(setCandidates)
-      .catch((e) => setError(e.message || "Failed to load candidates."))
-      .finally(() => setLoading(false));
+    try {
+      const res = await getCandidates();
+      setCandidates(res.data);
+    } catch (e: any) {
+      setError(e.response?.data?.error || "Failed to load candidates.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -334,14 +337,16 @@ const CandidateActionsCard = ({
     setDetailLoading(true);
     try {
       const res = await action();
-      if (res.success) {
+      if (res.data.success) {
         notification.showToast(successMessage, { type: "success" });
         onActionSuccess(); // Refetch the main list
       } else {
-        throw new Error(res.message || "Action failed");
+        throw new Error(res.data.error || "Action failed");
       }
     } catch (e: any) {
-      notification.showToast(e.message, { type: "error" });
+      notification.showToast(e.response?.data?.error || e.message, {
+        type: "error",
+      });
     }
     setLoading(false);
     setDetailLoading(false);
@@ -370,7 +375,8 @@ const CandidateActionsCard = ({
           disabled={candidate.Status !== "completed" || loading}
           onPress={() =>
             handleAction(
-              () => decideCandidate(candidate.PublicToken, "passed"),
+              () =>
+                updateCandidateStatus(candidate.PublicToken, { status: "passed" }),
               "Candidate marked as passed"
             )
           }
@@ -383,7 +389,10 @@ const CandidateActionsCard = ({
           disabled={candidate.Status !== "completed" || loading}
           onPress={() =>
             handleAction(
-              () => decideCandidate(candidate.PublicToken, "rejected"),
+              () =>
+                updateCandidateStatus(candidate.PublicToken, {
+                  status: "rejected",
+                }),
               "Candidate marked as rejected"
             )
           }
@@ -401,7 +410,10 @@ const CandidateActionsCard = ({
           }
           onPress={() =>
             handleAction(
-              () => withdrawCandidate(candidate.PublicToken),
+              () =>
+                updateCandidateStatus(candidate.PublicToken, {
+                  status: "withdrawn",
+                }),
               "Application withdrawn"
             )
           }

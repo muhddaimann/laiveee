@@ -11,9 +11,9 @@ import {
 } from "react-native-paper";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  getCandidateByPublicToken,
-  completeCandidate,
-  CandidatePublicView,
+  getCandidateByToken,
+  updateCandidateStatus,
+  PublicCandidate,
 } from "../../../contexts/api/candidate";
 import { useNotification } from "../../../contexts/notificationContext";
 import { useSidebar } from "../../../contexts/sidebarContext";
@@ -29,7 +29,7 @@ export default function CandidateInterviewPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [candidate, setCandidate] = useState<CandidatePublicView | null>(null);
+  const [candidate, setCandidate] = useState<PublicCandidate | null>(null);
   const [phase, setPhase] = useState<PagePhase>("welcome");
 
   useEffect(() => {
@@ -51,10 +51,12 @@ export default function CandidateInterviewPage() {
     }
     const fetchCandidate = async () => {
       try {
-        const fetchedCandidate = await getCandidateByPublicToken(token);
-        setCandidate(fetchedCandidate);
+        const res = await getCandidateByToken(token);
+        setCandidate(res.data);
       } catch (e: any) {
-        setError(e.message || "Could not find interview details.");
+        setError(
+          e.response?.data?.error || "Could not find interview details."
+        );
       } finally {
         setLoading(false);
       }
@@ -70,8 +72,17 @@ export default function CandidateInterviewPage() {
     }
   };
 
-  const handleEndInterview = () => {
-    setPhase("ending");
+  const handleEndInterview = async () => {
+    if (!token) return;
+    try {
+      await updateCandidateStatus(token, { status: "completed" });
+      setPhase("ending");
+    } catch (e: any) {
+      notification.showToast(
+        e.response?.data?.error || "Failed to update status.",
+        { type: "error" }
+      );
+    }
   };
 
   const handleRestart = () => {
@@ -117,7 +128,13 @@ export default function CandidateInterviewPage() {
 
   switch (phase) {
     case "welcome":
-      return <WelcomeScreen onProceed={handleProceed} candidate={candidate} />;
+      return (
+        <WelcomeScreen
+          onProceed={handleProceed}
+          candidate={candidate}
+          token={token!}
+        />
+      );
     case "preparation":
       return (
         <PreparationScreen
@@ -131,18 +148,59 @@ export default function CandidateInterviewPage() {
     case "ending":
       return <EndingScreen onRestart={handleRestart} />;
     default:
-      return <WelcomeScreen onProceed={handleProceed} candidate={candidate} />;
+      return (
+        <WelcomeScreen
+          onProceed={handleProceed}
+          candidate={candidate}
+          token={token!}
+        />
+      );
   }
 }
 
 function WelcomeScreen({
   onProceed,
   candidate,
+  token,
 }: {
   onProceed: () => void;
-  candidate: CandidatePublicView;
+  candidate: PublicCandidate;
+  token: string;
 }) {
   const theme = useTheme();
+  const notification = useNotification();
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+
+  const handleWithdraw = () => {
+    notification.showAlert({
+      title: "Confirm Withdrawal",
+      message:
+        "Are you sure you want to withdraw your application? This action cannot be undone.",
+      buttons: [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Confirm & Withdraw",
+          style: "destructive",
+          onPress: async () => {
+            setIsWithdrawing(true);
+            try {
+              await updateCandidateStatus(token, { status: "withdrawn" });
+              notification.showToast("Application withdrawn.", {
+                type: "info",
+              });
+            } catch (e: any) {
+              notification.showToast(
+                e.response?.data?.error || "Failed to withdraw application.",
+                { type: "error" }
+              );
+            }
+            setIsWithdrawing(false);
+          },
+        },
+      ],
+    });
+  };
+
   return (
     <View
       style={[
@@ -203,8 +261,23 @@ function WelcomeScreen({
               </Button>
             </Card.Content>
           </Card>
-          <Button mode="text" onPress={onProceed} style={{ marginTop: 12 }}>
+          <Button
+            mode="text"
+            onPress={onProceed}
+            style={{ marginTop: 12 }}
+            disabled={isWithdrawing}
+          >
             Proceed without resume
+          </Button>
+          <Button
+            mode="text"
+            onPress={handleWithdraw}
+            style={{ marginTop: 12 }}
+            textColor={theme.colors.error}
+            disabled={isWithdrawing}
+            loading={isWithdrawing}
+          >
+            Withdraw Application
           </Button>
         </ScrollView>
       </View>
@@ -217,7 +290,7 @@ function PreparationScreen({
   onProceed,
   onBack,
 }: {
-  candidate: CandidatePublicView;
+  candidate: PublicCandidate;
   onProceed: () => void;
   onBack: () => void;
 }) {
@@ -290,7 +363,15 @@ function PreparationScreen({
         </View>
         <View style={styles.preparationColumn}>
           <View style={{ alignItems: "center", paddingHorizontal: 16 }}>
-            <Avatar.Icon icon="camera-iris" size={80} style={{marginBottom: 24, backgroundColor: theme.colors.primaryContainer}} color={theme.colors.primary} />
+            <Avatar.Icon
+              icon="camera-iris"
+              size={80}
+              style={{
+                marginBottom: 24,
+                backgroundColor: theme.colors.primaryContainer,
+              }}
+              color={theme.colors.primary}
+            />
             <Text style={[styles.welcomeTitle, { fontSize: 24 }]}>
               Hi, {candidate.FullName}!
             </Text>
@@ -387,7 +468,15 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
     >
       <Card style={styles.card}>
         <Card.Content style={styles.cardContent}>
-          <Avatar.Icon icon="party-popper" size={80} style={{marginBottom: 24, backgroundColor: theme.colors.primaryContainer}} color={theme.colors.primary} />
+          <Avatar.Icon
+            icon="party-popper"
+            size={80}
+            style={{
+              marginBottom: 24,
+              backgroundColor: theme.colors.primaryContainer,
+            }}
+            color={theme.colors.primary}
+          />
           <Text style={styles.title}>You're All Set!</Text>
           <Text style={styles.subtitle}>
             Your interview has been completed. We appreciate your time and

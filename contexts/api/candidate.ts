@@ -1,17 +1,15 @@
 import { api } from "./api";
 
-// --- Main Candidate Types ---
-
 export type CandidateStatus =
   | "registered"
   | "invited"
   | "completed"
-  | "expired"
+  | "withdrawn"
   | "passed"
   | "rejected"
-  | "withdrawn";
+  | "expired";
 
-export type Candidate = {
+export interface Candidate {
   ID: number;
   PublicToken: string;
   FullName: string;
@@ -19,149 +17,115 @@ export type Candidate = {
   Email: string;
   Role: string;
   Status: CandidateStatus;
-  Stage: string | null;
-  ScheduledAt: string | null;
-  InviteSentAt?: string | null;
-  ExpiresAt?: string | null;
-  FirstOpenedAt?: string | null;
-  CompletedAt?: string | null;
-  DecisionAt?: string | null;
-  WithdrawnAt?: string | null;
-  LastActivityAt?: string | null;
-  CreatedByStaffID: number | null;
+  Stage: number | null;
   CreatedDateTime: string;
-  UpdatedDateTime: string;
-  [k: string]: any;
-};
+  FirstOpenedAt?: string;
+  LastActivityAt?: string;
+  InviteSentAt?: string;
+  ExpiresAt?: string;
+  CompletedAt?: string;
+  WithdrawnAt?: string;
+  DecisionAt?: string;
+  CreatedByStaffID?: number;
+}
 
-export type CandidatePublicView = Pick<Candidate, "FullName" | "ByName" | "Role">;
+export interface PublicCandidate {
+  FullName: string;
+  ByName: string;
+  Role: string;
+}
 
-export type RegisterCandidateInput = {
+export interface CandidateRecord {
+  id: number;
+  candidate_id: number;
+  language_pref?: string;
+  ra_full_name?: string;
+  ra_candidate_email?: string;
+  ra_candidate_phone?: string;
+  ra_highest_education?: string;
+  ra_current_role?: string;
+  ra_years_experience?: number;
+  ra_professional_summary?: string;
+  ra_related_links?: string;
+  ra_certs_relate?: string;
+  ra_skill_match?: string;
+  ra_experience_match?: string;
+  ra_concern_areas?: string;
+  ra_strengths?: string;
+  ra_rolefit_score?: number;
+  ra_rolefit_reason?: string;
+  int_started_at?: string;
+  int_ended_at?: string;
+  int_average_score?: number;
+  int_spoken_score?: number;
+  int_spoken_reason?: string;
+  int_behavior_score?: number;
+  int_behavior_reason?: string;
+  int_communication_score?: number;
+  int_communication_reason?: string;
+  int_knockouts?: string;
+  int_summary?: string;
+  int_full_transcript?: string;
+  ra_input_tokens?: number;
+  ra_output_tokens?: number;
+  int_input_tokens?: number;
+  int_output_tokens?: number;
+  int_audio_sec?: number;
+  total_cost_usd?: number;
+  ra_json_payload?: string;
+  int_scores_json?: string;
+  created_at: string;
+}
+
+export interface RegisterCandidatePayload {
   full_name: string;
   email: string;
   role: string;
-  by_name?: string | null;
+  by_name?: string;
+}
+
+export interface UpdateStatusPayload {
+  status: CandidateStatus;
+}
+
+export type CreateRecordPayload = Partial<
+  Omit<CandidateRecord, "id" | "candidate_id" | "created_at">
+>;
+
+export const getCandidates = () => {
+  return api.get<Candidate[]>("/candidate.php");
 };
 
-// --- Candidate Record Types ---
+export const registerCandidate = (data: RegisterCandidatePayload) => {
+  return api.post<Candidate>("/candidate.php", data);
+};
 
-export type CandidateRecord = {
-    id: number;
-    candidate_id: number;
-    language_pref: string;
-    ra_full_name?: string | null;
-    ra_candidate_email?: string | null;
-    ra_candidate_phone?: string | null;
-    ra_highest_education?: string | null;
-    ra_current_role?: string | null;
-    ra_years_experience?: number | null;
-    ra_professional_summary?: string | null;
-    ra_related_links?: any | null;
-    ra_certs_relate?: any | null;
-    ra_skill_match?: any | null;
-    ra_experience_match?: any | null;
-    ra_concern_areas?: any | null;
-    ra_strengths?: any | null;
-    ra_rolefit_score?: number | null;
-    ra_rolefit_reason?: string | null;
-    int_started_at?: string | null;
-    int_ended_at?: string | null;
-    int_average_score?: number | null;
-    int_spoken_score?: number | null;
-    int_spoken_reason?: string | null;
-    int_behavior_score?: number | null;
-    int_behavior_reason?: string |null;
-    int_communication_score?: number | null;
-    int_communication_reason?: string | null;
-    int_knockouts?: any | null;
-    int_summary?: string | null;
-    int_full_transcript?: string | null;
-    ra_input_tokens?: number | null;
-    ra_output_tokens?: number | null;
-    int_input_tokens?: number | null;
-    int_output_tokens?: number | null;
-    int_audio_sec?: number | null;
-    total_cost_usd?: number | null;
-    ra_json_payload?: any | null;
-    int_scores_json?: any | null;
-}
+export const getCandidateByToken = (token: string) => {
+  return api.get<PublicCandidate>(`/candidate.php/${token}`);
+};
 
-export type CandidateRecordInput = Omit<CandidateRecord, 'id'>;
+export const expireCandidates = () => {
+  return api.post("/candidate.php/expire");
+};
 
-// --- API Response Types ---
+export const inviteCandidate = (token: string) => {
+  return api.post(`/candidate.php/${token}/invite`);
+};
 
-type ServerError = { error: string };
-type ServerResponse<T> = T | ServerError;
-type ActionResponse = { success: boolean; message?: string; status?: CandidateStatus };
-type ExpireResponse = { success: boolean; expired_count: number };
+export const updateCandidateStatus = (
+  token: string,
+  data: UpdateStatusPayload
+) => {
+  return api.put(`/candidate.php/${token}/status`, data);
+};
 
-// === CANDIDATES (Plural) Endpoint === //
+export const getCandidateRecords = (token: string) => {
+  return api.get<CandidateRecord[]>(`/candidate.php/${token}/record`);
+};
 
-export async function listCandidates(): Promise<Candidate[]> {
-  const res = await api.get<Candidate[]>("/candidates.php");
-  return res.data;
-}
-
-export async function registerCandidate(input: RegisterCandidateInput): Promise<Candidate> {
-  const res = await api.post<ServerResponse<Candidate>>("/candidates.php", input);
-  const data = res.data;
-  if ((data as ServerError)?.error) throw new Error((data as ServerError).error);
-  return data as Candidate;
-}
-
-export async function expireCandidates(): Promise<ExpireResponse> {
-  const res = await api.post<ExpireResponse>("/candidates.php/expire");
-  return res.data;
-}
-
-// === CANDIDATE (Singular) Endpoint === //
-
-export async function getCandidateByPublicToken(token: string): Promise<CandidatePublicView> {
-  const res = await api.get<ServerResponse<CandidatePublicView>>(`/candidate.php/${encodeURIComponent(token)}`);
-  const data = res.data;
-  if ((data as ServerError)?.error) throw new Error((data as ServerError).error);
-  return data as CandidatePublicView;
-}
-
-async function updateCandidateStatus(token: string, status: CandidateStatus, data: object = {}): Promise<ActionResponse> {
-    const payload = { ...data, status };
-    const res = await api.put<ActionResponse>(`/candidate.php/${encodeURIComponent(token)}`, payload);
-    return res.data;
-}
-
-export async function inviteCandidate(token: string): Promise<ActionResponse> {
-    return updateCandidateStatus(token, 'invited');
-}
-
-export async function completeCandidate(token: string): Promise<ActionResponse> {
-    return updateCandidateStatus(token, 'completed');
-}
-
-export async function withdrawCandidate(token: string): Promise<ActionResponse> {
-    return updateCandidateStatus(token, 'withdrawn');
-}
-
-export async function decideCandidate(token: string, decision: "passed" | "rejected"): Promise<ActionResponse> {
-    return updateCandidateStatus(token, decision);
-}
-
-// === RECORDS Endpoint === //
-
-export async function createCandidateRecord(input: CandidateRecordInput): Promise<CandidateRecord> {
-    const res = await api.post<ServerResponse<CandidateRecord>>("/records.php", input);
-    const data = res.data;
-    if ((data as ServerError)?.error) throw new Error((data as ServerError).error);
-    return data as CandidateRecord;
-}
-
-export async function getCandidateRecord(id: number): Promise<CandidateRecord> {
-    const res = await api.get<ServerResponse<CandidateRecord>>(`/records.php/${id}`);
-    const data = res.data;
-    if ((data as ServerError)?.error) throw new Error((data as ServerError).error);
-    return data as CandidateRecord;
-}
-
-export async function getAllCandidateRecords(): Promise<CandidateRecord[]> {
-    const res = await api.get<CandidateRecord[]>("/records.php");
-    return res.data;
-}
+export const createCandidateRecord = (
+  token: string,
+  data: CreateRecordPayload
+) => {
+  return api.post<CandidateRecord>(`/candidate.php/${token}/record`, data);
+};
