@@ -46,12 +46,12 @@ export interface CandidateRecord {
   ra_current_role?: string;
   ra_years_experience?: number;
   ra_professional_summary?: string;
-  ra_related_links?: string;
-  ra_certs_relate?: string;
-  ra_skill_match?: string;
-  ra_experience_match?: string;
-  ra_concern_areas?: string;
-  ra_strengths?: string;
+  ra_related_links?: any;
+  ra_certs_relate?: any;
+  ra_skill_match?: any;
+  ra_experience_match?: any;
+  ra_concern_areas?: any;
+  ra_strengths?: any;
   ra_rolefit_score?: number;
   ra_rolefit_reason?: string;
   int_started_at?: string;
@@ -63,7 +63,7 @@ export interface CandidateRecord {
   int_behavior_reason?: string;
   int_communication_score?: number;
   int_communication_reason?: string;
-  int_knockouts?: string;
+  int_knockouts?: any;
   int_summary?: string;
   int_full_transcript?: string;
   ra_input_tokens?: number;
@@ -72,8 +72,8 @@ export interface CandidateRecord {
   int_output_tokens?: number;
   int_audio_sec?: number;
   total_cost_usd?: number;
-  ra_json_payload?: string;
-  int_scores_json?: string;
+  ra_json_payload?: any;
+  int_scores_json?: any;
   created_at: string;
 }
 
