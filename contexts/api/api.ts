@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getToken, removeToken } from "../tokenStorage";
+import { getToken, removeToken } from "../cTokenStorage";
 import { LOCAL_URL } from "../../constants/env";
 
 export interface ApiError extends Error {

@@ -27,7 +27,13 @@ import {
   createCandidateAnalyzerConfig,
   createInterviewConfig,
 } from "../../../utils/dConfig";
-import { getCandidateByToken } from "../../../contexts/api/candidate";
+import {
+  getCandidateByToken,
+  createCandidateRecord,
+  updateCandidateStatus,
+  CreateRecordPayload,
+} from "../../../contexts/api/candidate";
+import { useNotification } from "../../../contexts/notificationContext";
 import { useSidebar } from "../../../contexts/sidebarContext";
 import {
   OPENAI_API_KEY,
@@ -209,7 +215,7 @@ function InterviewFlow() {
         />
       );
     case "ending":
-      return <EndingScreen onRestart={handleRestart} />;
+      return <EndingScreen token={token!} />;
     default:
       return <WelcomeScreen onStart={handleStartAnalysis} />;
   }
@@ -576,13 +582,13 @@ function InterviewScreen({
     await client.updateSession({
       turn_detection: {
         type: "server_vad",
-        silence_duration_ms: 3000,
+        silence_duration_ms: 300,
       },
     });
     client.sendUserMessageContent([
       {
         type: `input_text`,
-        text: `Hello! My name is ${publicCandidate?.FullName}, and I am ready for my interview for the ${publicCandidate?.Role} role, speaking in ${languagePref}.`,
+        text: `Hello! My name is ${publicCandidate.FullName}, and I am ready for my interview for the ${publicCandidate.Role} role, speaking in ${languagePref}.`,
       },
     ]);
   }, [publicCandidate, languagePref]);
@@ -604,7 +610,7 @@ function InterviewScreen({
     clientRef.current.sendUserMessageContent([
       {
         type: "input_text",
-        text: "...",
+        text: "---END_SESSION_SIGNAL---",
       },
     ]);
   };
@@ -626,12 +632,9 @@ function InterviewScreen({
       };
       setInterviewUsage(usage);
 
-      const client = clientRef.current;
-      client.disconnect();
-      const wavRecorder = wavRecorderRef.current;
-      wavRecorder.end();
-      const wavStreamPlayer = wavStreamPlayerRef.current;
-      wavStreamPlayer.interrupt();
+      clientRef.current.disconnect();
+      wavRecorderRef.current.end();
+      wavStreamPlayerRef.current.interrupt();
       onEndRequest();
     }
   }, [scores, onEndRequest, items, setInterviewUsage]);
@@ -688,7 +691,7 @@ function InterviewScreen({
       languagePref,
       candidateData
     );
-    const transcriptionLanguage = languageCodeMapping[languagePref!] || "ms";
+    const transcriptionLanguage = languageCodeMapping[languagePref] || "ms";
 
     client.updateSession({
       instructions: config.instructions,
@@ -877,8 +880,9 @@ function MessageBubble({
   );
 }
 
-function EndingScreen({ onRestart }: { onRestart: () => void }) {
+function EndingScreen({ token }: { token: string }) {
   const theme = useTheme();
+  const notification = useNotification();
   const {
     publicCandidate,
     languagePref,
@@ -889,22 +893,8 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
     analysisUsage,
   } = useDContext();
   const [submissionState, setSubmissionState] = useState<
-    "idle" | "submitting" | "success"
+    "idle" | "submitting" | "success" | "error"
   >("idle");
-
-  const analysisCost = analysisUsage
-    ? calculateGptCost(
-        analysisUsage.inputTokens || 0,
-        analysisUsage.outputTokens || 0
-      )
-    : null;
-  const interviewCostResult = interviewUsage
-    ? calculateInterviewCost(interviewUsage)
-    : null;
-
-  const totalCostUSD =
-    (analysisCost?.totalCost || 0) + (interviewCostResult?.totalCostUSD || 0);
-  const totalCostMYR = totalCostUSD * 4.7;
 
   const handleSubmit = async () => {
     if (!publicCandidate || !candidateData || !scores) {
@@ -914,28 +904,64 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
 
     setSubmissionState("submitting");
 
-    try {
-      // helpers
-      const asInt = (v: any) =>
-        v == null || Number.isNaN(Number(v)) ? null : Math.round(Number(v));
+    // helpers
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const formatDateTime = (d: Date) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
+        d.getHours()
+      )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 
-      const toStringArray = (arr: any) => {
-        if (!Array.isArray(arr)) return [];
-        return arr.map((c) => {
-          if (typeof c === "string") return c;
-          // common key fallbacks
-          if (c?.name) return String(c.name);
-          if (c?.title) return String(c.title);
-          if (c?.label) return String(c.label);
-          // final fallback (preserve info without crashing)
-          try {
-            return JSON.stringify(c);
-          } catch {
-            return String(c);
-          }
-        });
+    const asInt = (v: any) =>
+      v == null || Number.isNaN(Number(v)) ? undefined : Math.round(Number(v));
+    const asNum = (v: any) =>
+      v == null || Number.isNaN(Number(v)) ? undefined : Number(v);
+
+    const toStringArray = (arr: any) => {
+      if (!Array.isArray(arr)) return [];
+      return arr.map((c) => {
+        if (typeof c === "string") return c;
+        const cert = c?.certificate ?? c?.name ?? c?.title ?? c?.label ?? "";
+        const issuer = c?.body ?? c?.issuer ?? c?.org ?? "";
+        const year =
+          c?.year ?? (typeof c?.date === "string" ? c.date.split("-")[0] : "");
+        return [cert, issuer && `- ${issuer}`, year && `(${year})`]
+          .filter(Boolean)
+          .join(" ");
+      });
+    };
+
+    const buildKnockoutsArray = (kb?: any) => {
+      if (!kb) return [];
+      const isYes = (v: any) => {
+        if (typeof v === "boolean") return v;
+        if (typeof v === "string") {
+          const s = v.trim().toLowerCase();
+          return [
+            "yes",
+            "y",
+            "true",
+            "available",
+            "able",
+            "can",
+            "pass",
+            "passed",
+          ].includes(s);
+        }
+        return false;
       };
+      return [
+        {
+          question: "Earliest availability",
+          pass: isYes(kb.earliestAvailability),
+        },
+        { question: "Expected salary", pass: isYes(kb.expectedSalary) },
+        { question: "Rotational shift", pass: isYes(kb.rotationalShift) },
+        { question: "Able to commute", pass: isYes(kb.ableCommute) },
+        { question: "Work flexibility", pass: isYes(kb.workFlex) },
+      ];
+    };
 
+    try {
       const transcriptText = conversation
         .map((item) => {
           const speaker =
@@ -948,56 +974,40 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
         })
         .join("\n");
 
-      const buildKnockoutsArray = (kb?: any) => {
-        if (!kb) return [];
-        const isYes = (v: any) => {
-          if (typeof v === "boolean") return v;
-          if (typeof v === "string") {
-            const s = v.trim().toLowerCase();
-            return [
-              "yes",
-              "y",
-              "true",
-              "available",
-              "able",
-              "can",
-              "pass",
-              "passed",
-            ].includes(s);
-          }
-          return false;
-        };
-        return [
-          {
-            question: "Earliest availability",
-            pass: isYes(kb.earliestAvailability),
-          },
-          { question: "Expected salary", pass: isYes(kb.expectedSalary) },
-          { question: "Rotational shift", pass: isYes(kb.rotationalShift) },
-          { question: "Able to commute", pass: isYes(kb.ableCommute) },
-          { question: "Work flexibility", pass: isYes(kb.workFlex) },
-        ];
-      };
+      const analysisCost = analysisUsage
+        ? calculateGptCost(
+            analysisUsage.inputTokens || 0,
+            analysisUsage.outputTokens || 0
+          )
+        : null;
+      const interviewCost = interviewUsage
+        ? calculateInterviewCost(interviewUsage)
+        : null;
+      const totalCostUSD =
+        (analysisCost?.totalCost || 0) + (interviewCost?.totalCostUSD || 0);
 
-      const payload = {
-        // ---- Required / canonical RA fields
+      const startedAt =
+        interviewUsage?.audioInputDuration != null
+          ? formatDateTime(
+              new Date(Date.now() - interviewUsage.audioInputDuration * 1000)
+            )
+          : undefined;
+
+      const payload: CreateRecordPayload = {
+        // RA fields
         language_pref: languagePref || "English",
-        ra_full_name: candidateData.fullName ?? null,
-        ra_candidate_email: candidateData.candidateEmail ?? null,
-        ra_candidate_phone: candidateData.candidatePhone ?? null,
-        ra_highest_education: candidateData.highestEducation ?? null,
-        ra_current_role: candidateData.currentRole ?? null,
-        ra_years_experience:
-          candidateData.yearExperience != null
-            ? Number(candidateData.yearExperience)
-            : null,
-        ra_professional_summary: candidateData.professionalSummary ?? null,
+        ra_full_name: candidateData.fullName ?? undefined,
+        ra_candidate_email: candidateData.candidateEmail ?? undefined,
+        ra_candidate_phone: candidateData.candidatePhone ?? undefined,
+        ra_highest_education: candidateData.highestEducation ?? undefined,
+        ra_current_role: candidateData.currentRole ?? undefined,
+        ra_years_experience: asNum(candidateData.yearExperience),
+        ra_professional_summary: candidateData.professionalSummary ?? undefined,
 
-        // ---- Arrays (JSON-encoded by backend)
         ra_related_links: Array.isArray(candidateData.relatedLink)
           ? candidateData.relatedLink
           : [],
-        ra_certs_relate: toStringArray(candidateData.certsRelate), // <-- ensure array of strings
+        ra_certs_relate: toStringArray(candidateData.certsRelate), // <-- strings
         ra_skill_match: Array.isArray(candidateData.skillMatch)
           ? candidateData.skillMatch
           : [],
@@ -1011,50 +1021,41 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
           ? candidateData.strengths
           : [],
 
-        // ---- Role-fit
-        ra_rolefit_score:
-          candidateData.roleFit?.roleScore != null
-            ? Number(candidateData.roleFit.roleScore)
-            : null,
-        ra_rolefit_reason: candidateData.roleFit?.justification ?? null,
+        ra_rolefit_score: asNum(candidateData.roleFit?.roleScore),
+        ra_rolefit_reason: candidateData.roleFit?.justification ?? undefined,
 
-        // ---- Interview timestamps (omit if unknown)
-        int_started_at: null,
-        int_ended_at: null,
+        // Interview timestamps
+        int_started_at: startedAt,
+        int_ended_at: formatDateTime(new Date()),
 
-        // ---- Scores
-        int_average_score: scores.averageScore ?? null,
-        int_spoken_score: scores.scoreBreakdown?.spokenAbility?.score ?? null,
+        // Scores
+        int_average_score: asNum(scores.averageScore),
+        int_spoken_score: asNum(scores.scoreBreakdown?.spokenAbility?.score),
         int_spoken_reason:
-          scores.scoreBreakdown?.spokenAbility?.reasoning ?? null,
-        int_behavior_score: scores.scoreBreakdown?.behavior?.score ?? null,
-        int_behavior_reason: scores.scoreBreakdown?.behavior?.reasoning ?? null,
-        int_communication_score:
-          scores.scoreBreakdown?.communicationStyle?.score ?? null,
+          scores.scoreBreakdown?.spokenAbility?.reasoning ?? undefined,
+        int_behavior_score: asNum(scores.scoreBreakdown?.behavior?.score),
+        int_behavior_reason:
+          scores.scoreBreakdown?.behavior?.reasoning ?? undefined,
+        int_communication_score: asNum(
+          scores.scoreBreakdown?.communicationStyle?.score
+        ),
         int_communication_reason:
-          scores.scoreBreakdown?.communicationStyle?.reasoning ?? null,
+          scores.scoreBreakdown?.communicationStyle?.reasoning ?? undefined,
 
-        // ---- Knockouts (standardized to array)
+        // Knockouts (array)
         int_knockouts: buildKnockoutsArray(scores.knockoutBreakdown),
-        int_summary: scores.summary ?? null,
+        int_summary: scores.summary ?? undefined,
         int_full_transcript: transcriptText,
 
-        // ---- Usage & cost (COERCED TO INTS)
+        // Usage & cost (ints where required)
         ra_input_tokens: asInt(analysisUsage?.inputTokens),
         ra_output_tokens: asInt(analysisUsage?.outputTokens),
         int_input_tokens: asInt(interviewUsage?.inputTokens),
-        int_output_tokens: asInt(interviewUsage?.outputTokens), // <-- e.g. 69.75 -> 70
+        int_output_tokens: asInt(interviewUsage?.outputTokens),
         int_audio_sec: asInt(interviewUsage?.audioInputDuration),
+        total_cost_usd: Number(totalCostUSD.toFixed(5)),
 
-        total_cost_usd:
-          Number(
-            (
-              (analysisCost?.totalCost || 0) +
-              (interviewCostResult?.totalCostUSD || 0)
-            ).toFixed(5)
-          ) || null,
-
-        // ---- JSON blobs
+        // JSON blobs
         ra_json_payload: candidateData,
         int_scores_json: {
           detail: {
@@ -1067,13 +1068,20 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
         },
       };
 
-      console.log("DEBUG: Payload to be sent:", payload);
+      await createCandidateRecord(token, payload);
+      await updateCandidateStatus(token, { status: "completed" });
+
       setSubmissionState("success");
-      Alert.alert("Logged", "Payload logged to console successfully.");
+      notification.showToast("Interview submitted successfully!", {
+        type: "success",
+      });
     } catch (e: any) {
-      console.error(e);
-      Alert.alert("Error", e?.message || "Failed to build payload.");
-      setSubmissionState("idle");
+      console.error("Error during submission:", e);
+      setSubmissionState("error");
+      notification.showToast(
+        e?.response?.data?.error || e?.message || "Failed to submit interview.",
+        { type: "error" }
+      );
     }
   };
 
@@ -1093,7 +1101,7 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
         You're All Set, {publicCandidate?.ByName || publicCandidate?.FullName}!
       </Text>
       <Text style={styles.welcomeSubtitle}>
-        Your interview has been completed. We appreciate your time and effort.
+        Your interview has been completed. Thank you for your time.
       </Text>
 
       <View
@@ -1106,26 +1114,18 @@ function EndingScreen({ onRestart }: { onRestart: () => void }) {
         }}
       >
         <Button
-          mode="text"
-          onPress={onRestart}
-          disabled={submissionState === "submitting"}
-        >
-          Restart
-        </Button>
-        <Button
           mode="contained"
           onPress={handleSubmit}
           disabled={submissionState !== "idle"}
           loading={submissionState === "submitting"}
-          icon={submissionState === "success" ? "check" : "content-copy"}
+          icon={submissionState === "success" ? "check" : "upload"}
         >
-          {submissionState === "success" ? "Logged" : "Log Payload to Console"}
+          {submissionState === "success" ? "Submitted" : "Submit Interview"}
         </Button>
       </View>
     </View>
   );
 }
-
 function ErrorScreen({ message }: { message: string }) {
   const theme = useTheme();
   const router = useRouter();
