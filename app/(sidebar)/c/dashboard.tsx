@@ -65,7 +65,6 @@ export default function Dashboard() {
     null
   );
 
-  // Staff data fetching
   const { isAuthenticated } = useAuth();
   const [staffUser, setStaffUser] = useState<Staff | null>(null);
   useEffect(() => {
@@ -157,8 +156,6 @@ export default function Dashboard() {
     </View>
   );
 }
-
-// --- All other components from a/index.tsx are copied below ---
 
 function DashboardView({
   candidates,
@@ -307,7 +304,7 @@ function DashboardView({
               <Text
                 style={[styles.widgetTitle, { color: theme.colors.onSurface }]}
               >
-                Configure Laive
+                Manage Openings
               </Text>
               <Text
                 style={[
@@ -315,19 +312,18 @@ function DashboardView({
                   { color: theme.colors.onSurfaceVariant, paddingRight: 100 },
                 ]}
               >
-                Customize prompts, scoring and other settings for the
-                recruitment process.
+                Configure roles and track active vacancies.
               </Text>
             </View>
 
             <Button
               mode="contained"
               style={{ alignSelf: "flex-end" }}
-              onPress={() => router.push("c/laiveConfigure")}
-              icon="chevron-right"
+              onPress={() => router.push("c/laiveRole")}
+              icon="plus-circle-outline"
               contentStyle={{ flexDirection: "row-reverse" }}
             >
-              Configure
+              Manage
             </Button>
           </View>
         </View>

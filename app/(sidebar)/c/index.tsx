@@ -31,7 +31,6 @@ export default function Login() {
           { type: "error" }
         );
       }
-      // On success, navigation will happen automatically via the auth context listener
     } catch {
       notification.showToast("An unexpected error occurred during login.", {
         type: "error",

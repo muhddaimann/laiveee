@@ -15,8 +15,6 @@ import { useNotification } from "../../contexts/notificationContext";
 import { RECRUITER_PASS } from "../../constants/env";
 
 const navItems = [
-  { icon: "account-search-outline", label: "Recruiter", route: "/a" },
-  { icon: "form-select", label: "Candidate", route: "/b" },
   { icon: "account-search-outline", label: "LaiveRecruit", route: "/c" },
 ];
 
