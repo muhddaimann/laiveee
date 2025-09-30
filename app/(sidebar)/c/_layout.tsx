@@ -23,9 +23,13 @@ function AuthLayout() {
       <Stack.Screen name="dashboard" options={{ title: "Dashboard" }} />
       <Stack.Screen name="laiveRole" options={{ title: "LaiveRole" }} />
       <Stack.Screen name="laiveRegister" options={{ title: "LaiveRegister" }} />
-\      <Stack.Screen
+      <Stack.Screen
         name="laiveApplicant"
         options={{ title: "LaiveApplicant" }}
+      />
+      <Stack.Screen
+        name="result/[token]"
+        options={{ title: "Candidate Result" }}
       />
     </Stack>
   );

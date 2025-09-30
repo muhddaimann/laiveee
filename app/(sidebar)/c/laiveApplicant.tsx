@@ -108,6 +108,8 @@ export default function LaiveApplicant() {
     );
   }
 
+  const canShowResult = selectedCandidate && ["completed", "passed", "rejected"].includes(selectedCandidate.Status);
+
   return (
     <View style={{ flex: 1 }}>
       <Header page="All Applicants" showBack />
@@ -217,6 +219,7 @@ export default function LaiveApplicant() {
           {selectedCandidate ? (
             <ScrollView>
               <CandidateDetailCard candidate={selectedCandidate} />
+              {canShowResult && <ResultSummaryCard candidate={selectedCandidate} />}
               <CandidateActionsCard
                 candidate={selectedCandidate}
                 onActionSuccess={fetchCandidates}
@@ -316,6 +319,32 @@ const CandidateDetailCard = ({ candidate }: { candidate: Candidate }) => {
   );
 };
 
+const ResultSummaryCard = ({ candidate }: { candidate: Candidate }) => {
+  const theme = useTheme();
+  const router = useRouter();
+  return (
+    <Card style={{ marginBottom: 16, backgroundColor: theme.colors.surface }}>
+      <Card.Content style={styles.summaryCardContent}>
+        <View style={styles.summaryLeft}>
+          <Text variant="labelLarge">Overall Score</Text>
+          <Text variant="displayMedium" style={{ color: theme.colors.primary }}>
+            8.2<Text variant="headlineSmall">/10</Text>
+          </Text>
+        </View>
+        <View style={styles.summaryRight}>
+          <Button 
+            mode="contained-tonal" 
+            icon="poll"
+            onPress={() => router.push(`/c/result/${candidate.PublicToken}`)}
+          >
+            View Full Result
+          </Button>
+        </View>
+      </Card.Content>
+    </Card>
+  );
+};
+
 const CandidateActionsCard = ({
   candidate,
   onActionSuccess,
@@ -399,27 +428,7 @@ const CandidateActionsCard = ({
         >
           Mark as Rejected
         </Button>
-        <Divider style={{ marginVertical: 8 }} />
-        <Button
-          mode="outlined"
-          textColor="red"
-          icon="account-cancel-outline"
-          disabled={
-            ["passed", "rejected", "withdrawn"].includes(candidate.Status) ||
-            loading
-          }
-          onPress={() =>
-            handleAction(
-              () =>
-                updateCandidateStatus(candidate.PublicToken, {
-                  status: "withdrawn",
-                }),
-              "Application withdrawn"
-            )
-          }
-        >
-          Withdraw
-        </Button>
+
       </Card.Content>
     </Card>
   );
@@ -580,7 +589,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   leftColumn: { flex: 2, paddingLeft: 16 },
-  rightColumn: { flex: 1, borderLeftWidth: 1, paddingLeft: 16 },
+  rightColumn: { flex: 3, borderLeftWidth: 1, paddingLeft: 16 },
   toolbar: {
     flexDirection: "row",
     alignItems: "center",
@@ -615,4 +624,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  summaryCardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  summaryLeft: {
+    alignItems: "center",
+  },
+  summaryRight: {},
 });
