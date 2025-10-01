@@ -18,10 +18,13 @@ import {
   List,
 } from "react-native-paper";
 import { useRouter } from "expo-router";
-import { useMockCandidates, CandidateUI } from "../../../hooks/mockCandidate";
 import Header from "../../../components/c/header";
 import { useAuth } from "../../../contexts/cAuthContext";
 import { getSelfDetails, Staff } from "../../../contexts/api/staff";
+import { CandidateRecord, getCandidateById, getCandidateRecords, Candidate } from "../../../contexts/api/candidate";
+import LookupCard from "../../../components/c/LookupCard";
+import RecentCard from "../../../components/c/RecentCard";
+import CandidateTable from "../../../components/c/CandidateTable";
 
 function ProfileCard({
   name,
@@ -60,8 +63,7 @@ function ProfileCard({
 export default function Dashboard() {
   const theme = useTheme();
   const [loading, setLoading] = useState(false);
-  const { candidates, setCandidates, findById } = useMockCandidates();
-  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(
+  const [selectedCandidate, setSelectedCandidate] = useState<CandidateRecord | null>(
     null
   );
 
@@ -79,32 +81,41 @@ export default function Dashboard() {
 
   const handleSearch = async (id: string) => {
     if (!id.trim()) return;
+    const numericId = parseInt(id, 10);
+    if (isNaN(numericId)) {
+      alert("Please enter a valid numeric Candidate ID.");
+      return;
+    }
+
     setLoading(true);
+    setSelectedCandidate(null);
     try {
-      const found = findById(id);
-      if (!found) {
-        alert("Candidate ID not found.");
-        return;
+      // Step 1: Get the basic candidate info by ID
+      const candidateRes = await getCandidateById(numericId);
+      const candidate = candidateRes.data;
+
+      if (candidate && candidate.PublicToken) {
+        // Step 2: Get the detailed records using the token from the candidate
+        const recordsRes = await getCandidateRecords(candidate.PublicToken);
+        const record = recordsRes.data?.[0];
+
+        if (record) {
+          setSelectedCandidate(record);
+        } else {
+          alert("Candidate found, but no detailed records are available.");
+        }
+      } else {
+        throw new Error("Candidate not found.");
       }
-      setCandidates((prev) =>
-        prev.some((c) => c.id === found.id) ? prev : [...prev, found]
-      );
-      setSelectedCandidateId(found.id);
+    } catch (err) {
+      alert("Candidate ID not found.");
+      setSelectedCandidate(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const selectedCandidateData = useMemo(() => {
-    if (!selectedCandidateId) return null;
-    return candidates.find((c) => c.id === selectedCandidateId) ?? null;
-  }, [selectedCandidateId, candidates]);
 
-  const recentCandidates = useMemo(
-    () =>
-      [...candidates].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 4),
-    [candidates]
-  );
 
   return (
     <View style={{ flex: 1 }}>
@@ -113,17 +124,29 @@ export default function Dashboard() {
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
         <View style={styles.left}>
-          {loading && !candidates.length ? (
+          {loading ? (
             <LoadingScreen />
-          ) : selectedCandidateData ? (
+          ) : selectedCandidate ? (
             <ReportView
-              candidateData={selectedCandidateData}
-              onBack={() => setSelectedCandidateId(null)}
+              candidateData={selectedCandidate}
+              onBack={() => setSelectedCandidate(null)}
             />
           ) : (
             <DashboardView
-              candidates={candidates}
-              onSelect={setSelectedCandidateId}
+              onSelect={(candidate) => {
+                setLoading(true);
+                getCandidateRecords(candidate.PublicToken)
+                  .then(response => {
+                    const record = response.data?.[0];
+                    if (record) {
+                      setSelectedCandidate(record);
+                    }
+                  })
+                  .catch(err => {
+                    alert("Could not fetch candidate details.");
+                  })
+                  .finally(() => setLoading(false));
+              }}
             />
           )}
         </View>
@@ -138,19 +161,20 @@ export default function Dashboard() {
             <ActivityIndicator style={{ marginVertical: 60 }} />
           )}
           <LookupCard onSearch={handleSearch} />
-          {recentCandidates.length > 0 ? (
-            <RecentCard
-              candidates={recentCandidates}
-              onSelect={setSelectedCandidateId}
-            />
-          ) : (
-            <EmptyStateCard
-              title="Recently Completed"
-              icon="clock-alert-outline"
-              message="No recent completions"
-              suggestion="Try refreshing or check back later."
-            />
-          )}
+          <RecentCard onSelect={(candidate) => {
+            setLoading(true);
+            getCandidateRecords(candidate.PublicToken)
+              .then(response => {
+                const record = response.data?.[0];
+                if (record) {
+                  setSelectedCandidate(record);
+                }
+              })
+              .catch(err => {
+                alert("Could not fetch candidate details.");
+              })
+              .finally(() => setLoading(false));
+          }} />
         </View>
       </View>
     </View>
@@ -158,21 +182,16 @@ export default function Dashboard() {
 }
 
 function DashboardView({
-  candidates,
   onSelect,
 }: {
-  candidates: CandidateUI[];
-  onSelect: (id: string) => void;
+  onSelect: (candidate: Candidate) => void;
 }) {
   const theme = useTheme();
   const router = useRouter();
-  const totalCandidates = candidates.length;
-  const roleCounts = candidates.reduce((acc, c) => {
-    const role = c.candidateDetails.roleAppliedFor;
-    acc[role] = (acc[role] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  const totalRoles = Object.keys(roleCounts).length;
+
+  // Static data for widgets, can be replaced with real data later
+  const totalCandidates = 5; // Example data
+  const totalRoles = 1; // Example data
 
   return (
     <View>
@@ -328,108 +347,60 @@ function DashboardView({
           </View>
         </View>
       </View>
-      <CandidateTable candidates={candidates} onSelect={onSelect} />
+      <CandidateTable onSelect={onSelect} />
     </View>
   );
 }
 
-function SectionHeader({ title }: { title: string }) {
-  const router = useRouter();
-  const theme = useTheme();
 
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        paddingBottom: 8,
-        paddingHorizontal: 8,
-      }}
-    >
-      <Text
-        style={{
-          fontSize: 16,
-          fontWeight: "600",
-          color: theme.colors.onBackground,
-        }}
-      >
-        {title}
-      </Text>
-      <Button
-        mode="text"
-        onPress={() => router.push("c/laiveApplicant")}
-        icon="chevron-right"
-        contentStyle={{ flexDirection: "row-reverse", alignItems: "center" }}
-        labelStyle={{ fontSize: 14, color: theme.colors.primary }}
-      >
-        View all
-      </Button>
-    </View>
-  );
-}
-
-function CandidateTable({
-  candidates,
-  onSelect,
-}: {
-  candidates: CandidateUI[];
-  onSelect: (id: string) => void;
-}) {
-  const theme = useTheme();
-  const firstFive = candidates.slice(0, 6);
-
-  return (
-    <>
-      <SectionHeader title="All Candidates" />
-      {firstFive.length === 0 ? (
-        <EmptyStateCard
-          title=""
-          icon="account-search-outline"
-          message="No candidates found"
-          suggestion="Try a different search or add new candidates."
-        />
-      ) : (
-        <Card
-          style={[styles.largeCard, { backgroundColor: theme.colors.surface }]}
-        >
-          <Card.Content>
-            <View style={styles.tableHeader}>
-              <Text style={styles.tableHeaderText}>Candidate</Text>
-              <Text style={styles.tableHeaderText}>Role</Text>
-              <Text style={styles.tableHeaderText}>Action</Text>
-            </View>
-
-            {firstFive.map((candidate) => (
-              <View key={candidate.id} style={styles.tableRow}>
-                <Text style={styles.tableCell}>
-                  {candidate.resumeAnalysis.fullName}
-                </Text>
-                <Text style={styles.tableCell}>
-                  {candidate.candidateDetails.roleAppliedFor}
-                </Text>
-                <Button mode="contained" onPress={() => onSelect(candidate.id)}>
-                  View
-                </Button>
-              </View>
-            ))}
-          </Card.Content>
-        </Card>
-      )}
-    </>
-  );
-}
 
 function ReportView({
   candidateData,
   onBack,
 }: {
-  candidateData: CandidateUI;
+  candidateData: CandidateRecord;
   onBack: () => void;
 }) {
   const theme = useTheme();
-  const { id, candidateDetails, resumeAnalysis, interviewPerformance } =
+  const { id, ra_full_name, ra_current_role, ra_rolefit_score, ra_rolefit_reason, int_average_score, int_summary, ra_professional_summary, ra_candidate_email, ra_candidate_phone, ra_related_links, ra_highest_education, ra_strengths, ra_skill_match, ra_experience_match, ra_concern_areas, int_scores_json, int_knockouts } =
     candidateData;
+
+  const parseJsonString = (jsonString: any, defaultValue: any = []) => {
+    if (typeof jsonString === 'object' && jsonString !== null) return jsonString;
+    if (typeof jsonString === 'string') {
+      try {
+        return JSON.parse(jsonString);
+      } catch (e) {
+        return defaultValue;
+      }
+    }
+    return defaultValue;
+  };
+
+  const getDisplayableLinks = (links: any): string => {
+    if (!links) return "N/A";
+    if (Array.isArray(links)) {
+      return links.join(", ");
+    }
+    if (typeof links === 'string') {
+      try {
+        const parsedLinks = JSON.parse(links);
+        if (Array.isArray(parsedLinks)) {
+          return parsedLinks.join(", ");
+        }
+      } catch (e) {
+        return links;
+      }
+    }
+    return String(links);
+  };
+
+  const strengthsList = parseJsonString(ra_strengths, []);
+  const skillMatchList = parseJsonString(ra_skill_match, []);
+  const experienceMatchList = parseJsonString(ra_experience_match, []);
+  const concernAreasList = parseJsonString(ra_concern_areas, []);
+  const scoresObject = parseJsonString(int_scores_json, {});
+  const knockoutsObject = parseJsonString(int_knockouts, {});
 
   const InfoRow = ({ label, value }: { label: string; value: any }) => (
     <View style={styles.infoRow}>
@@ -439,7 +410,7 @@ function ReportView({
       <Text
         style={[styles.infoValue, { color: theme.colors.onSurfaceVariant }]}
       >
-        {value}
+        {value || 'N/A'}
       </Text>
     </View>
   );
@@ -465,9 +436,9 @@ function ReportView({
             ]}
           >
             <Card.Content>
-              <Text style={styles.reportTitle}>{resumeAnalysis.fullName}</Text>
+              <Text style={styles.reportTitle}>{ra_full_name}</Text>
               <Text style={styles.reportSubtitle}>
-                {candidateDetails.roleAppliedFor} #{id}
+                {ra_current_role} #{id}
               </Text>
             </Card.Content>
           </Card>
@@ -481,10 +452,10 @@ function ReportView({
             <Card.Content>
               <Text style={styles.cardTitle}>Role Fit</Text>
               <Text style={[styles.score, { color: theme.colors.primary }]}>
-                {resumeAnalysis.roleFit.roleScore} / 10
+                {ra_rolefit_score} / 10
               </Text>
               <Text style={styles.justification}>
-                {resumeAnalysis.roleFit.justification}
+                {ra_rolefit_reason}
               </Text>
             </Card.Content>
           </Card>
@@ -498,11 +469,11 @@ function ReportView({
             <Card.Content>
               <Text style={styles.cardTitle}>Interview Score</Text>
               <Text style={[styles.score, { color: theme.colors.primary }]}>
-                {Number(interviewPerformance?.averageScore ?? 0).toFixed(1)} /
+                {Number(int_average_score ?? 0).toFixed(1)} /
                 5.0
               </Text>
               <Text style={styles.justification}>
-                {interviewPerformance.summary}
+                {int_summary}
               </Text>
             </Card.Content>
           </Card>
@@ -519,7 +490,7 @@ function ReportView({
             <Card.Content>
               <Text style={styles.cardTitle}>Professional Summary</Text>
               <Text style={styles.summaryText}>
-                {resumeAnalysis.professionalSummary}
+                {ra_professional_summary}
               </Text>
             </Card.Content>
           </Card>
@@ -532,18 +503,15 @@ function ReportView({
           >
             <Card.Content>
               <Text style={styles.cardTitle}>Candidate Details</Text>
-              <InfoRow label="Email" value={resumeAnalysis.candidateEmail} />
-              <InfoRow label="Phone" value={resumeAnalysis.candidatePhone} />
-              <InfoRow
-                label="Links"
-                value={resumeAnalysis.relatedLink?.join(", ") || "N/A"}
-              />
+              <InfoRow label="Email" value={ra_candidate_email} />
+              <InfoRow label="Phone" value={ra_candidate_phone} />
+              <InfoRow label="Links" value={getDisplayableLinks(ra_related_links)} />
               <Divider style={{ marginVertical: 8 }} />
               <InfoRow
                 label="Education"
-                value={resumeAnalysis.highestEducation}
+                value={ra_highest_education}
               />
-              <InfoRow label="Experience" value={resumeAnalysis.currentRole} />
+              <InfoRow label="Experience" value={ra_current_role} />
             </Card.Content>
           </Card>
         </View>
@@ -559,7 +527,7 @@ function ReportView({
             <Card.Content>
               <List.Section title="Resume Analysis">
                 <List.Accordion title="Strengths">
-                  {resumeAnalysis.strengths?.map((item, i) => (
+                  {strengthsList.map((item: any, i: number) => (
                     <List.Item
                       key={i}
                       title={item.trait}
@@ -568,7 +536,7 @@ function ReportView({
                   ))}
                 </List.Accordion>
                 <List.Accordion title="Skill Match">
-                  {resumeAnalysis.skillMatch?.map((item, i) => (
+                  {skillMatchList.map((item: any, i: number) => (
                     <List.Item
                       key={i}
                       title={item.name}
@@ -577,7 +545,7 @@ function ReportView({
                   ))}
                 </List.Accordion>
                 <List.Accordion title="Experience Match">
-                  {resumeAnalysis.experienceMatch?.map((item, i) => (
+                  {experienceMatchList.map((item: any, i: number) => (
                     <List.Item
                       key={i}
                       title={item.area}
@@ -586,7 +554,7 @@ function ReportView({
                   ))}
                 </List.Accordion>
                 <List.Accordion title="Concern Areas">
-                  {resumeAnalysis.concernArea?.map((item, i) => (
+                  {concernAreasList.map((item: any, i: number) => (
                     <List.Item key={i} title={item} />
                   ))}
                 </List.Accordion>
@@ -603,8 +571,8 @@ function ReportView({
             <Card.Content>
               <List.Section title="Interview Analysis">
                 <List.Accordion title="Score Breakdown">
-                  {Object.entries(interviewPerformance.scoreBreakdown).map(
-                    ([key, value]) => (
+                  {Object.entries(scoresObject).map(
+                    ([key, value]: [string, any]) => (
                       <List.Item
                         key={key}
                         title={`${key.replace(/([A-Z])/g, " $1").trim()} - ${
@@ -617,12 +585,13 @@ function ReportView({
                   )}
                 </List.Accordion>
                 <List.Accordion title="Knockout Questions">
-                  {Object.entries(interviewPerformance.knockoutBreakdown).map(
-                    ([key, value]) => (
+                  {Object.entries(knockoutsObject).map(
+                    ([key, value]: [string, any]) => (
                       <List.Item
                         key={key}
-                        title={key.replace(/([A-Z])/g, " $1").trim()}
-                        description={value}
+                        title={value.question}
+                        description={value.pass ? 'Pass' : 'Fail'}
+                        descriptionStyle={{ color: value.pass ? 'green' : 'red' }}
                       />
                     )
                   )}
@@ -632,130 +601,6 @@ function ReportView({
           </Card>
         </View>
       </ScrollView>
-    </View>
-  );
-}
-
-function LookupCard({ onSearch }: { onSearch: (id: string) => void }) {
-  const theme = useTheme();
-  const [id, setId] = React.useState("");
-  return (
-    <Card style={[styles.rightCard, { backgroundColor: theme.colors.surface }]}>
-      <Card.Content>
-        <Text style={styles.cardTitle}>Candidate Lookup</Text>
-        <TextInput
-          mode="outlined"
-          label="Enter Candidate ID"
-          value={id}
-          onChangeText={setId}
-          style={styles.lookupInput}
-        />
-        <Button mode="contained" onPress={() => onSearch(id)} disabled={!id}>
-          Search
-        </Button>
-      </Card.Content>
-    </Card>
-  );
-}
-
-function RecentCard({
-  candidates,
-  onSelect,
-}: {
-  candidates: CandidateUI[];
-  onSelect: (id: string) => void;
-}) {
-  const theme = useTheme();
-  return (
-    <>
-      <Text style={styles.sectionTitle}>Recently Completed</Text>
-      {candidates.map((candidate) => (
-        <Card
-          key={candidate.id}
-          style={[styles.rightCard, { backgroundColor: theme.colors.surface }]}
-        >
-          <TouchableOpacity onPress={() => onSelect(candidate.id)}>
-            <Card.Content style={styles.recentContent}>
-              <Avatar.Icon
-                icon="account-check"
-                size={48}
-                style={[
-                  styles.recentAvatar,
-                  { backgroundColor: theme.colors.primaryContainer },
-                ]}
-                color={theme.colors.primary}
-              />
-              <View style={styles.recentTextContainer}>
-                <Text style={styles.candidateName}>
-                  {candidate.resumeAnalysis.fullName}
-                </Text>
-                <Text style={{ color: theme.colors.onSurfaceVariant }}>
-                  {candidate.candidateDetails.roleAppliedFor}
-                </Text>
-              </View>
-            </Card.Content>
-          </TouchableOpacity>
-        </Card>
-      ))}
-    </>
-  );
-}
-
-function EmptyStateCard({
-  title,
-  icon,
-  message,
-  suggestion,
-}: {
-  title: string;
-  icon: string;
-  message: string;
-  suggestion: string;
-}) {
-  const theme = useTheme();
-
-  return (
-    <View>
-      <Text
-        style={{
-          fontSize: 16,
-          fontWeight: "600",
-          marginBottom: 12,
-          color: theme.colors.onBackground,
-        }}
-      >
-        {title}
-      </Text>
-
-      <View
-        style={{ alignItems: "center", paddingVertical: 100, borderRadius: 12 }}
-      >
-        <Avatar.Icon
-          icon={icon}
-          size={56}
-          style={{ backgroundColor: theme.colors.surface, marginBottom: 12 }}
-          color={theme.colors.onSurfaceVariant}
-        />
-        <Text
-          style={{
-            fontSize: 15,
-            fontWeight: "500",
-            color: theme.colors.onSurfaceVariant,
-            marginBottom: 4,
-          }}
-        >
-          {message}
-        </Text>
-        <Text
-          style={{
-            fontSize: 13,
-            color: theme.colors.onSurfaceDisabled,
-            textAlign: "center",
-          }}
-        >
-          {suggestion}
-        </Text>
-      </View>
     </View>
   );
 }

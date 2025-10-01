@@ -129,3 +129,15 @@ export const createCandidateRecord = (
 ) => {
   return api.post<CandidateRecord>(`/candidate.php/${token}/record`, data);
 };
+
+export const getLatestCandidates = () => {
+  return api.get<Candidate[]>("/candidate.php/latest");
+};
+
+export const getLatestCompletedCandidates = () => {
+  return api.get<Candidate[]>("/candidate.php/latest/completed");
+};
+
+export const getCandidateById = (id: number) => {
+  return api.get<Candidate>(`/candidate.php/id/${id}`);
+};

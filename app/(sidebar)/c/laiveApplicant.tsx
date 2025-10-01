@@ -16,10 +16,12 @@ import { useRouter } from "expo-router";
 import Header from "../../../components/c/header";
 import {
   getCandidates,
+  getCandidateRecords,
   inviteCandidate,
   updateCandidateStatus,
   Candidate,
   CandidateStatus,
+  CandidateRecord,
 } from "../../../contexts/api/candidate";
 import { useNotification } from "../../../contexts/notificationContext";
 
@@ -48,6 +50,9 @@ export default function LaiveApplicant() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(
     null
   );
+  const [latestRecord, setLatestRecord] = useState<CandidateRecord | null>(
+    null
+  );
 
   const fetchCandidates = async () => {
     setLoading(true);
@@ -61,6 +66,31 @@ export default function LaiveApplicant() {
     }
   };
 
+  const fetchLatestRecord = async (c: Candidate | null) => {
+    if (!c) {
+      setLatestRecord(null);
+      return;
+    }
+    setIsDetailLoading(true);
+    try {
+      const recRes = await getCandidateRecords(c.PublicToken);
+      const records: CandidateRecord[] = recRes.data ?? [];
+      const latest =
+        records
+          .slice()
+          .sort(
+            (a, b) =>
+              new Date(b.created_at).getTime() -
+              new Date(a.created_at).getTime()
+          )[0] ?? null;
+      setLatestRecord(latest);
+    } catch {
+      setLatestRecord(null);
+    } finally {
+      setIsDetailLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchCandidates();
   }, []);
@@ -71,6 +101,9 @@ export default function LaiveApplicant() {
         (c) => c.ID === selectedCandidate.ID
       );
       setSelectedCandidate(freshCandidate || null);
+      fetchLatestRecord(freshCandidate || null);
+    } else {
+      setLatestRecord(null);
     }
   }, [candidates]);
 
@@ -108,7 +141,10 @@ export default function LaiveApplicant() {
     );
   }
 
-  const canShowResult = selectedCandidate && ["completed", "passed", "rejected"].includes(selectedCandidate.Status);
+  const canShowResult =
+    !!selectedCandidate &&
+    ["completed", "passed", "rejected"].includes(selectedCandidate.Status) &&
+    !!latestRecord;
 
   return (
     <View style={{ flex: 1 }}>
@@ -116,7 +152,6 @@ export default function LaiveApplicant() {
       <View
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
-        {/* Left Column */}
         <View style={styles.leftColumn}>
           <View style={styles.toolbar}>
             <TextInput
@@ -182,7 +217,10 @@ export default function LaiveApplicant() {
               renderItem={({ item }) => (
                 <CandidateGridCard
                   item={item}
-                  onSelect={setSelectedCandidate}
+                  onSelect={(c) => {
+                    setSelectedCandidate(c);
+                    fetchLatestRecord(c);
+                  }}
                   selected={selectedCandidate?.ID === item.ID}
                 />
               )}
@@ -195,7 +233,10 @@ export default function LaiveApplicant() {
               renderItem={({ item }) => (
                 <CandidateListCard
                   item={item}
-                  onSelect={setSelectedCandidate}
+                  onSelect={(c) => {
+                    setSelectedCandidate(c);
+                    fetchLatestRecord(c);
+                  }}
                   selected={selectedCandidate?.ID === item.ID}
                 />
               )}
@@ -204,7 +245,6 @@ export default function LaiveApplicant() {
           )}
         </View>
 
-        {/* Right Column */}
         <View
           style={[
             styles.rightColumn,
@@ -218,8 +258,35 @@ export default function LaiveApplicant() {
           )}
           {selectedCandidate ? (
             <ScrollView>
+              <SectionHeader title="Candidate Details" />
               <CandidateDetailCard candidate={selectedCandidate} />
-              {canShowResult && <ResultSummaryCard candidate={selectedCandidate} />}
+
+              {canShowResult && latestRecord && (
+                <>
+                  <SectionHeader
+                    title="Result Summary"
+                    action={
+                      <Button
+                        mode="contained-tonal"
+                        icon="poll"
+                        onPress={() =>
+                          router.push(
+                            `/c/result/${selectedCandidate.PublicToken}`
+                          )
+                        }
+                      >
+                        View Full Result
+                      </Button>
+                    }
+                  />
+                  <ResultSummaryCard
+                    candidate={selectedCandidate}
+                    record={latestRecord}
+                  />
+                </>
+              )}
+
+              <SectionHeader title="Actions" />
               <CandidateActionsCard
                 candidate={selectedCandidate}
                 onActionSuccess={fetchCandidates}
@@ -236,6 +303,29 @@ export default function LaiveApplicant() {
 }
 
 // --- Detail View Components ---
+
+const SectionHeader = ({
+  title,
+  action,
+}: {
+  title: string;
+  action?: React.ReactNode;
+}) => (
+  <View
+    style={{
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+      paddingHorizontal: 4,
+    }}
+  >
+    <Text variant="titleLarge" style={{ fontWeight: "600" }}>
+      {title}
+    </Text>
+    {action}
+  </View>
+);
 
 const Placeholder = () => {
   const theme = useTheme();
@@ -288,7 +378,7 @@ const CandidateDetailCard = ({ candidate }: { candidate: Candidate }) => {
   const theme = useTheme();
   return (
     <Card style={{ marginBottom: 16, backgroundColor: theme.colors.surface }}>
-      <Card.Title title="Candidate Details" subtitle={`ID: ${candidate.ID}`} />
+      
       <Card.Content>
         <DetailRow label="Full Name" value={candidate.FullName} />
         <DetailRow label="Email" value={candidate.Email} />
@@ -319,26 +409,33 @@ const CandidateDetailCard = ({ candidate }: { candidate: Candidate }) => {
   );
 };
 
-const ResultSummaryCard = ({ candidate }: { candidate: Candidate }) => {
+const ResultSummaryCard = ({
+  candidate,
+  record,
+}: {
+  candidate: Candidate;
+  record: CandidateRecord;
+}) => {
   const theme = useTheme();
-  const router = useRouter();
+  const rolefit = record.ra_rolefit_score ?? "-";
+  const interview = record.int_average_score ?? "-";
   return (
     <Card style={{ marginBottom: 16, backgroundColor: theme.colors.surface }}>
       <Card.Content style={styles.summaryCardContent}>
         <View style={styles.summaryLeft}>
-          <Text variant="labelLarge">Overall Score</Text>
+          <Text variant="labelLarge">Role Fit Score</Text>
           <Text variant="displayMedium" style={{ color: theme.colors.primary }}>
-            8.2<Text variant="headlineSmall">/10</Text>
+            {rolefit}
+            <Text variant="headlineSmall">/10</Text>
           </Text>
         </View>
+        <Divider style={styles.verticalDivider} />
         <View style={styles.summaryRight}>
-          <Button 
-            mode="contained-tonal" 
-            icon="poll"
-            onPress={() => router.push(`/c/result/${candidate.PublicToken}`)}
-          >
-            View Full Result
-          </Button>
+          <Text variant="labelLarge">Interview Score</Text>
+          <Text variant="displayMedium" style={{ color: theme.colors.primary }}>
+            {interview}
+            <Text variant="headlineSmall">/5</Text>
+          </Text>
         </View>
       </Card.Content>
     </Card>
@@ -368,7 +465,7 @@ const CandidateActionsCard = ({
       const res = await action();
       if (res.data.success) {
         notification.showToast(successMessage, { type: "success" });
-        onActionSuccess(); // Refetch the main list
+        onActionSuccess();
       } else {
         throw new Error(res.data.error || "Action failed");
       }
@@ -383,7 +480,7 @@ const CandidateActionsCard = ({
 
   return (
     <Card style={{ backgroundColor: theme.colors.surface }}>
-      <Card.Title title="Actions" />
+      
       <Card.Content style={{ gap: 8 }}>
         <Button
           mode="contained"
@@ -405,7 +502,9 @@ const CandidateActionsCard = ({
           onPress={() =>
             handleAction(
               () =>
-                updateCandidateStatus(candidate.PublicToken, { status: "passed" }),
+                updateCandidateStatus(candidate.PublicToken, {
+                  status: "passed",
+                }),
               "Candidate marked as passed"
             )
           }
@@ -428,13 +527,10 @@ const CandidateActionsCard = ({
         >
           Mark as Rejected
         </Button>
-
       </Card.Content>
     </Card>
   );
 };
-
-// --- List View Components ---
 
 const EmptyState = ({
   onPrimary,
@@ -627,12 +723,20 @@ const styles = StyleSheet.create({
   summaryCardContent: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
+    justifyContent: "space-around",
     paddingVertical: 12,
+  },
+  summaryItem: {
+    alignItems: "center",
   },
   summaryLeft: {
     alignItems: "center",
   },
-  summaryRight: {},
+  summaryRight: {
+    alignItems: "center",
+  },
+  verticalDivider: {
+    height: "100%",
+    width: 1,
+  },
 });
