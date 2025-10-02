@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { View, StyleSheet, FlatList, ScrollView } from "react-native";
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  FlatList,
+  ScrollView,
+} from "react-native";
 import {
   Button,
   Card,
   Text,
   useTheme,
   Avatar,
-  Chip,
   TextInput,
   IconButton,
   Divider,
@@ -25,6 +30,7 @@ import {
 } from "../../../contexts/api/candidate";
 import { useNotification } from "../../../contexts/notificationContext";
 import EmptyStateCard from "../../../components/c/EmptyStateCard";
+import { useStatus } from "../../../hooks/useStatus";
 
 const STATUS_FILTERS: CandidateStatus[] = [
   "registered",
@@ -41,6 +47,63 @@ const RESULT_VIEWABLE_STATUSES: CandidateStatus[] = [
 ];
 const INVITEABLE_STATUS: CandidateStatus = "registered";
 const DECISION_MAKING_STATUS: CandidateStatus = "completed";
+
+function FilterPill({
+  label,
+  onPress,
+  selected,
+  status,
+}: {
+  label: string;
+  onPress: () => void;
+  selected: boolean;
+  status: CandidateStatus | "all";
+}) {
+  const theme = useTheme();
+  const defaultStyle = {
+    bgColor: theme.colors.primaryContainer,
+    textColor: theme.colors.onPrimaryContainer,
+  };
+  // The hook needs a valid status, so we provide a fallback for the 'all' case.
+  const statusStyleHook = useStatus(status === "all" ? "registered" : status);
+  const finalStyle =
+    status === "all"
+      ? defaultStyle
+      : {
+          bgColor: statusStyleHook.backgroundColor,
+          textColor: statusStyleHook.color,
+        };
+
+  return (
+    <TouchableOpacity onPress={onPress}>
+      <View
+        style={[
+          styles.pill,
+          {
+            backgroundColor: selected
+              ? finalStyle.bgColor
+              : theme.colors.surface,
+            borderColor: selected ? finalStyle.bgColor : theme.colors.outline,
+            borderWidth: 1,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.pillText,
+            {
+              color: selected
+                ? finalStyle.textColor
+                : theme.colors.onSurfaceVariant,
+            },
+          ]}
+        >
+          {label}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 export default function LaiveApplicant() {
   const theme = useTheme();
@@ -187,22 +250,20 @@ export default function LaiveApplicant() {
           </View>
 
           <View style={styles.filters}>
-            <Chip
+            <FilterPill
+              label="All"
+              status="all"
               selected={!statusFilter}
               onPress={() => setStatusFilter(null)}
-              style={styles.chip}
-            >
-              All
-            </Chip>
+            />
             {STATUS_FILTERS.map((status) => (
-              <Chip
+              <FilterPill
                 key={status}
+                label={status.charAt(0).toUpperCase() + status.slice(1)}
+                status={status}
                 selected={statusFilter === status}
                 onPress={() => setStatusFilter(status)}
-                style={styles.chip}
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </Chip>
+              />
             ))}
           </View>
 
@@ -210,7 +271,11 @@ export default function LaiveApplicant() {
 
           {filteredCandidates.length === 0 ? (
             <View
-              style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+              style={{
+                flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
             >
               <EmptyStateCard
                 icon="account-search-outline"
@@ -350,18 +415,21 @@ const Placeholder = () => {
           { backgroundColor: theme.colors.surface },
         ]}
       >
-        <Avatar.Icon
-          icon="cursor-default-click-outline"
-          size={80}
-          style={{ marginBottom: 16, backgroundColor: theme.colors.background }}
-        />
-        <Text style={{ fontSize: 18, fontWeight: "500" }}>
-          Select a Candidate
-        </Text>
-        <Text style={{ color: "gray", textAlign: "center", marginTop: 4 }}>
-          Choose a candidate from the list to view their details and available
-          actions.
-        </Text>
+        <Card.Content style={styles.placeholderContent}>
+          <Avatar.Icon
+            icon="cursor-default-click-outline"
+            size={80}
+            style={{
+              marginBottom: 16,
+              backgroundColor: theme.colors.background,
+            }}
+          />
+          <Text style={styles.placeholderTitle}>Select a Candidate</Text>
+          <Text style={styles.placeholderText}>
+            Choose a candidate from the list to view their details and available
+            actions.
+          </Text>
+        </Card.Content>
       </Card>
     </View>
   );
@@ -387,6 +455,15 @@ const DetailRow = ({
   );
 };
 
+function StatusPill({ status }: { status: CandidateStatus }) {
+  const { backgroundColor, color } = useStatus(status);
+  return (
+    <View style={[styles.pill, { backgroundColor }]}>
+      <Text style={[styles.pillText, { color }]}>{status}</Text>
+    </View>
+  );
+}
+
 const CandidateDetailCard = ({ candidate }: { candidate: Candidate }) => {
   const theme = useTheme();
   return (
@@ -395,7 +472,16 @@ const CandidateDetailCard = ({ candidate }: { candidate: Candidate }) => {
         <DetailRow label="Full Name" value={candidate.FullName} />
         <DetailRow label="Email" value={candidate.Email} />
         <DetailRow label="Role" value={candidate.Role} />
-        <DetailRow label="Status" value={candidate.Status} />
+        <View style={{ marginBottom: 12 }}>
+          <Text
+            style={{ fontSize: 12, color: "gray", textTransform: "uppercase" }}
+          >
+            Status
+          </Text>
+          <View style={{ marginTop: 4 }}>
+            <StatusPill status={candidate.Status} />
+          </View>
+        </View>
         <Divider style={{ marginVertical: 8 }} />
         <DetailRow
           label="Registered"
@@ -583,7 +669,7 @@ const CandidateGridCard = ({
               {item.Role}
             </Text>
           </View>
-          <Chip compact>{item.Status}</Chip>
+          <StatusPill status={item.Status} />
         </View>
       </Card.Content>
     </Card>
@@ -630,7 +716,7 @@ const CandidateListCard = ({
             {item.Role}
           </Text>
         </View>
-        <Chip compact>{item.Status}</Chip>
+        <StatusPill status={item.Status} />
         <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
           {new Date(item.CreatedDateTime).toLocaleDateString()}
         </Text>
@@ -675,7 +761,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 24,
   },
-  placeholderCard: { padding: 32, alignItems: "center", width: "100%" },
+  placeholderCard: {
+    width: "100%",
+    maxWidth: 420,
+    alignSelf: "center",
+    borderRadius: 12,
+  },
+  placeholderContent: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 24,
+  },
+  placeholderTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  placeholderText: {
+    color: "gray",
+    textAlign: "center",
+    marginTop: 4,
+  },
+
   detailOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(255,255,255,0.7)",
@@ -701,5 +808,16 @@ const styles = StyleSheet.create({
   verticalDivider: {
     height: "100%",
     width: 1,
+  },
+  pill: {
+    borderRadius: 24,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignSelf: "center",
+  },
+  pillText: {
+    fontSize: 12,
+    fontWeight: "500",
+    textTransform: "capitalize",
   },
 });

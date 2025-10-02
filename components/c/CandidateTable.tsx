@@ -4,6 +4,7 @@ import { Card, Text, Button, useTheme, ActivityIndicator } from 'react-native-pa
 import { useRouter } from 'expo-router';
 import { Candidate, getLatestCandidates } from '../../contexts/api/candidate';
 import EmptyStateCard from './EmptyStateCard';
+import { useStatus } from '../../hooks/useStatus';
 
 function SectionHeader({ title }: { title: string }) {
   const router = useRouter();
@@ -41,6 +42,15 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
+function StatusPill({ status }: { status: Candidate['Status'] }) {
+  const { backgroundColor, color } = useStatus(status);
+  return (
+    <View style={[styles.pill, { backgroundColor }]}>
+      <Text style={[styles.pillText, { color }]}>{status}</Text>
+    </View>
+  );
+}
+
 function CandidateTable({
   onSelect,
 }: {
@@ -71,11 +81,11 @@ function CandidateTable({
     <>
       <SectionHeader title="Latest Candidates" />
       {candidates.length === 0 ? (
-        <View style={{ justifyContent: 'center', alignItems: 'center', height: 400 }}>
+        <View style={{ justifyContent: 'center', alignItems: 'center', height: 300 }}>
           <EmptyStateCard
-            title=""
+            title="No Candidates Found"
             icon="account-search-outline"
-            message="No candidates to been displayed."
+            message="No candidates have been registered yet."
             suggestion="Register a new candidate to see them appear here."
           />
         </View>
@@ -85,22 +95,33 @@ function CandidateTable({
         >
           <Card.Content>
             <View style={styles.tableHeader}>
-              <Text style={styles.tableHeaderText}>Candidate</Text>
-              <Text style={styles.tableHeaderText}>Role</Text>
-              <Text style={styles.tableHeaderText}>Action</Text>
+              <Text style={[styles.tableHeaderText, { flex: 2 }]}>Candidate</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1.5 }]}>Role</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1 }]}>Date Added</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1 }]}>Status</Text>
+              <Text style={[styles.tableHeaderText, { flex: 0.7, textAlign: 'right' }]}>Action</Text>
             </View>
 
             {candidates.map((candidate) => (
               <View key={candidate.ID} style={styles.tableRow}>
-                <Text style={styles.tableCell}>
-                  {candidate.FullName}
-                </Text>
-                <Text style={styles.tableCell}>
+                <View style={{ flex: 2 }}>
+                  <Text style={styles.cellMainText}>{candidate.FullName}</Text>
+                  <Text style={styles.cellSubText}>{candidate.Email}</Text>
+                </View>
+                <Text style={[styles.tableCell, { flex: 1.5 }]}>
                   {candidate.Role}
                 </Text>
-                <Button mode="contained" onPress={() => onSelect(candidate)}>
-                  View
-                </Button>
+                <Text style={[styles.tableCell, { flex: 1 }]}>
+                  {new Date(candidate.CreatedDateTime).toLocaleDateString()}
+                </Text>
+                <View style={[styles.tableCell, { flex: 1, alignItems: 'flex-start' }]}>
+                  <StatusPill status={candidate.Status} />
+                </View>
+                <View style={{ flex: 0.7, alignItems: 'flex-end' }}>
+                  <Button mode="contained" onPress={() => onSelect(candidate)}>
+                    View
+                  </Button>
+                </View>
               </View>
             ))}
           </Card.Content>
@@ -118,6 +139,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+    gap: 12,
   },
   tableHeaderText: { fontWeight: 'bold' },
   tableRow: {
@@ -127,8 +149,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+    gap: 12,
   },
   tableCell: { flex: 1 },
+  cellMainText: { fontWeight: '500' },
+  cellSubText: { fontSize: 12, color: 'gray' },
+  pill: {
+    borderRadius: 24,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  pillText: {
+    fontSize: 12,
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
 });
 
 export default CandidateTable;

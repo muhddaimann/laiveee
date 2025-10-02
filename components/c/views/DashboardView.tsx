@@ -84,7 +84,7 @@ function DashboardView({
             </Text>
             <View style={styles.ringChartGrid}>
               <View style={styles.ringChartItem}>
-                <PercentageCircle percentage="68%" />
+                <PercentageCircle percentage="100%" />
                 <Text
                   style={[
                     styles.chartLabel,
