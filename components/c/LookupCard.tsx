@@ -1,11 +1,12 @@
 import React from 'react';
-import { Card, Text, TextInput, Button } from 'react-native-paper';
+import { Card, Text, TextInput, Button, useTheme } from 'react-native-paper';
 import { StyleSheet } from 'react-native';
 
 function LookupCard({ onSearch }: { onSearch: (id: string) => void }) {
   const [id, setId] = React.useState('');
+  const theme = useTheme();
   return (
-    <Card style={styles.rightCard}>
+    <Card style={[styles.rightCard, { backgroundColor: theme.colors.surface }]}>
       <Card.Content>
         <Text style={styles.cardTitle}>Candidate Lookup</Text>
         <TextInput

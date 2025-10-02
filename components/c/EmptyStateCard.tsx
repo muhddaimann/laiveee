@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { Text, Avatar, useTheme } from 'react-native-paper';
 
 function EmptyStateCard({
@@ -29,7 +29,7 @@ function EmptyStateCard({
       </Text>
 
       <View
-        style={{ alignItems: 'center', paddingVertical: 100, borderRadius: 12 }}
+        style={{ alignItems: 'center', borderRadius: 12 }}
       >
         <Avatar.Icon
           icon={icon}

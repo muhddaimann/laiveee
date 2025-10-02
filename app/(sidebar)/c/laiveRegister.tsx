@@ -9,6 +9,7 @@ import {
   Avatar,
   Divider,
   Chip,
+  SegmentedButtons,
 } from "react-native-paper";
 import { useRouter } from "expo-router";
 import Header from "../../../components/c/header";
@@ -20,119 +21,95 @@ import {
   RegisterCandidatePayload,
 } from "../../../contexts/api/candidate";
 
-type RegisterFormProps = {
-  onRegister: (input: RegisterCandidatePayload) => void | Promise<void>;
-  onCancel: () => void;
-  isSubmitting: boolean;
+const Stepper = ({ activeStep, steps }: { activeStep: number; steps: string[] }) => {
+  const theme = useTheme();
+  return (
+    <View style={styles.stepperContainer}>
+      {steps.map((step, index) => (
+        <React.Fragment key={index}>
+          <View style={styles.stepContainer}>
+            <Avatar.Text
+              size={32}
+              label={`${index + 1}`}
+              style={{
+                backgroundColor: index <= activeStep ? theme.colors.primary : theme.colors.surfaceVariant,
+              }}
+              color={index <= activeStep ? theme.colors.onPrimary : theme.colors.onSurfaceVariant}
+            />
+            <Text style={[styles.stepLabel, {color: index <= activeStep ? theme.colors.primary : theme.colors.onSurfaceVariant}]}>{step}</Text>
+          </View>
+          {index < steps.length - 1 && <Divider style={styles.stepperDivider} />}
+        </React.Fragment>
+      ))}
+    </View>
+  );
 };
 
-type SuccessViewProps = {
-  candidate: Candidate;
-  onReset: () => void;
-  onDone: () => void;
-};
-
-type LabeledInputProps = React.ComponentProps<typeof TextInput> & {
-  label: string;
-};
-
-const LabeledInput: React.FC<LabeledInputProps> = ({ label, ...props }) => (
-  <View style={styles.inputContainer}>
-    <Text style={styles.inputLabel}>{label}</Text>
-    <TextInput mode="outlined" {...props} />
+const SummaryRow = ({ label, value }: { label: string; value?: string }) => (
+  <View style={styles.summaryRow}>
+    <Text style={styles.summaryLabel}>{label}</Text>
+    <Text style={styles.summaryValue}>{value || "-"}</Text>
   </View>
 );
 
-const RegisterForm: React.FC<RegisterFormProps> = ({
-  onRegister,
-  onCancel,
-  isSubmitting,
-}) => {
+export default function LaiveRegister() {
+  const theme = useTheme();
+  const router = useRouter();
+  const notification = useNotification();
+
+  // Step and Form State
+  const [step, setStep] = useState(0);
   const [fullName, setFullName] = useState("");
   const [shortName, setShortName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
 
-  const handlePress = () => {
+  // API State
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
+  const [registeredCandidate, setRegisteredCandidate] = useState<Candidate | null>(null);
+
+  const handleNext = () => {
+    const emailRegex = /.+@.+\..+/;
+    if (!emailRegex.test(email)) {
+      notification.showToast("Please enter a valid email address.", { type: "error" });
+      return;
+    }
+    setStep(1);
+  };
+
+  const handleBack = () => {
+    setStep(0);
+  };
+
+  const handleRegister = async () => {
     const input: RegisterCandidatePayload = {
       full_name: fullName,
       by_name: shortName || undefined,
       email,
       role,
     };
-    onRegister(input);
+    setIsSubmitting(true);
+    try {
+      const res = await registerCandidate(input);
+      setRegisteredCandidate(res.data);
+      notification.showToast("Candidate registered successfully!", { type: "success" });
+    } catch (e: any) {
+      notification.showToast(
+        e.response?.data?.error || "Failed to register candidate.",
+        { type: "error" }
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const isButtonDisabled = !fullName || !email || !role || isSubmitting;
-
-  return (
-    <>
-      <Card.Title title="New Candidate Details" subtitle="Enter details" />
-      <Card.Content>
-        <LabeledInput
-          label="Full Name"
-          value={fullName}
-          onChangeText={setFullName}
-          disabled={isSubmitting}
-          left={<TextInput.Icon icon="account" />}
-        />
-        <LabeledInput
-          label="Short Name (Nickname)"
-          value={shortName}
-          onChangeText={setShortName}
-          disabled={isSubmitting}
-          left={<TextInput.Icon icon="account-outline" />}
-        />
-        <LabeledInput
-          label="Email Address"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          disabled={isSubmitting}
-          left={<TextInput.Icon icon="email" />}
-        />
-        <LabeledInput
-          label="Role Applied For"
-          value={role}
-          onChangeText={setRole}
-          disabled={isSubmitting}
-          left={<TextInput.Icon icon="briefcase" />}
-        />
-      </Card.Content>
-      <Card.Actions style={styles.actions}>
-        <Button onPress={onCancel} disabled={isSubmitting}>
-          Cancel
-        </Button>
-        <Button
-          mode="contained"
-          onPress={handlePress}
-          disabled={isButtonDisabled}
-          loading={isSubmitting}
-          icon="account-plus"
-        >
-          Register Candidate
-        </Button>
-      </Card.Actions>
-    </>
-  );
-};
-
-const SuccessView: React.FC<SuccessViewProps> = ({
-  candidate,
-  onReset,
-  onDone,
-}) => {
-  const theme = useTheme();
-  const notification = useNotification();
-  const [isInviting, setIsInviting] = useState(false);
-  const [localCandidate, setLocalCandidate] = useState(candidate);
-  const publicLink = `http://localhost:8081/d/${localCandidate.PublicToken}`;
-
   const handleInvite = () => {
+    if (!registeredCandidate) return;
+
     notification.showAlert({
       title: "Confirm Invitation",
-      message: `This will send an invitation to ${localCandidate.FullName}. They will have 2 days to complete the interview. Do you want to proceed?`,
+      message: `This will send an invitation to ${registeredCandidate.FullName}. They will have 2 days to complete the interview. Do you want to proceed?`,
       buttons: [
         { text: "Cancel", style: "cancel" },
         {
@@ -140,26 +117,15 @@ const SuccessView: React.FC<SuccessViewProps> = ({
           onPress: async () => {
             setIsInviting(true);
             try {
-              const res = await inviteCandidate(localCandidate.PublicToken);
+              const res = await inviteCandidate(registeredCandidate.PublicToken);
               if (res.data.success) {
-                notification.showToast("Invitation sent successfully!", {
-                  type: "success",
-                });
-                setLocalCandidate((prev) => ({ ...prev, Status: "invited" }));
+                notification.showToast("Invitation sent successfully!", { type: "success" });
+                setRegisteredCandidate((prev) => prev ? { ...prev, Status: "invited" } : null);
               } else {
-                throw new Error(
-                  res.data.message || "Failed to send invitation."
-                );
+                throw new Error(res.data.message || "Failed to send invitation.");
               }
             } catch (e: any) {
-              notification.showToast(
-                e.response?.data?.error ||
-                  e.message ||
-                  "An error occurred.",
-                {
-                  type: "error",
-                }
-              );
+              notification.showToast(e.response?.data?.error || e.message || "An error occurred.", { type: "error" });
             }
             setIsInviting(false);
           },
@@ -168,138 +134,110 @@ const SuccessView: React.FC<SuccessViewProps> = ({
     });
   };
 
-  const isInvited = localCandidate.Status === "invited";
-
-  return (
-    <>
-      <Card.Title
-        title="Candidate Registered"
-        subtitle={`ID: ${localCandidate.ID}`}
-      />
-      <Card.Content style={styles.successContainer}>
-        <View style={styles.profileHeader}>
-          <Avatar.Text
-            size={64}
-            label={
-              localCandidate.ByName?.charAt(0) ||
-              localCandidate.FullName.charAt(0)
-            }
-          />
-          <View style={{ marginLeft: 16, flex: 1 }}>
-            <Text style={styles.profileName}>{localCandidate.FullName}</Text>
-            <Text style={styles.profileRole}>{localCandidate.Role}</Text>
-          </View>
-          <Chip
-            icon={isInvited ? "check" : "clock-outline"}
-            selected={isInvited}
-          >
-            {localCandidate.Status}
-          </Chip>
-        </View>
-
-        <Divider style={{ width: "100%", marginVertical: 16 }} />
-
-        {isInvited ? (
-          <View style={styles.linkContainer}>
-            <LabeledInput
-              label="Public Interview Link"
-              value={publicLink}
-              editable={false}
-              right={
-                <TextInput.Icon
-                  icon="content-copy"
-                  onPress={() => {
-                    Clipboard.setString(publicLink);
-                    notification.showToast("Link copied!", { type: "success" });
-                  }}
-                />
-              }
-            />
-          </View>
-        ) : (
-          <View style={{ alignItems: "center" }}>
-            <Text style={styles.actionTitle}>Next Step: Send Invitation</Text>
-            <Text style={styles.actionSubtitle}>
-              The candidate needs to be invited to receive their unique
-              interview link via email.
-            </Text>
-            <Button
-              mode="contained"
-              icon="email-fast-outline"
-              style={{ marginTop: 20 }}
-              onPress={handleInvite}
-              loading={isInviting}
-              disabled={isInviting}
-              contentStyle={{ paddingVertical: 8 }}
-              labelStyle={{ fontSize: 16 }}
-            >
-              Invite Candidate
-            </Button>
-          </View>
-        )}
-      </Card.Content>
-      <Card.Actions style={styles.actions}>
-        <Button onPress={onReset} icon="plus" disabled={isInviting}>
-          Register Another
-        </Button>
-        <Button
-          mode="contained-tonal"
-          onPress={onDone}
-          icon="check-all"
-          disabled={isInviting}
-        >
-          Done
-        </Button>
-      </Card.Actions>
-    </>
-  );
-};
-
-export default function LaiveRegister() {
-  const theme = useTheme();
-  const router = useRouter();
-  const notification = useNotification();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [registeredCandidate, setRegisteredCandidate] =
-    useState<Candidate | null>(null);
-
-  const handleRegister = async (input: RegisterCandidatePayload) => {
-    setIsSubmitting(true);
-    try {
-      const res = await registerCandidate(input);
-      setRegisteredCandidate(res.data);
-      notification.showToast("Candidate registered.", { type: "success" });
-    } catch (e: any) {
-      notification.showToast(
-        e.response?.data?.error || "Failed to register candidate.",
-        {
-          type: "error",
-        }
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const steps = ["Enter Details", "Confirm & Act"];
+  const isStep1Valid = fullName.trim() !== "" && email.trim() !== "" && role.trim() !== "";
+  const publicLink = registeredCandidate ? `http://localhost:8081/d/${registeredCandidate.PublicToken}` : '';
 
   return (
     <View style={[styles.page, { backgroundColor: theme.colors.background }]}>
       <Header page="Register Candidate" showBack />
       <ScrollView contentContainerStyle={styles.container}>
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          {registeredCandidate ? (
-            <SuccessView
-              candidate={registeredCandidate}
-              onReset={() => setRegisteredCandidate(null)}
-              onDone={() => router.back()}
-            />
-          ) : (
-            <RegisterForm
-              onRegister={handleRegister}
-              onCancel={() => router.back()}
-              isSubmitting={isSubmitting}
-            />
-          )}
-        </Card>
+        <View style={styles.cardContainer}>
+          <Stepper activeStep={step} steps={steps} />
+          <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+            {step === 0 && (
+              <Card.Content style={{ paddingVertical: 24 }}>
+                <View style={styles.formRow}>
+                  <View style={styles.formInputContainer}>
+                    <TextInput
+                      label="Full Name"
+                      value={fullName}
+                      onChangeText={setFullName}
+                      mode="outlined"
+                    />
+                  </View>
+                  <View style={styles.formInputContainer}>
+                    <TextInput
+                      label="Short Name (Nickname)"
+                      value={shortName}
+                      onChangeText={setShortName}
+                      mode="outlined"
+                    />
+                  </View>
+                </View>
+                <View style={styles.formRow}>
+                  <View style={styles.formInputContainer}>
+                    <TextInput
+                      label="Email Address"
+                      value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      mode="outlined"
+                    />
+                  </View>
+                  <View style={styles.formInputContainer}>
+                    <Text style={styles.segmentedButtonLabel}>Role</Text>
+                    <SegmentedButtons
+                      value={role}
+                      onValueChange={setRole}
+                      buttons={[
+                        { value: 'Customer Service Agent', label: 'CS Agent' },
+                        { value: 'Talent Acquisition', label: 'TA' },
+                      ]}
+                    />
+                  </View>
+                </View>
+              </Card.Content>
+            )}
+
+            {step === 1 && (
+              <Card.Content style={{ padding: 24 }}>
+                <Text variant="titleMedium" style={{marginBottom: 16}}>Please confirm the details below:</Text>
+                <SummaryRow label="Full Name" value={fullName} />
+                <SummaryRow label="Nickname" value={shortName} />
+                <SummaryRow label="Email" value={email} />
+                <SummaryRow label="Role" value={role} />
+                {registeredCandidate && (
+                  <>
+                    <Divider style={{marginVertical: 24}}/>
+                    <TextInput
+                      label="Public Interview Link"
+                      value={publicLink}
+                      editable={false}
+                      mode="outlined"
+                      right={
+                        <TextInput.Icon
+                          icon="content-copy"
+                          onPress={() => {
+                            Clipboard.setString(publicLink);
+                            notification.showToast("Link copied!", { type: "success" });
+                          }}
+                        />
+                      }
+                    />
+                  </>
+                )}
+              </Card.Content>
+            )}
+
+            <Card.Actions style={styles.actions}>
+              <Button onPress={() => router.back()}>Cancel</Button>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                {step === 1 && <Button onPress={handleBack} icon="arrow-left">Back</Button>}
+                {step === 0 && (
+                  <Button mode="contained" onPress={handleNext} disabled={!isStep1Valid} icon="arrow-right" contentStyle={{flexDirection: 'row-reverse'}}>Next</Button>
+                )}
+                {step === 1 && !registeredCandidate && (
+                  <Button mode="contained" onPress={handleRegister} loading={isSubmitting} disabled={isSubmitting} icon="account-plus">Register</Button>
+                )}
+                {step === 1 && registeredCandidate && (
+                  <Button mode="contained" onPress={handleInvite} loading={isInviting} disabled={isInviting || registeredCandidate.Status === 'invited'} icon="email-fast">Invite</Button>
+                )}
+              </View>
+            </Card.Actions>
+          </Card>
+        </View>
       </ScrollView>
     </View>
   );
@@ -308,48 +246,66 @@ export default function LaiveRegister() {
 const styles = StyleSheet.create({
   page: { flex: 1 },
   container: {
-    flexGrow: 1,
-    justifyContent: "center",
     alignItems: "center",
     padding: 24,
   },
-  card: { width: "100%", maxWidth: 700 },
-  inputContainer: { marginBottom: 16 },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 8,
-    color: "#666",
+  cardContainer: {
+    width: "100%",
+    maxWidth: 800,
   },
-  actions: { padding: 16, justifyContent: "flex-end" },
-  successContainer: { alignItems: "center", padding: 16 },
-  profileHeader: {
+  stepperContainer: {
     flexDirection: "row",
     alignItems: "center",
-    width: "100%",
+    justifyContent: "space-around",
+    marginBottom: 24,
   },
-  profileName: {
-    fontSize: 20,
-    fontWeight: "bold",
+  stepContainer: {
+    alignItems: "center",
+    gap: 8,
   },
-  profileRole: {
-    fontSize: 16,
-    color: "gray",
-  },
-  linkContainer: {
-    width: "100%",
-    paddingHorizontal: 8,
-    marginTop: 16,
-  },
-  actionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  actionSubtitle: {
+  stepLabel: {
     fontSize: 14,
-    color: "gray",
-    textAlign: "center",
-    marginTop: 4,
+    fontWeight: "bold",
+  },
+  stepperDivider: {
+    flex: 1,
+    marginHorizontal: 8,
+  },
+  card: { width: "100%" },
+  formRow: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 16,
+  },
+  formInputContainer: {
+    flex: 1,
+  },
+  segmentedButtonLabel: {
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  summaryLabel: {
+    fontSize: 16,
+    color: "#666",
+  },
+  summaryValue: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  actions: { 
+    padding: 16, 
+    justifyContent: "space-between", 
+    borderTopWidth: 1,
+    borderTopColor: '#eee'
   },
 });

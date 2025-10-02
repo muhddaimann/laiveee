@@ -24,6 +24,7 @@ import {
   CandidateRecord,
 } from "../../../contexts/api/candidate";
 import { useNotification } from "../../../contexts/notificationContext";
+import EmptyStateCard from "../../../components/c/EmptyStateCard";
 
 const STATUS_FILTERS: CandidateStatus[] = [
   "registered",
@@ -32,6 +33,14 @@ const STATUS_FILTERS: CandidateStatus[] = [
   "passed",
   "rejected",
 ];
+
+const RESULT_VIEWABLE_STATUSES: CandidateStatus[] = [
+  "completed",
+  "passed",
+  "rejected",
+];
+const INVITEABLE_STATUS: CandidateStatus = "registered";
+const DECISION_MAKING_STATUS: CandidateStatus = "completed";
 
 export default function LaiveApplicant() {
   const theme = useTheme();
@@ -56,6 +65,7 @@ export default function LaiveApplicant() {
 
   const fetchCandidates = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await getCandidates();
       setCandidates(res.data);
@@ -128,7 +138,7 @@ export default function LaiveApplicant() {
     );
   }
 
-  if (error) {
+  if (error && !loading) {
     return (
       <View style={styles.placeholderContainer}>
         <Text style={{ fontSize: 18, marginBottom: 12, textAlign: "center" }}>
@@ -143,7 +153,7 @@ export default function LaiveApplicant() {
 
   const canShowResult =
     !!selectedCandidate &&
-    ["completed", "passed", "rejected"].includes(selectedCandidate.Status) &&
+    RESULT_VIEWABLE_STATUSES.includes(selectedCandidate.Status) &&
     !!latestRecord;
 
   return (
@@ -199,13 +209,16 @@ export default function LaiveApplicant() {
           <Divider style={{ marginBottom: 12 }} />
 
           {filteredCandidates.length === 0 ? (
-            <EmptyState
-              onPrimary={() => router.push("c/laiveRegister")}
-              onSecondary={() => {
-                setQuery("");
-                setStatusFilter(null);
-              }}
-            />
+            <View
+              style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+            >
+              <EmptyStateCard
+                icon="account-search-outline"
+                title=""
+                message="No candidates match your filter criteria."
+                suggestion="Try adjusting your search or register a new candidate."
+              />
+            </View>
           ) : viewMode === "grid" ? (
             <FlatList
               data={filteredCandidates}
@@ -378,7 +391,6 @@ const CandidateDetailCard = ({ candidate }: { candidate: Candidate }) => {
   const theme = useTheme();
   return (
     <Card style={{ marginBottom: 16, backgroundColor: theme.colors.surface }}>
-      
       <Card.Content>
         <DetailRow label="Full Name" value={candidate.FullName} />
         <DetailRow label="Email" value={candidate.Email} />
@@ -480,12 +492,11 @@ const CandidateActionsCard = ({
 
   return (
     <Card style={{ backgroundColor: theme.colors.surface }}>
-      
       <Card.Content style={{ gap: 8 }}>
         <Button
           mode="contained"
           icon="email-fast-outline"
-          disabled={candidate.Status !== "registered" || loading}
+          disabled={candidate.Status !== INVITEABLE_STATUS || loading}
           onPress={() =>
             handleAction(
               () => inviteCandidate(candidate.PublicToken),
@@ -498,7 +509,7 @@ const CandidateActionsCard = ({
         <Button
           mode="contained-tonal"
           icon="check-circle-outline"
-          disabled={candidate.Status !== "completed" || loading}
+          disabled={candidate.Status !== DECISION_MAKING_STATUS || loading}
           onPress={() =>
             handleAction(
               () =>
@@ -514,7 +525,7 @@ const CandidateActionsCard = ({
         <Button
           mode="contained-tonal"
           icon="close-circle-outline"
-          disabled={candidate.Status !== "completed" || loading}
+          disabled={candidate.Status !== DECISION_MAKING_STATUS || loading}
           onPress={() =>
             handleAction(
               () =>
@@ -527,54 +538,6 @@ const CandidateActionsCard = ({
         >
           Mark as Rejected
         </Button>
-      </Card.Content>
-    </Card>
-  );
-};
-
-const EmptyState = ({
-  onPrimary,
-  onSecondary,
-}: {
-  onPrimary: () => void;
-  onSecondary: () => void;
-}) => {
-  const theme = useTheme();
-  return (
-    <Card style={[styles.emptyCard, { backgroundColor: theme.colors.surface }]}>
-      <Card.Content style={{ alignItems: "center" }}>
-        <Avatar.Icon
-          icon="account-search-outline"
-          size={72}
-          style={{
-            backgroundColor: theme.colors.surfaceVariant,
-            marginBottom: 12,
-          }}
-          color={theme.colors.onSurfaceVariant}
-        />
-        <Text style={[styles.emptyTitle, { color: theme.colors.onSurface }]}>
-          No applicants found
-        </Text>
-        <Text
-          style={[
-            styles.emptyMessage,
-            { color: theme.colors.onSurfaceVariant },
-          ]}
-        >
-          No candidates match your current search and filter criteria.
-        </Text>
-        <View style={styles.emptyActions}>
-          <Button mode="contained" onPress={onPrimary} icon="account-plus">
-            Register Candidate
-          </Button>
-          <Button
-            mode="outlined"
-            onPress={onSecondary}
-            icon="filter-remove-outline"
-          >
-            Clear Filters
-          </Button>
-        </View>
       </Card.Content>
     </Card>
   );

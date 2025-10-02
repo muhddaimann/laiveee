@@ -71,12 +71,14 @@ function CandidateTable({
     <>
       <SectionHeader title="Latest Candidates" />
       {candidates.length === 0 ? (
-        <EmptyStateCard
-          title=""
-          icon="account-search-outline"
-          message="No candidates found"
-          suggestion="Register a new candidate to get started."
-        />
+        <View style={{ justifyContent: 'center', alignItems: 'center', height: 400 }}>
+          <EmptyStateCard
+            title=""
+            icon="account-search-outline"
+            message="No candidates to been displayed."
+            suggestion="Register a new candidate to see them appear here."
+          />
+        </View>
       ) : (
         <Card
           style={[styles.largeCard, { backgroundColor: theme.colors.surface }]}
