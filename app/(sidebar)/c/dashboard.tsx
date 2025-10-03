@@ -135,7 +135,14 @@ export default function Dashboard() {
       <View
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
-        <View style={styles.left}>{renderContent()}</View>
+        <View
+          style={[
+            styles.left,
+            { borderRightColor: theme.colors.surfaceVariant },
+          ]}
+        >
+          {renderContent()}
+        </View>{" "}
         <View style={styles.right}>
           {staffUser ? (
             <ProfileCard
@@ -158,7 +165,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, flexDirection: "row" },
   left: {
     flex: 4,
-    borderRightWidth: 1,
+    borderRightWidth: 2,
     padding: 24,
     justifyContent: "flex-start",
   },

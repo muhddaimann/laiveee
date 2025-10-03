@@ -4,7 +4,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
-  ScrollView,
 } from "react-native";
 import {
   Button,
@@ -21,9 +20,8 @@ import { useRouter } from "expo-router";
 import Header from "../../../components/c/header";
 import {
   getCandidates,
+  getCandidateById,
   getCandidateRecords,
-  inviteCandidate,
-  updateCandidateStatus,
   Candidate,
   CandidateStatus,
   CandidateRecord,
@@ -31,6 +29,7 @@ import {
 import { useNotification } from "../../../contexts/notificationContext";
 import EmptyStateCard from "../../../components/c/EmptyStateCard";
 import { useStatus } from "../../../hooks/useStatus";
+import RightColumnView from "../../../components/c/views/RightColumnView";
 
 const STATUS_FILTERS: CandidateStatus[] = [
   "registered",
@@ -45,8 +44,6 @@ const RESULT_VIEWABLE_STATUSES: CandidateStatus[] = [
   "passed",
   "rejected",
 ];
-const INVITEABLE_STATUS: CandidateStatus = "registered";
-const DECISION_MAKING_STATUS: CandidateStatus = "completed";
 
 function FilterPill({
   label,
@@ -64,7 +61,6 @@ function FilterPill({
     bgColor: theme.colors.primaryContainer,
     textColor: theme.colors.onPrimaryContainer,
   };
-  // The hook needs a valid status, so we provide a fallback for the 'all' case.
   const statusStyleHook = useStatus(status === "all" ? "registered" : status);
   const finalStyle =
     status === "all"
@@ -108,7 +104,7 @@ function FilterPill({
 export default function LaiveApplicant() {
   const theme = useTheme();
   const router = useRouter();
-
+  const notification = useNotification();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -139,15 +135,20 @@ export default function LaiveApplicant() {
     }
   };
 
-  const fetchLatestRecord = async (c: Candidate | null) => {
-    if (!c) {
+  const fetchDetailsForSelectedCandidate = async (candidate: Candidate | null) => {
+    if (!candidate) {
       setLatestRecord(null);
       return;
     }
     setIsDetailLoading(true);
     try {
-      const recRes = await getCandidateRecords(c.PublicToken);
-      const records: CandidateRecord[] = recRes.data ?? [];
+      const [fullCandidateRes, recordsRes] = await Promise.all([
+        getCandidateById(candidate.ID),
+        getCandidateRecords(candidate.PublicToken),
+      ]);
+
+      const fullCandidate = fullCandidateRes.data;
+      const records: CandidateRecord[] = recordsRes.data ?? [];
       const latest =
         records
           .slice()
@@ -156,9 +157,11 @@ export default function LaiveApplicant() {
               new Date(b.created_at).getTime() -
               new Date(a.created_at).getTime()
           )[0] ?? null;
+
+      setSelectedCandidate(fullCandidate); // Update with the full object
       setLatestRecord(latest);
-    } catch {
-      setLatestRecord(null);
+    } catch (err) {
+      notification.showToast("Failed to load candidate details.", { type: "error" });
     } finally {
       setIsDetailLoading(false);
     }
@@ -170,13 +173,17 @@ export default function LaiveApplicant() {
 
   useEffect(() => {
     if (selectedCandidate) {
-      const freshCandidate = candidates.find(
+      const freshCandidateInList = candidates.find(
         (c) => c.ID === selectedCandidate.ID
       );
-      setSelectedCandidate(freshCandidate || null);
-      fetchLatestRecord(freshCandidate || null);
-    } else {
-      setLatestRecord(null);
+      // If the candidate is still in the list (e.g. after a refresh), re-fetch its full details.
+      if (freshCandidateInList) {
+        fetchDetailsForSelectedCandidate(freshCandidateInList);
+      } else {
+        // The candidate is no longer in the list (e.g. deleted), so clear the selection.
+        setSelectedCandidate(null);
+        setLatestRecord(null);
+      }
     }
   }, [candidates]);
 
@@ -297,7 +304,7 @@ export default function LaiveApplicant() {
                   item={item}
                   onSelect={(c) => {
                     setSelectedCandidate(c);
-                    fetchLatestRecord(c);
+                    fetchDetailsForSelectedCandidate(c);
                   }}
                   selected={selectedCandidate?.ID === item.ID}
                 />
@@ -313,7 +320,7 @@ export default function LaiveApplicant() {
                   item={item}
                   onSelect={(c) => {
                     setSelectedCandidate(c);
-                    fetchLatestRecord(c);
+                    fetchDetailsForSelectedCandidate(c);
                   }}
                   selected={selectedCandidate?.ID === item.ID}
                 />
@@ -329,131 +336,18 @@ export default function LaiveApplicant() {
             { borderLeftColor: theme.colors.outlineVariant },
           ]}
         >
-          {isDetailLoading && (
-            <View style={styles.detailOverlay}>
-              <ActivityIndicator size="large" />
-            </View>
-          )}
-          {selectedCandidate ? (
-            <ScrollView>
-              <SectionHeader title="Candidate Details" />
-              <CandidateDetailCard candidate={selectedCandidate} />
-
-              {canShowResult && latestRecord && (
-                <>
-                  <SectionHeader
-                    title="Result Summary"
-                    action={
-                      <Button
-                        mode="contained-tonal"
-                        icon="poll"
-                        onPress={() =>
-                          router.push(
-                            `/c/result/${selectedCandidate.PublicToken}`
-                          )
-                        }
-                      >
-                        View Full Result
-                      </Button>
-                    }
-                  />
-                  <ResultSummaryCard
-                    candidate={selectedCandidate}
-                    record={latestRecord}
-                  />
-                </>
-              )}
-
-              <SectionHeader title="Actions" />
-              <CandidateActionsCard
-                candidate={selectedCandidate}
-                onActionSuccess={fetchCandidates}
-                setLoading={setIsDetailLoading}
-              />
-            </ScrollView>
-          ) : (
-            <Placeholder />
-          )}
+          <RightColumnView
+            isDetailLoading={isDetailLoading}
+            selectedCandidate={selectedCandidate}
+            latestRecord={latestRecord}
+            onActionSuccess={fetchCandidates}
+            setLoading={setIsDetailLoading}
+          />
         </View>
       </View>
     </View>
   );
 }
-
-// --- Detail View Components ---
-
-const SectionHeader = ({
-  title,
-  action,
-}: {
-  title: string;
-  action?: React.ReactNode;
-}) => (
-  <View
-    style={{
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 8,
-      paddingHorizontal: 4,
-    }}
-  >
-    <Text variant="titleLarge" style={{ fontWeight: "600" }}>
-      {title}
-    </Text>
-    {action}
-  </View>
-);
-
-const Placeholder = () => {
-  const theme = useTheme();
-  return (
-    <View style={styles.placeholderContainer}>
-      <Card
-        style={[
-          styles.placeholderCard,
-          { backgroundColor: theme.colors.surface },
-        ]}
-      >
-        <Card.Content style={styles.placeholderContent}>
-          <Avatar.Icon
-            icon="cursor-default-click-outline"
-            size={80}
-            style={{
-              marginBottom: 16,
-              backgroundColor: theme.colors.background,
-            }}
-          />
-          <Text style={styles.placeholderTitle}>Select a Candidate</Text>
-          <Text style={styles.placeholderText}>
-            Choose a candidate from the list to view their details and available
-            actions.
-          </Text>
-        </Card.Content>
-      </Card>
-    </View>
-  );
-};
-
-const DetailRow = ({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | Date | null;
-}) => {
-  if (!value) return null;
-  return (
-    <View style={{ marginBottom: 12 }}>
-      <Text style={{ fontSize: 12, color: "gray", textTransform: "uppercase" }}>
-        {label}
-      </Text>
-      <Text style={{ fontSize: 16 }}>
-        {value instanceof Date ? value.toLocaleString() : value}
-      </Text>
-    </View>
-  );
-};
 
 function StatusPill({ status }: { status: CandidateStatus }) {
   const { backgroundColor, color } = useStatus(status);
@@ -463,171 +357,6 @@ function StatusPill({ status }: { status: CandidateStatus }) {
     </View>
   );
 }
-
-const CandidateDetailCard = ({ candidate }: { candidate: Candidate }) => {
-  const theme = useTheme();
-  return (
-    <Card style={{ marginBottom: 16, backgroundColor: theme.colors.surface }}>
-      <Card.Content>
-        <DetailRow label="Full Name" value={candidate.FullName} />
-        <DetailRow label="Email" value={candidate.Email} />
-        <DetailRow label="Role" value={candidate.Role} />
-        <View style={{ marginBottom: 12 }}>
-          <Text
-            style={{ fontSize: 12, color: "gray", textTransform: "uppercase" }}
-          >
-            Status
-          </Text>
-          <View style={{ marginTop: 4 }}>
-            <StatusPill status={candidate.Status} />
-          </View>
-        </View>
-        <Divider style={{ marginVertical: 8 }} />
-        <DetailRow
-          label="Registered"
-          value={new Date(candidate.CreatedDateTime)}
-        />
-        {candidate.InviteSentAt && (
-          <DetailRow label="Invited" value={new Date(candidate.InviteSentAt)} />
-        )}
-        {candidate.ExpiresAt && (
-          <DetailRow label="Expires" value={new Date(candidate.ExpiresAt)} />
-        )}
-        {candidate.CompletedAt && (
-          <DetailRow
-            label="Completed"
-            value={new Date(candidate.CompletedAt)}
-          />
-        )}
-        {candidate.DecisionAt && (
-          <DetailRow label="Decision" value={new Date(candidate.DecisionAt)} />
-        )}
-      </Card.Content>
-    </Card>
-  );
-};
-
-const ResultSummaryCard = ({
-  candidate,
-  record,
-}: {
-  candidate: Candidate;
-  record: CandidateRecord;
-}) => {
-  const theme = useTheme();
-  const rolefit = record.ra_rolefit_score ?? "-";
-  const interview = record.int_average_score ?? "-";
-  return (
-    <Card style={{ marginBottom: 16, backgroundColor: theme.colors.surface }}>
-      <Card.Content style={styles.summaryCardContent}>
-        <View style={styles.summaryLeft}>
-          <Text variant="labelLarge">Role Fit Score</Text>
-          <Text variant="displayMedium" style={{ color: theme.colors.primary }}>
-            {rolefit}
-            <Text variant="headlineSmall">/10</Text>
-          </Text>
-        </View>
-        <Divider style={styles.verticalDivider} />
-        <View style={styles.summaryRight}>
-          <Text variant="labelLarge">Interview Score</Text>
-          <Text variant="displayMedium" style={{ color: theme.colors.primary }}>
-            {interview}
-            <Text variant="headlineSmall">/5</Text>
-          </Text>
-        </View>
-      </Card.Content>
-    </Card>
-  );
-};
-
-const CandidateActionsCard = ({
-  candidate,
-  onActionSuccess,
-  setLoading: setDetailLoading,
-}: {
-  candidate: Candidate;
-  onActionSuccess: () => void;
-  setLoading: (l: boolean) => void;
-}) => {
-  const theme = useTheme();
-  const notification = useNotification();
-  const [loading, setLoading] = useState(false);
-
-  const handleAction = async (
-    action: () => Promise<any>,
-    successMessage: string
-  ) => {
-    setLoading(true);
-    setDetailLoading(true);
-    try {
-      const res = await action();
-      if (res.data.success) {
-        notification.showToast(successMessage, { type: "success" });
-        onActionSuccess();
-      } else {
-        throw new Error(res.data.error || "Action failed");
-      }
-    } catch (e: any) {
-      notification.showToast(e.response?.data?.error || e.message, {
-        type: "error",
-      });
-    }
-    setLoading(false);
-    setDetailLoading(false);
-  };
-
-  return (
-    <Card style={{ backgroundColor: theme.colors.surface }}>
-      <Card.Content style={{ gap: 8 }}>
-        <Button
-          mode="contained"
-          icon="email-fast-outline"
-          disabled={candidate.Status !== INVITEABLE_STATUS || loading}
-          onPress={() =>
-            handleAction(
-              () => inviteCandidate(candidate.PublicToken),
-              "Invitation sent!"
-            )
-          }
-        >
-          Invite
-        </Button>
-        <Button
-          mode="contained-tonal"
-          icon="check-circle-outline"
-          disabled={candidate.Status !== DECISION_MAKING_STATUS || loading}
-          onPress={() =>
-            handleAction(
-              () =>
-                updateCandidateStatus(candidate.PublicToken, {
-                  status: "passed",
-                }),
-              "Candidate marked as passed"
-            )
-          }
-        >
-          Mark as Passed
-        </Button>
-        <Button
-          mode="contained-tonal"
-          icon="close-circle-outline"
-          disabled={candidate.Status !== DECISION_MAKING_STATUS || loading}
-          onPress={() =>
-            handleAction(
-              () =>
-                updateCandidateStatus(candidate.PublicToken, {
-                  status: "rejected",
-                }),
-              "Candidate marked as rejected"
-            )
-          }
-        >
-          Mark as Rejected
-        </Button>
-      </Card.Content>
-    </Card>
-  );
-};
 
 const CandidateGridCard = ({
   item,
@@ -691,10 +420,10 @@ const CandidateListCard = ({
       style={[
         {
           backgroundColor: selected
-            ? theme.colors.primaryContainer
+            ? theme.colors.surface
             : theme.colors.surface,
         },
-        selected && { borderColor: theme.colors.primary, borderWidth: 2 },
+        selected && { borderColor: theme.colors.outline, borderWidth: 2 },
       ]}
       onPress={() => onSelect(item)}
     >
@@ -750,64 +479,11 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 8,
   },
-  chip: { borderRadius: 999 },
-  emptyCard: { paddingVertical: 32, borderRadius: 16, marginTop: 24 },
-  emptyTitle: { fontSize: 18, fontWeight: "700", marginBottom: 6 },
-  emptyMessage: { fontSize: 14, textAlign: "center", marginBottom: 16 },
-  emptyActions: { flexDirection: "row", gap: 12 },
   placeholderContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
-  },
-  placeholderCard: {
-    width: "100%",
-    maxWidth: 420,
-    alignSelf: "center",
-    borderRadius: 12,
-  },
-  placeholderContent: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 24,
-  },
-  placeholderTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  placeholderText: {
-    color: "gray",
-    textAlign: "center",
-    marginTop: 4,
-  },
-
-  detailOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255,255,255,0.7)",
-    zIndex: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  summaryCardContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-    paddingVertical: 12,
-  },
-  summaryItem: {
-    alignItems: "center",
-  },
-  summaryLeft: {
-    alignItems: "center",
-  },
-  summaryRight: {
-    alignItems: "center",
-  },
-  verticalDivider: {
-    height: "100%",
-    width: 1,
   },
   pill: {
     borderRadius: 24,
@@ -821,3 +497,4 @@ const styles = StyleSheet.create({
     textTransform: "capitalize",
   },
 });
+

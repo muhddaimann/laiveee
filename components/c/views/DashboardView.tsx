@@ -44,7 +44,7 @@ function DashboardView({
               <Text
                 style={[styles.widgetValue, { color: theme.colors.primary }]}
               >
-                0
+                2
               </Text>
             </View>
           </Card.Content>

@@ -81,9 +81,9 @@ function CandidateTable({
     <>
       <SectionHeader title="Latest Candidates" />
       {candidates.length === 0 ? (
-        <View style={{ justifyContent: 'center', alignItems: 'center', height: 300 }}>
+        <View style={{ justifyContent: 'center', alignItems: 'center', height: 400 }}>
           <EmptyStateCard
-            title="No Candidates Found"
+            title=""
             icon="account-search-outline"
             message="No candidates have been registered yet."
             suggestion="Register a new candidate to see them appear here."

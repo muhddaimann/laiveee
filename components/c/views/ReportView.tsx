@@ -10,6 +10,16 @@ import {
 } from "react-native-paper";
 import { Candidate, CandidateRecord } from "../../../contexts/api/candidate";
 import EmptyStateCard from "../EmptyStateCard";
+import { useStatus } from "../../../hooks/useStatus";
+
+function StatusPill({ status }: { status: Candidate['Status'] }) {
+  const { backgroundColor, color } = useStatus(status);
+  return (
+    <View style={[styles.pill, { backgroundColor }]}>
+      <Text style={[styles.pillText, { color }]}>{status}</Text>
+    </View>
+  );
+}
 
 function ReportView({
   candidate,
@@ -22,7 +32,21 @@ function ReportView({
 }) {
   const theme = useTheme();
 
-  if (candidate.Status === "registered" || candidate.Status === "invited") {
+  const InfoRow = ({ label, value }: { label: string; value: any }) => (
+    <View style={styles.infoRow}>
+      <Text style={[styles.infoLabel, { color: theme.colors.onSurface }]}>
+        {label}
+      </Text>
+      <Text
+        style={[styles.infoValue, { color: theme.colors.onSurfaceVariant }]}
+      >
+        {value || "N/A"}
+      </Text>
+    </View>
+  );
+
+  // If no detailed record is found, show a partial view that mimics the full report layout.
+  if (!candidateData || !candidateData.id) {
     return (
       <View style={{ flex: 1 }}>
         <View
@@ -32,16 +56,70 @@ function ReportView({
             Back to Dashboard
           </Button>
         </View>
-        <View
-          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-        >
-          <EmptyStateCard
-            icon="file-question-outline"
-            message="Report Not Available"
-            suggestion={`This candidate's status is '${candidate.Status}'. The report will be generated after they complete the interview.`}
-            title=""
-          />
-        </View>
+
+        <ScrollView contentContainerStyle={styles.reportContainer}>
+          <View style={styles.row}>
+            <Card
+              style={[
+                styles.card,
+                styles.flex1,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
+              <Card.Content>
+                <Text style={styles.reportTitle}>{candidate.FullName}</Text>
+                <Text style={styles.reportSubtitle}>
+                  {candidate.Role} #{candidate.ID}
+                </Text>
+              </Card.Content>
+            </Card>
+            <Card
+              style={[
+                styles.card,
+                styles.flex1,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
+              <Card.Content>
+                <Text style={styles.cardTitle}>Role Fit</Text>
+                <Text
+                  style={[styles.score, { color: theme.colors.onSurfaceDisabled }]}
+                >
+                  N/A
+                </Text>
+                <Text style={styles.justification}>Awaiting resume analysis</Text>
+              </Card.Content>
+            </Card>
+            <Card
+              style={[
+                styles.card,
+                styles.flex1,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
+              <Card.Content>
+                <Text style={styles.cardTitle}>Interview Score</Text>
+                <Text
+                  style={[styles.score, { color: theme.colors.onSurfaceDisabled }]}
+                >
+                  N/A
+                </Text>
+                <Text style={styles.justification}>
+                  Awaiting interview completion
+                </Text>
+              </Card.Content>
+            </Card>
+          </View>
+
+        <View style={{ justifyContent: 'center', alignItems: 'center', height: 600 }}>
+            <EmptyStateCard
+              icon="file-question-outline"
+              title=""
+              message="The full report is not yet available."
+              suggestion={`The report will be generated after they complete the assessment.`}
+            />
+          </View>
+        </ScrollView>
       </View>
     );
   }
@@ -101,18 +179,6 @@ function ReportView({
   const concernAreasList = parseJsonString(ra_concern_areas, []);
   const scoresObject = parseJsonString(int_scores_json, {});
   const knockoutsObject = parseJsonString(int_knockouts, {});
-  const InfoRow = ({ label, value }: { label: string; value: any }) => (
-    <View style={styles.infoRow}>
-      <Text style={[styles.infoLabel, { color: theme.colors.onSurface }]}>
-        {label}
-      </Text>
-      <Text
-        style={[styles.infoValue, { color: theme.colors.onSurfaceVariant }]}
-      >
-        {value || "N/A"}
-      </Text>
-    </View>
-  );
 
   return (
     <View style={{ flex: 1 }}>
@@ -323,6 +389,16 @@ const styles = StyleSheet.create({
   },
   summaryLabel: { fontSize: 16 },
   summaryValue: { fontSize: 16, fontWeight: "bold" },
+  pill: {
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  pillText: {
+    fontSize: 12,
+    fontWeight: "500",
+    textTransform: "capitalize",
+  },
 });
 
 export default ReportView;

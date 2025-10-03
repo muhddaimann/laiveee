@@ -50,7 +50,7 @@ function RecentCard({
           <EmptyStateCard
             title=""
             icon="clock-alert-outline"
-            message="No candidates to been displayed."
+            message="No candidates found"
             suggestion="Completed interviews will appear here."
           />
         </View>
